@@ -367,6 +367,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <div class="sb-group-children" id="koc-children">
             <div class="sb-sub-item sb-sub-sub" data-koc-sub="overview" onclick="navKocSub('overview')"><span class="sidebar-label">📊 Tổng quan</span></div>
             <div class="sb-sub-item sb-sub-sub" data-koc-sub="master" onclick="navKocSub('master')"><span class="sidebar-label">📋 Danh sách KOC</span></div>
+            <div class="sb-sub-item sb-sub-sub" data-koc-sub="scripts" onclick="navKocSub('scripts')"><span class="sidebar-label">📝 Kịch bản</span></div>
             <div class="sb-sub-item sb-sub-sub" data-koc-sub="prod" onclick="navKocSub('prod')"><span class="sidebar-label">🔗 KOC theo SP/CD</span></div>
             <div class="sb-sub-item sb-sub-sub" data-koc-sub="collab" onclick="navKocSub('collab')"><span class="sidebar-label">🤝 KOC hợp tác</span></div>
             <div class="sb-sub-item sb-sub-sub" data-koc-sub="compliance" onclick="navKocSub('compliance')"><span class="sidebar-label">⚖️ Kiểm duyệt</span></div>
@@ -1428,6 +1429,7 @@ const KOC_COLLAB_VIEW_TT = new Set(['Đồng ý hợp tác','Đã gửi sản ph
 const KOC_SUBTABS = [
   {id:'overview', l:'📊 Tổng quan'},
   {id:'master',   l:'📋 Danh sách KOC'},
+  {id:'scripts',  l:'📝 Kịch bản'},
   {id:'prod',     l:'🔗 KOC theo SP/CD'},
   {id:'collab',   l:'🤝 KOC hợp tác'},
   {id:'compliance', l:'⚖️ Kiểm duyệt nội dung'},
@@ -1866,15 +1868,51 @@ function _saleKocTab() {
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 12px;align-items:center">
       ${actions.join('')}
     </div>`;
-  const renderers = {overview:renderKocOverview,master:renderKocMaster,prod:renderKocProductCampaign,collab:renderKocCollaboration,compliance:renderKocCompliance,report:renderKocReport};
+  const renderers = {overview:renderKocOverview,master:renderKocMaster,scripts:renderKocScripts,prod:renderKocProductCampaign,collab:renderKocCollaboration,compliance:renderKocCompliance,report:renderKocReport};
   const body = (renderers[kocSubTab] || renderKocOverview)();
   return nav + body;
 }
 function renderKocOverview(){ return _kocOverview(); }
 function renderKocMaster(){ return _kocMaster(); }
+function renderKocScripts(){ return _kocScripts(); }
 function renderKocProductCampaign(){ return _kocProdCamp(); }
 function renderKocCollaboration(){ return _kocCollabView(); }
 function renderKocReport(){ return _kocReport(); }
+
+/* ════════════════════════════════════════════════════════════
+   KỊCH BẢN — placeholder UI (chờ wire Supabase + OpenAI)
+════════════════════════════════════════════════════════════ */
+let scriptTab = 'all';
+const SCRIPT_TABS = [
+  {id:'all',           l:'Tất cả'},
+  {id:'draft',         l:'📝 Nháp'},
+  {id:'pending_review',l:'⏳ Chờ duyệt'},
+  {id:'approved',      l:'✅ Đã duyệt'},
+  {id:'assigned',      l:'🤝 Đã giao KOC'},
+  {id:'filming',       l:'🎬 Đang quay'},
+  {id:'aired',         l:'📺 Đã air'},
+  {id:'rejected',      l:'❌ Từ chối / Archive'},
+];
+function _scriptSwitch(t){ scriptTab = t; saleRerender(); }
+function _kocScripts(){
+  const tabBar = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+    ${SCRIPT_TABS.map(t=>`<button onclick="_scriptSwitch('${t.id}')" style="padding:6px 12px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;border:1.5px solid ${scriptTab===t.id?'#1e2e4a':'#e2e8f0'};background:${scriptTab===t.id?'#1e2e4a':'#fff'};color:${scriptTab===t.id?'#fff':'#475569'}">${t.l}</button>`).join('')}
+  </div>`;
+  const actions = `<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+    <button onclick="alert('Cần Supabase + OpenAI: paste 01_init.sql + 02_scripts.sql vào SQL Editor, cấu hình OPENAI_API_KEY')" style="padding:8px 16px;border-radius:8px;background:linear-gradient(90deg,#ff7a45,#ff5a36);color:#fff;border:0;font-weight:800;cursor:pointer">＋ Nhập kịch bản mới</button>
+    <button style="padding:8px 16px;border-radius:8px;background:#fff;border:1.5px solid #e2e8f0;color:#475569;font-weight:700;cursor:pointer">📥 Import Excel/Doc</button>
+    <button style="padding:8px 16px;border-radius:8px;background:#fff;border:1.5px solid #e2e8f0;color:#475569;font-weight:700;cursor:pointer">🤖 Re-run AI check</button>
+  </div>`;
+  const empty = `<div style="padding:50px;text-align:center;background:#fff;border:1px dashed #e2e8f0;border-radius:14px;color:#64748b">
+    <div style="font-size:42px;margin-bottom:10px">📝</div>
+    <div style="font-size:15px;font-weight:700;color:#1e2e4a;margin-bottom:6px">Module Kịch bản — sắp ra mắt</div>
+    <div style="font-size:13px;max-width:520px;margin:0 auto;line-height:1.55">
+      Sẽ cho phép: nhập kịch bản → <strong>OpenAI</strong> tự check vi phạm + chấm điểm + tìm bản trùng (embedding) → người duyệt OK → giao 1 hoặc nhiều KOC → track quay/upload/air → nối với Booking Log để xem hiệu quả (WIN/Hiệu quả/Nuôi/Dừng).
+      <br><br>Cần: ① bạn paste <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px">supabase/01_init.sql</code> + <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px">02_scripts.sql</code> vào Supabase SQL Editor. ② Cung cấp OpenAI API key (<code style="background:#f1f5f9;padding:2px 6px;border-radius:4px">sk-...</code>) để wire Edge Function ai-check.
+    </div>
+  </div>`;
+  return tabBar + actions + empty;
+}
 
 /* ── Shared cell helpers ── */
 function _kocPtSel(id,field,val) {
