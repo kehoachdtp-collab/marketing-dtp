@@ -1,0 +1,25 @@
+{
+    "scripts":  {
+                    "dev":  "node server.js",
+                    "build":  "next build",
+                    "start":  "next start -p 3399",
+                    "db:seed-owner":  "tsx scripts/seed-owner.ts",
+                    "next:dev":  "next dev -p 3399"
+                },
+    "dependencies":  {
+                         "@supabase/ssr":  "latest",
+                         "@supabase/supabase-js":  "latest",
+                         "next":  "latest",
+                         "react":  "latest",
+                         "react-dom":  "latest",
+                         "server-only":  "latest",
+                         "zod":  "latest"
+                     },
+    "devDependencies":  {
+                            "@types/node":  "latest",
+                            "@types/react":  "latest",
+                            "@types/react-dom":  "latest",
+                            "tsx":  "latest",
+                            "typescript":  "latest"
+                        }
+}
