@@ -21,6 +21,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .sb-item.active{background:rgba(255,255,255,.16);color:#fff;font-weight:700}
 .sb-item-icon{font-size:16px;width:22px;text-align:center;flex-shrink:0}
 
+/* Nested sidebar groups */
+.sb-group{display:flex;flex-direction:column}
+.sb-group-children{display:none;flex-direction:column;margin:0 0 4px 8px;padding-left:8px;border-left:2px solid rgba(255,255,255,.08)}
+.sb-group.open>.sb-group-children{display:flex}
+.sb-chevron{margin-left:auto;font-size:10px;opacity:.55;transition:transform .15s;display:inline-block}
+.sb-group.open>.sb-item>.sb-chevron,.sb-group.open>.sb-sub-item>.sb-chevron{transform:rotate(90deg)}
+.sb-sub-item{position:relative;display:flex;align-items:center;gap:8px;padding:7px 10px 7px 30px;border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:500;color:rgba(255,255,255,.6);transition:all .15s;margin-bottom:1px;user-select:none}
+.sb-sub-item:hover{background:rgba(255,255,255,.06);color:#fff}
+.sb-sub-item.active{background:rgba(59,130,246,.22);color:#fff;font-weight:700}
+.sb-sub-item.sb-sub-sub{padding-left:46px;font-size:12px;color:rgba(255,255,255,.55)}
+.sb-sub-item.sb-sub-sub.active{background:rgba(59,130,246,.28)}
+.app-shell.sidebar-collapsed .sb-group-children{display:none !important}
+
 /* Sidebar collapse/expand */
 .app-shell{display:flex}
 .sidebar{width:280px;position:relative;background:#1e2e4a;display:flex;flex-direction:column;flex-shrink:0;overflow:visible;transition:width .2s ease}
@@ -101,6 +114,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 /* ── B2B Module ── */
 .mod-tabs{display:flex;gap:0;border-bottom:2px solid #e2e8f0;margin-bottom:20px;overflow-x:auto}
+.sale-crumb,.koc-crumb{display:flex;align-items:center;gap:10px;padding:14px 18px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:18px;font-size:13.5px;box-shadow:0 1px 3px rgba(15,23,42,.04)}
+.sale-crumb .crumb-mod,.koc-crumb .crumb-mod{color:#64748b;font-weight:600}
+.sale-crumb .crumb-sep,.koc-crumb .crumb-sep{color:#cbd5e1;font-weight:700}
+.sale-crumb .crumb-cur,.koc-crumb .crumb-cur{color:#1e2e4a;font-weight:800;font-size:15px}
 .mod-tab{padding:10px 20px;font-size:13px;font-weight:600;color:#64748b;cursor:pointer;white-space:nowrap;border-bottom:2.5px solid transparent;margin-bottom:-2px;transition:all .15s;user-select:none}
 .mod-tab:hover{color:#1e2e4a;background:#f8fafc}
 .mod-tab.active{color:#1e2e4a;border-bottom-color:#1e2e4a}
@@ -332,8 +349,39 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="sb-section sidebar-section-title">Hoạt động Marketing</div>
     <div class="sb-item" id="nav-b2b" title="Business to Business" onclick="navTo('b2b',this)">
       <span class="sb-item-icon">🤝</span> <span class="sidebar-label">Business to Business</span></div>
-    <div class="sb-item" id="nav-sale" title="Sale Online" onclick="navTo('sale',this)">
-      <span class="sb-item-icon">🛒</span> <span class="sidebar-label">Sale Online</span></div>
+    <div class="sb-group" id="grp-sale">
+      <div class="sb-item" id="nav-sale" title="Sale Online" onclick="navSaleGroup(this)">
+        <span class="sb-item-icon">🛒</span>
+        <span class="sidebar-label">Sale Online</span>
+        <span class="sb-chevron sidebar-label">▶</span>
+      </div>
+      <div class="sb-group-children" id="sale-children">
+        <div class="sb-sub-item" data-sale-tab="overview" onclick="navSaleSub('overview')"><span class="sidebar-label">Tổng quan</span></div>
+        <div class="sb-sub-item" data-sale-tab="products" onclick="navSaleSub('products')"><span class="sidebar-label">Danh sách SP</span></div>
+        <div class="sb-sub-item" data-sale-tab="campaigns" onclick="navSaleSub('campaigns')"><span class="sidebar-label">Chiến dịch</span></div>
+        <div class="sb-group" id="grp-koc">
+          <div class="sb-sub-item" data-sale-tab="koc" onclick="navKocGroup()">
+            <span class="sidebar-label">KOC / Affiliate</span>
+            <span class="sb-chevron">▶</span>
+          </div>
+          <div class="sb-group-children" id="koc-children">
+            <div class="sb-sub-item sb-sub-sub" data-koc-sub="overview" onclick="navKocSub('overview')"><span class="sidebar-label">📊 Tổng quan</span></div>
+            <div class="sb-sub-item sb-sub-sub" data-koc-sub="master" onclick="navKocSub('master')"><span class="sidebar-label">📋 Danh sách KOC</span></div>
+            <div class="sb-sub-item sb-sub-sub" data-koc-sub="prod" onclick="navKocSub('prod')"><span class="sidebar-label">🔗 KOC theo SP/CD</span></div>
+            <div class="sb-sub-item sb-sub-sub" data-koc-sub="collab" onclick="navKocSub('collab')"><span class="sidebar-label">🤝 KOC hợp tác</span></div>
+            <div class="sb-sub-item sb-sub-sub" data-koc-sub="compliance" onclick="navKocSub('compliance')"><span class="sidebar-label">⚖️ Kiểm duyệt</span></div>
+            <div class="sb-sub-item sb-sub-sub" data-koc-sub="report" onclick="navKocSub('report')"><span class="sidebar-label">📈 Báo cáo</span></div>
+          </div>
+        </div>
+        <div class="sb-sub-item" data-sale-tab="compliance" onclick="navSaleSub('compliance')"><span class="sidebar-label">⚖️ Kiểm duyệt nội dung</span></div>
+        <div class="sb-sub-item" data-sale-tab="ads" onclick="navSaleSub('ads')"><span class="sidebar-label">Ads</span></div>
+        <div class="sb-sub-item" data-sale-tab="orders" onclick="navSaleSub('orders')"><span class="sidebar-label">Đơn hàng & DT</span></div>
+        <div class="sb-sub-item" data-sale-tab="profit" onclick="navSaleSub('profit')"><span class="sidebar-label">Chi phí & Lãi lỗ</span></div>
+        <div class="sb-sub-item" data-sale-tab="inventory" onclick="navSaleSub('inventory')"><span class="sidebar-label">Kiểm kho</span></div>
+        <div class="sb-sub-item" data-sale-tab="reviews" onclick="navSaleSub('reviews')"><span class="sidebar-label">Đánh giá KH</span></div>
+        <div class="sb-sub-item" data-sale-tab="alerts" onclick="navSaleSub('alerts')"><span class="sidebar-label">Cảnh báo</span></div>
+      </div>
+    </div>
     <div class="sb-item" id="nav-hr" title="Tuyển dụng" onclick="navTo('hr',this)">
       <span class="sb-item-icon">👥</span> <span class="sidebar-label">Tuyển dụng</span></div>
       <div class="sb-section sidebar-section-title" id="nav-admin-section">⚙️ Quản trị hệ thống</div>
@@ -972,7 +1020,55 @@ function navTo(mod, el) {
   if (el) el.classList.add('active');
   curMod = mod;
   document.getElementById('topbar-title').textContent = MOD_TITLE[mod] || DEMO_MODULE_LABELS[mod] || DEMO_MODULE_LABELS[demoModuleKey(mod)] || mod;
+  // Auto-collapse Sale group when leaving sale
+  if (mod !== 'sale') {
+    const g = document.getElementById('grp-sale'); if (g) g.classList.remove('open');
+    const k = document.getElementById('grp-koc');  if (k) k.classList.remove('open');
+  }
   render();
+}
+/* ── Hierarchical Sale → KOC nav (sidebar-driven) ── */
+function navSaleGroup(el) {
+  const grp = document.getElementById('grp-sale');
+  if (curMod === 'sale') { grp.classList.toggle('open'); return; }
+  navTo('sale', el);
+  grp.classList.add('open');
+  _syncSaleSidebar();
+}
+function navKocGroup() {
+  const grp = document.getElementById('grp-koc');
+  // When clicked from outside KOC tab, switch to KOC first
+  if (saleTab !== 'koc' || curMod !== 'sale') {
+    navSaleSub('koc');
+  }
+  grp.classList.toggle('open');
+}
+function navSaleSub(tab) {
+  if (curMod !== 'sale') navTo('sale', document.getElementById('nav-sale'));
+  saleTab = tab;
+  document.getElementById('grp-sale').classList.add('open');
+  if (tab === 'koc') {
+    document.getElementById('grp-koc').classList.add('open');
+    if (!kocSubTab) kocSubTab = 'overview';
+  } else {
+    document.getElementById('grp-koc').classList.remove('open');
+  }
+  _syncSaleSidebar();
+  saleRerender();
+}
+function navKocSub(sub) {
+  if (curMod !== 'sale') navTo('sale', document.getElementById('nav-sale'));
+  saleTab = 'koc';
+  switchKocTab(sub);
+  document.getElementById('grp-sale').classList.add('open');
+  document.getElementById('grp-koc').classList.add('open');
+  _syncSaleSidebar();
+}
+function _syncSaleSidebar() {
+  document.querySelectorAll('#sale-children [data-sale-tab]').forEach(x =>
+    x.classList.toggle('active', x.dataset.saleTab === saleTab));
+  document.querySelectorAll('#koc-children [data-koc-sub]').forEach(x =>
+    x.classList.toggle('active', x.dataset.kocSub === kocSubTab && saleTab === 'koc'));
 }
 function refresh() {
   render(); setTs(); toast('✅ Đã cập nhật!');
@@ -1597,7 +1693,7 @@ function kocPtChange(id,field,val){
   }
   kocMstUpd(id,field,val);
 }
-function saleRerender()   { document.getElementById('content').innerHTML = renderSale(); }
+function saleRerender()   { document.getElementById('content').innerHTML = renderSale(); if(typeof _syncSaleSidebar==='function') _syncSaleSidebar(); }
 function saleSwitchTab(t) { saleTab = t; saleRerender(); }
 
 /* ── Generic CRUD (used by all 6 tables) ── */
@@ -1698,9 +1794,8 @@ function renderSale() {
     {id:'reviews',   l:'Đánh giá KH'},
     {id:'alerts',    l:'Cảnh báo'},
   ];
-  const tabBar = `<div class="mod-tabs">${TABS.map(t=>
-    `<div class="mod-tab ${saleTab===t.id?'active':''}" onclick="saleSwitchTab('${t.id}')">${t.l}</div>`
-  ).join('')}</div>`;
+  const curTab = TABS.find(t=>t.id===saleTab) || TABS[0];
+  const crumb = `<div class="sale-crumb"><span class="crumb-mod">🛒 Sale Online</span><span class="crumb-sep">›</span><span class="crumb-cur">${curTab.l}</span></div>`;
   const body = ({
     overview:_saleOverview, products:_saleProdMst, campaigns:_saleCampTab,
     koc:_saleKocTab, compliance:()=>renderCompliancePage('sale'), ads:_saleAdsTab, orders:_saleOrdTab,
@@ -1708,7 +1803,7 @@ function renderSale() {
     reviews:()=>_ph('⭐','Tab Đánh giá KH — bước tiếp theo.'),
     alerts:_saleAlertsTab,
   }[saleTab]??_saleOverview)();
-  return tabBar+body;
+  return crumb+body;
 }
 
 function _saleOverview() {
@@ -1765,11 +1860,9 @@ function _saleKocTab() {
   }
   actions.push(`<div style="flex:1"></div>`);
   actions.push(_b('💾 Lưu',"_kocSaveAll();toast('💾 Đã lưu KOC!')",'#ea580c'));
+  const curKoc = KOC_SUBTABS.find(t=>t.id===kocSubTab) || KOC_SUBTABS[0];
   const nav = `
-    <div style="display:flex;gap:4px;border-bottom:2px solid #e2e8f0;padding-bottom:0;align-items:flex-end">
-      ${KOC_SUBTABS.map(t=>`<button type="button" data-koc-tab="${t.id}" style="padding:8px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;border-bottom:3px solid ${kocSubTab===t.id?'#3b82f6':'transparent'};color:${kocSubTab===t.id?'#3b82f6':'#64748b'};margin-bottom:-2px">${t.l}</button>`).join('')}
-      <div style="flex:1"></div>
-    </div>
+    <div class="koc-crumb"><span class="crumb-mod">🤝 KOC / Affiliate</span><span class="crumb-sep">›</span><span class="crumb-cur">${curKoc.l}</span></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 12px;align-items:center">
       ${actions.join('')}
     </div>`;
