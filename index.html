@@ -275,22 +275,47 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ai-act-item.p-tb{border-left-color:#ea580c}
 .ai-act-item.p-thap{border-left-color:#16a34a}
 
-/* Demo login/auth - localStorage only, not for production */
+/* Demo login/auth */
 .auth-boot .sb,.auth-boot .main{display:none!important}
-.login-screen{display:none;position:fixed;inset:0;z-index:10000;background:linear-gradient(135deg,#eff6ff,#f8fafc 48%,#ecfdf5);padding:28px;overflow:auto}
-.auth-boot .login-screen{display:grid;place-items:center}
-.login-card{width:min(460px,100%);display:block}
-.login-panel,.login-info{background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 18px 50px rgba(15,23,42,.12);padding:24px}
-.login-logo{width:52px;height:52px;border-radius:15px;background:linear-gradient(135deg,#2563eb,#7c3aed);display:grid;place-items:center;color:#fff;font-size:25px;margin-bottom:14px}
-.login-title{font-size:26px;font-weight:850;color:#0f172a;margin-bottom:6px}
-.login-sub{font-size:13px;color:#64748b;line-height:1.55;margin-bottom:20px}
-.login-form{display:grid;gap:12px}
-.login-field{display:grid;gap:6px}
-.login-field label{font-size:12px;font-weight:750;color:#334155}
-.login-field input{height:40px;border:1.5px solid #dbe3ef;border-radius:9px;padding:0 12px;font-size:14px;outline:none}
-.login-field input:focus{border-color:#2563eb;box-shadow:0 0 0 3px #dbeafe}
-.login-error{display:none;background:#fef2f2;color:#991b1b;border:1px solid #fecaca;border-radius:10px;padding:9px 11px;font-size:13px;line-height:1.4}
+.login-screen{display:none;position:fixed;inset:0;z-index:10000;overflow:hidden;font-family:'Segoe UI',sans-serif}
+.auth-boot .login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center}
+/* Canvas pháo hoa nằm dưới */
+#login-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+/* Ảnh Sale Online làm background mờ */
+.login-bg{position:absolute;inset:0;background:url('https://i.imgur.com/placeholder.png') center/cover no-repeat;z-index:1}
+.login-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(160deg,rgba(2,12,40,.88) 0%,rgba(0,30,80,.82) 50%,rgba(0,10,30,.92) 100%)}
+/* Các chấm mạng lưới */
+.login-net{position:absolute;inset:0;z-index:2;overflow:hidden;pointer-events:none}
+.login-net::before{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,rgba(0,150,255,.18) 1px,transparent 1px);background-size:40px 40px;animation:netMove 20s linear infinite}
+@keyframes netMove{from{background-position:0 0}to{background-position:80px 80px}}
+/* Header phòng ban */
+.login-header{position:relative;z-index:10;text-align:center;margin-bottom:28px;animation:fadeDown .7s ease}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-24px)}to{opacity:1;transform:none}}
+.login-company{font-size:13px;letter-spacing:3px;color:#7dd3fc;text-transform:uppercase;margin-bottom:6px;font-weight:600}
+.login-dept{font-size:32px;font-weight:900;color:#fff;letter-spacing:4px;text-transform:uppercase;text-shadow:0 0 30px rgba(56,189,248,.6),0 2px 12px rgba(0,0,0,.5)}
+.login-dept span{color:#38bdf8}
+.login-tagline{font-size:12px;color:#94a3b8;margin-top:6px;letter-spacing:1px}
+/* Card đăng nhập */
+.login-card{position:relative;z-index:10;width:min(420px,92vw);animation:fadeUp .7s ease .1s both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+.login-panel{background:rgba(10,20,50,.75);border:1px solid rgba(56,189,248,.25);border-radius:18px;box-shadow:0 0 40px rgba(0,100,255,.2),0 20px 60px rgba(0,0,0,.5);padding:32px;backdrop-filter:blur(18px)}
+.login-panel-title{font-size:22px;font-weight:800;color:#fff;margin-bottom:6px}
+.login-sub{font-size:13px;color:#94a3b8;margin-bottom:24px}
+.login-form{display:grid;gap:16px}
+.login-field{display:grid;gap:7px}
+.login-field label{font-size:11px;font-weight:800;color:#7dd3fc;text-transform:uppercase;letter-spacing:1.5px}
+.login-field input{height:46px;border:1.5px solid rgba(56,189,248,.3);border-radius:10px;padding:0 14px;font-size:14px;outline:none;background:rgba(255,255,255,.06);color:#fff;transition:border-color .2s,box-shadow .2s}
+.login-field input::placeholder{color:#475569}
+.login-field input:focus{border-color:#38bdf8;box-shadow:0 0 0 3px rgba(56,189,248,.2);background:rgba(255,255,255,.1)}
+.login-btn{height:48px;border:none;border-radius:10px;background:linear-gradient(90deg,#0284c7,#38bdf8);color:#fff;font-size:15px;font-weight:800;letter-spacing:1px;cursor:pointer;text-transform:uppercase;transition:opacity .2s,box-shadow .2s;box-shadow:0 4px 18px rgba(56,189,248,.35)}
+.login-btn:hover{opacity:.9;box-shadow:0 6px 24px rgba(56,189,248,.5)}
+.login-btn:active{opacity:.8}
+.login-error{display:none;background:rgba(239,68,68,.12);color:#fca5a5;border:1px solid rgba(239,68,68,.35);border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.4}
 .login-error.show{display:block}
+.login-change-pw{text-align:center;margin-top:14px}
+.login-change-pw a{color:#38bdf8;font-size:13px;text-decoration:none;cursor:pointer;opacity:.8}
+.login-change-pw a:hover{opacity:1;text-decoration:underline}
+.login-footer{position:relative;z-index:10;margin-top:22px;text-align:center;color:#334155;font-size:11.5px;letter-spacing:.5px}
 .login-note{margin-top:12px;color:#64748b;font-size:12px;line-height:1.5}
 .demo-users-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:0}
 .demo-users-table th{background:#f1f5f9;color:#334155;text-align:left;padding:8px;border-bottom:1px solid #e2e8f0;font-size:11px;text-transform:uppercase}
@@ -335,24 +360,33 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </head>
 <body class="auth-boot app-shell">
 <div class="login-screen" id="login-screen">
+  <canvas id="login-canvas"></canvas>
+  <div class="login-bg" id="login-bg"></div>
+  <div class="login-net"></div>
+
+  <div class="login-header">
+    <div class="login-company">Công ty cổ phần dược phẩm DTP</div>
+    <div class="login-dept">Phòng <span>Kế Hoạch</span></div>
+    <div class="login-tagline">Nội bộ — Chỉ dành cho nhân viên được phân quyền</div>
+  </div>
+
   <div class="login-card">
     <section class="login-panel">
-      <div class="login-logo">📊</div>
-      <div class="login-title">MKT Dashboard</div>
-      <div class="login-sub">Vui lòng đăng nhập bằng tài khoản được cấp.</div>
+      <div class="login-panel-title">Đăng nhập</div>
+      <div class="login-sub">Nhập tài khoản được cấp để truy cập hệ thống.</div>
       <form class="login-form" onsubmit="demoLogin(event)">
         <div class="login-field">
-          <label for="demo-username">Username</label>
-          <input id="demo-username" name="username" autocomplete="username" required>
+          <label for="demo-username">Tên đăng nhập</label>
+          <input id="demo-username" name="username" autocomplete="username" placeholder="username hoặc email" required>
         </div>
         <div class="login-field">
-          <label for="demo-password">Password</label>
-          <input id="demo-password" name="password" type="password" autocomplete="current-password" required>
+          <label for="demo-password">Mật khẩu</label>
+          <input id="demo-password" name="password" type="password" autocomplete="current-password" placeholder="••••••" required>
         </div>
         <div class="login-error" id="login-error"></div>
-        <button class="btn btn-primary" type="submit" style="height:42px;font-size:14px">Đăng nhập</button>
+        <button class="login-btn" type="submit">Đăng nhập</button>
       </form>
-
+      <div class="login-change-pw"><a onclick="demoChangePwPrompt()">🔑 Đổi mật khẩu</a></div>
     </section>
   </div>
 </div>
@@ -4191,12 +4225,156 @@ window.addEventListener('load', async () => {
   initSidebarToggle();
   bindKocTabEvents();
   if (!demoCurrentUser()) { demoShowLogin(); return; }
-  // Đã có session — sync xuống trước khi hiển thị app
   try {
     await Promise.all([syncDown(), demoRefreshUsers()]);
   } catch(e) { console.warn('[init] sync failed', e); }
   demoShowApp();
 });
+
+/* ═══════════════════════════════════════
+   PHÁO HOA — login screen canvas animation
+═══════════════════════════════════════ */
+(function() {
+  const BG_URL = 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=1600&q=80';
+
+  function initFireworks() {
+    const screen = document.getElementById('login-screen');
+    if (!screen) return;
+    // Set background image
+    const bg = document.getElementById('login-bg');
+    if (bg) bg.style.backgroundImage = `url('${BG_URL}')`;
+
+    const canvas = document.getElementById('login-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let W, H, particles = [], rockets = [], frame = 0, animId;
+
+    function resize() {
+      W = canvas.width  = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    const COLORS = ['#38bdf8','#7dd3fc','#f0abfc','#fbbf24','#34d399','#fb7185','#a78bfa','#fff'];
+
+    function rnd(a, b) { return a + Math.random() * (b - a); }
+    function rndColor() { return COLORS[Math.floor(Math.random() * COLORS.length)]; }
+
+    class Particle {
+      constructor(x, y, color) {
+        this.x = x; this.y = y; this.color = color;
+        this.vx = rnd(-5, 5); this.vy = rnd(-7, 2);
+        this.alpha = 1; this.decay = rnd(.012, .025);
+        this.size = rnd(2, 4); this.gravity = .12;
+        this.trail = [{x, y}];
+      }
+      update() {
+        this.vy += this.gravity;
+        this.x += this.vx; this.y += this.vy;
+        this.alpha -= this.decay;
+        this.trail.push({x: this.x, y: this.y});
+        if (this.trail.length > 6) this.trail.shift();
+      }
+      draw() {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, this.alpha);
+        ctx.shadowBlur = 8; ctx.shadowColor = this.color;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      dead() { return this.alpha <= 0; }
+    }
+
+    class Rocket {
+      constructor() {
+        this.x = rnd(W * .2, W * .8);
+        this.y = H + 10;
+        this.vy = rnd(-14, -10);
+        this.vx = rnd(-1.5, 1.5);
+        this.color = rndColor();
+        this.exploded = false;
+        this.targetY = rnd(H * .1, H * .45);
+      }
+      update() {
+        this.vy += .18; // gravity pulling up rocket (decelerate)
+        this.x += this.vx; this.y += this.vy;
+      }
+      draw() {
+        ctx.save();
+        ctx.globalAlpha = .9;
+        ctx.shadowBlur = 12; ctx.shadowColor = this.color;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      shouldExplode() { return this.vy >= 0 || this.y <= this.targetY; }
+      explode() {
+        const count = Math.floor(rnd(80, 140));
+        for (let i = 0; i < count; i++) {
+          particles.push(new Particle(this.x, this.y, this.color));
+        }
+      }
+    }
+
+    function launch() {
+      rockets.push(new Rocket());
+    }
+
+    function loop() {
+      ctx.fillStyle = 'rgba(0,5,20,.18)';
+      ctx.fillRect(0, 0, W, H);
+
+      // Launch rocket periodically
+      frame++;
+      if (frame % 55 === 0) launch();
+      if (frame % 130 === 0) launch(); // double burst
+
+      // Update rockets
+      rockets = rockets.filter(r => {
+        r.update(); r.draw();
+        if (r.shouldExplode() && !r.exploded) {
+          r.exploded = true; r.explode();
+        }
+        return !r.exploded;
+      });
+
+      // Update particles
+      particles = particles.filter(p => { p.update(); p.draw(); return !p.dead(); });
+
+      animId = requestAnimationFrame(loop);
+    }
+
+    // Start
+    loop();
+    // Launch first rockets immediately
+    setTimeout(launch, 200);
+    setTimeout(launch, 600);
+    setTimeout(launch, 1100);
+
+    // Pause when login screen hidden
+    const obs = new MutationObserver(() => {
+      if (screen.style.display === 'none' || !screen.classList.contains('visible')) {
+        cancelAnimationFrame(animId);
+      } else {
+        loop();
+      }
+    });
+    obs.observe(screen, { attributes: true, attributeFilter: ['style','class'] });
+  }
+
+  // Wait for DOM
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initFireworks);
+  } else {
+    initFireworks();
+  }
+})();
 </script>
 </body>
 </html>
