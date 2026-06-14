@@ -119,6 +119,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .sale-crumb .crumb-mod,.koc-crumb .crumb-mod{color:#64748b;font-weight:600}
 .sale-crumb .crumb-sep,.koc-crumb .crumb-sep{color:#cbd5e1;font-weight:700}
 .sale-crumb .crumb-cur,.koc-crumb .crumb-cur{color:#1e2e4a;font-weight:800;font-size:15px}
+.koc-horizontal-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,23,42,.04)}
+.koc-horizontal-btn{border:1px solid transparent;background:transparent;color:#64748b;border-radius:8px;padding:9px 13px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;transition:background .15s ease,color .15s ease,border-color .15s ease}
+.koc-horizontal-btn:hover{background:#f1f5f9;color:#1e2e4a}
+.koc-horizontal-btn.active{background:#eaf1ff;border-color:#bfd2ff;color:#1d4ed8;box-shadow:inset 0 0 0 1px rgba(37,99,235,.08)}
 .mod-tab{padding:10px 20px;font-size:13px;font-weight:600;color:#64748b;cursor:pointer;white-space:nowrap;border-bottom:2.5px solid transparent;margin-bottom:-2px;transition:all .15s;user-select:none}
 .mod-tab:hover{color:#1e2e4a;background:#f8fafc}
 .mod-tab.active{color:#1e2e4a;border-bottom-color:#1e2e4a}
@@ -360,20 +364,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="sb-sub-item" data-sale-tab="overview" onclick="navSaleSub('overview')"><span class="sidebar-label">Tổng quan</span></div>
         <div class="sb-sub-item" data-sale-tab="products" onclick="navSaleSub('products')"><span class="sidebar-label">Danh sách SP</span></div>
         <div class="sb-sub-item" data-sale-tab="campaigns" onclick="navSaleSub('campaigns')"><span class="sidebar-label">Chiến dịch</span></div>
-        <div class="sb-group" id="grp-koc">
-          <div class="sb-sub-item" data-sale-tab="koc" onclick="navKocGroup()">
-            <span class="sidebar-label">KOC / Affiliate</span>
-            <span class="sb-chevron">▶</span>
-          </div>
-          <div class="sb-group-children" id="koc-children">
-            <div class="sb-sub-item sb-sub-sub" data-koc-sub="overview" onclick="navKocSub('overview')"><span class="sidebar-label">📊 Tổng quan</span></div>
-            <div class="sb-sub-item sb-sub-sub" data-koc-sub="master" onclick="navKocSub('master')"><span class="sidebar-label">📋 Danh sách KOC</span></div>
-            <div class="sb-sub-item sb-sub-sub" data-koc-sub="scripts" onclick="navKocSub('scripts')"><span class="sidebar-label">📝 Kịch bản</span></div>
-            <div class="sb-sub-item sb-sub-sub" data-koc-sub="prod" onclick="navKocSub('prod')"><span class="sidebar-label">🔗 KOC theo SP/CD</span></div>
-            <div class="sb-sub-item sb-sub-sub" data-koc-sub="collab" onclick="navKocSub('collab')"><span class="sidebar-label">🤝 KOC hợp tác</span></div>
-            <div class="sb-sub-item sb-sub-sub" data-koc-sub="report" onclick="navKocSub('report')"><span class="sidebar-label">📈 Báo cáo</span></div>
-          </div>
-        </div>
+        <div class="sb-sub-item" data-sale-tab="koc" onclick="navSaleSub('koc')"><span class="sidebar-label">KOC / Affiliate</span></div>
         <div class="sb-sub-item" data-sale-tab="compliance" onclick="navSaleSub('compliance')"><span class="sidebar-label">⚖️ Kiểm duyệt nội dung</span></div>
         <div class="sb-sub-item" data-sale-tab="ads" onclick="navSaleSub('ads')"><span class="sidebar-label">Ads</span></div>
         <div class="sb-sub-item" data-sale-tab="orders" onclick="navSaleSub('orders')"><span class="sidebar-label">Đơn hàng & DT</span></div>
@@ -1241,23 +1232,14 @@ function navSaleGroup(el) {
   _syncSaleSidebar();
 }
 function navKocGroup() {
-  const grp = document.getElementById('grp-koc');
-  // When clicked from outside KOC tab, switch to KOC first
-  if (saleTab !== 'koc' || curMod !== 'sale') {
-    navSaleSub('koc');
-  }
-  grp.classList.toggle('open');
+  navSaleSub('koc');
 }
 function navSaleSub(tab) {
   if (curMod !== 'sale') navTo('sale', document.getElementById('nav-sale'));
   saleTab = tab;
-  document.getElementById('grp-sale').classList.add('open');
-  if (tab === 'koc') {
-    document.getElementById('grp-koc').classList.add('open');
-    if (!kocSubTab) kocSubTab = 'overview';
-  } else {
-    document.getElementById('grp-koc').classList.remove('open');
-  }
+  const saleGroup = document.getElementById('grp-sale');
+  if (saleGroup) saleGroup.classList.add('open');
+  if (tab === 'koc' && !kocSubTab) kocSubTab = 'overview';
   _syncSaleSidebar();
   saleRerender();
 }
@@ -1265,15 +1247,18 @@ function navKocSub(sub) {
   if (curMod !== 'sale') navTo('sale', document.getElementById('nav-sale'));
   saleTab = 'koc';
   switchKocTab(sub);
-  document.getElementById('grp-sale').classList.add('open');
-  document.getElementById('grp-koc').classList.add('open');
+  const saleGroup = document.getElementById('grp-sale');
+  if (saleGroup) saleGroup.classList.add('open');
   _syncSaleSidebar();
 }
 function _syncSaleSidebar() {
   document.querySelectorAll('#sale-children [data-sale-tab]').forEach(x =>
     x.classList.toggle('active', x.dataset.saleTab === saleTab));
-  document.querySelectorAll('#koc-children [data-koc-sub]').forEach(x =>
-    x.classList.toggle('active', x.dataset.kocSub === kocSubTab && saleTab === 'koc'));
+  const kocChildren = document.getElementById('koc-children');
+  if (kocChildren) {
+    kocChildren.querySelectorAll('[data-koc-sub]').forEach(x =>
+      x.classList.toggle('active', x.dataset.kocSub === kocSubTab && saleTab === 'koc'));
+  }
 }
 function refresh() {
   render(); setTs(); toast('✅ Đã cập nhật!');
@@ -2065,9 +2050,10 @@ function _saleKocTab() {
   }
   actions.push(`<div style="flex:1"></div>`);
   actions.push(_b('💾 Lưu',"_kocSaveAll();toast('💾 Đã lưu KOC!')",'#ea580c'));
-  const curKoc = KOC_SUBTABS.find(t=>t.id===kocSubTab) || KOC_SUBTABS[0];
   const nav = `
-    <div class="koc-crumb"><span class="crumb-mod">🤝 KOC / Affiliate</span><span class="crumb-sep">›</span><span class="crumb-cur">${curKoc.l}</span></div>
+    <div class="koc-horizontal-nav" aria-label="KOC / Affiliate tabs">
+      ${KOC_SUBTABS.map(t=>`<button type="button" data-koc-tab="${t.id}" class="koc-horizontal-btn ${kocSubTab===t.id?'active':''}">${t.l}</button>`).join('')}
+    </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 12px;align-items:center">
       ${actions.join('')}
     </div>`;
