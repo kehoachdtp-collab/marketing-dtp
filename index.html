@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>MKT Dashboard — Planning Department</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f1f5f9;color:#1e293b;display:flex;height:100vh;overflow:hidden}
@@ -131,6 +133,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .koc-mini-chip.blue{background:#eff6ff;color:#2563eb}.koc-mini-chip.green{background:#dcfce7;color:#15803d}.koc-mini-chip.orange{background:#fff7ed;color:#c2410c}.koc-mini-chip.red{background:#fee2e2;color:#b91c1c}.koc-mini-chip.purple{background:#f5f3ff;color:#7c3aed}
 .koc-source-pill{display:inline-block;border-radius:999px;background:#f8fafc;border:1px solid #e2e8f0;color:#334155;padding:3px 8px;font-size:11px;font-weight:800;white-space:nowrap}
 .koc-summary-link{display:inline-block;max-width:210px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#2563eb;text-decoration:underline;font-size:11.5px;vertical-align:middle}
+.product-ai-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 1px 3px rgba(15,23,42,.05)}
+.product-ai-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:12px;flex-wrap:wrap}
+.product-ai-title{font-size:16px;font-weight:900;color:#0f172a;margin-bottom:4px}.product-ai-sub{font-size:12.5px;color:#64748b;line-height:1.45}
+.product-ai-grid{display:grid;grid-template-columns:minmax(320px,1.05fr) minmax(360px,1.3fr);gap:14px}.product-ai-inputs{display:flex;flex-direction:column;gap:9px}
+.product-ai-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.product-ai-input,.product-ai-textarea{width:100%;border:1px solid #dbe3ef;border-radius:10px;padding:9px 11px;font-family:inherit;font-size:13px;color:#0f172a;background:#fff;outline:none}.product-ai-input:focus,.product-ai-textarea:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+.product-ai-textarea{min-height:220px;resize:vertical;line-height:1.5}.product-ai-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.product-ai-results{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-content:start}
+.product-ai-panel{border:1px solid #e2e8f0;border-radius:12px;background:#fafbfc;padding:12px;min-height:96px}.product-ai-panel.full{grid-column:1/-1}.product-ai-panel h4{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#475569;margin:0 0 8px;font-weight:900}.product-ai-panel ul{margin:0;padding-left:18px;color:#334155;font-size:12.5px;line-height:1.55}.product-ai-panel li{margin-bottom:5px}.product-ai-pill{display:inline-block;margin:0 5px 6px 0;border-radius:999px;background:#eff6ff;color:#1d4ed8;padding:4px 8px;font-size:11.5px;font-weight:800}.product-ai-hook{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px 10px;margin-bottom:7px;font-size:12.5px;color:#0f172a;line-height:1.4}.product-ai-warn{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:10px;padding:9px 11px;font-size:12.5px;line-height:1.45}.product-ai-status{font-size:12px;color:#64748b}.product-ai-brief{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:8px}.product-ai-brief-title{font-size:13px;font-weight:900;color:#0f172a;margin-bottom:4px}.product-ai-brief-meta{font-size:11.5px;color:#64748b;margin-bottom:6px}.product-ai-brief-body{font-size:12.5px;color:#334155;line-height:1.45;white-space:pre-line}
+@media(max-width:1100px){.product-ai-grid{grid-template-columns:1fr}.product-ai-results{grid-template-columns:1fr}.product-ai-panel.full{grid-column:auto}.product-ai-row{grid-template-columns:1fr}}
 .mod-tab{padding:10px 20px;font-size:13px;font-weight:600;color:#64748b;cursor:pointer;white-space:nowrap;border-bottom:2.5px solid transparent;margin-bottom:-2px;transition:all .15s;user-select:none}
 .mod-tab:hover{color:#1e2e4a;background:#f8fafc}
 .mod-tab.active{color:#1e2e4a;border-bottom-color:#1e2e4a}
@@ -2204,11 +2214,202 @@ function _aiBadge(score, issues){
   return `<span style="display:inline-block;padding:3px 9px;border-radius:8px;font-size:11.5px;font-weight:800;background:${bg};color:${c}">${score}/100 · ${nIssue} issue</span>`;
 }
 
+const PRODUCT_INSIGHT_STORE_KEY = 'mkt_product_insight_brief';
+let productInsightDraft = null;
+function _productDefaultInfo(){
+  return `Thông tin cơ bản
+Thành phần
+Purified Water, Xylitol, Sorbitol, Poloxamer 188, Propylene Glycol, Sodium hydroxide, Allantoin, Sodium Methylparaben, Citric acid, Cetylpyridinium Chloride, Sodium Fluoride, Fragrance, Citrus Aurantium Dulcis Oil, Mentha Piperita Oil, Sucralose, Sodium Propylparaben.
+
+Công dụng
+Giúp làm sạch răng miệng hàng ngày.
+Giúp làm thơm miệng.
+
+Đối tượng sử dụng
+Trẻ em trên 6 tuổi và người lớn.
+
+Cách dùng
+Súc miệng với 1 gói trong khoảng 30 giây – 1 phút. Sử dụng 2-3 lần trong ngày vào buổi sáng thức dậy; buổi tối trước khi đi ngủ; sau khi ăn hoặc nhiều hơn tuỳ vào nhu cầu sử dụng.
+
+Bảo quản
+Để nơi khô ráo, thoáng mát, tránh ánh sáng trực tiếp.`;
+}
+function _productGetInputText(){ return (document.getElementById('product-ai-input')?.value || '').trim(); }
+function _productSetStatus(msg){ const el=document.getElementById('product-ai-status'); if(el) el.textContent=msg||''; }
+function _productUseExample(){
+  const el=document.getElementById('product-ai-input');
+  if(el) el.value=_productDefaultInfo();
+  _productSetStatus('Đã điền ví dụ Laforin Stick. Bấm Phân tích insight.');
+}
+async function readProductInsightFile(file){
+  if(!file) return;
+  const input=document.getElementById('product-ai-input');
+  _productSetStatus('Đang đọc file: '+file.name+' ...');
+  try{
+    let text='';
+    if(file.type==='text/plain' || /\.(txt|csv|md)$/i.test(file.name)) text=await file.text();
+    else if(file.type==='application/pdf' || /\.pdf$/i.test(file.name)) text=await _productReadPdf(file);
+    else if(file.type.startsWith('image/')) text=await _productReadImage(file);
+    else text=await file.text().catch(()=> '');
+    if(text && input){
+      input.value=(input.value?input.value+'\n\n':'')+_productCleanExtractedText(text);
+      _productSetStatus('Đã đọc file. Kiểm tra lại nội dung rồi bấm Phân tích insight.');
+    } else {
+      _productSetStatus('Chưa trích được chữ từ file. Bạn có thể copy nội dung sản phẩm và dán vào ô bên trái.');
+    }
+  }catch(e){
+    console.warn('[product file read]', e);
+    _productSetStatus('Không đọc được file tự động. Hãy copy text nội dung sản phẩm và dán vào ô bên trái.');
+  }
+}
+async function _productReadPdf(file){
+  if(!window.pdfjsLib) throw new Error('pdfjs_not_loaded');
+  if(window.pdfjsLib.GlobalWorkerOptions) window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+  const buf=await file.arrayBuffer();
+  const pdf=await window.pdfjsLib.getDocument({data:buf}).promise;
+  const chunks=[];
+  for(let p=1;p<=pdf.numPages;p++){
+    const page=await pdf.getPage(p);
+    const content=await page.getTextContent();
+    chunks.push(content.items.map(it=>it.str||'').join(' '));
+  }
+  return chunks.join('\n');
+}
+async function _productReadImage(file){
+  if(!window.Tesseract) throw new Error('tesseract_not_loaded');
+  _productSetStatus('Đang OCR ảnh. Lần đầu có thể mất 20-60 giây...');
+  const res=await window.Tesseract.recognize(file,'vie+eng',{ logger:m=>{ if(m.status) _productSetStatus('OCR: '+m.status+(m.progress?` ${Math.round(m.progress*100)}%`:'')); }});
+  return res?.data?.text || '';
+}
+function _productCleanExtractedText(text){
+  return String(text||'')
+    .replace(/\/uni([0-9A-Fa-f]{4})/g,(_,h)=>String.fromCharCode(parseInt(h,16)))
+    .replace(/\s+\n/g,'\n')
+    .replace(/[ \t]{2,}/g,' ')
+    .replace(/\n{3,}/g,'\n\n')
+    .trim();
+}
+function _productAnalyzeText(text, productName){
+  const src=_productCleanExtractedText(text);
+  const lower=src.toLowerCase();
+  const has=(...words)=>words.some(w=>lower.includes(w.toLowerCase()));
+  const benefits=[];
+  if(has('làm sạch','sạch răng','sạch khoang')) benefits.push('Làm sạch răng miệng hằng ngày');
+  if(has('thơm miệng','hơi thở')) benefits.push('Giúp hơi thở thơm mát, tự tin giao tiếp');
+  if(has('không cồn','khong con')) benefits.push('Không cồn, phù hợp angle dịu nhẹ trong routine');
+  if(has('30 giây','30s','1 phút')) benefits.push('Nhanh gọn 30 giây - 1 phút');
+  if(has('gói 15 ml','stick','gói')) benefits.push('Dạng gói/stick nhỏ gọn, dễ mang theo');
+  if(has('trẻ em trên 6','trên 6 tuổi')) benefits.push('Đối tượng: trẻ em trên 6 tuổi và người lớn');
+  if(has('sodium fluoride','fluoride')) benefits.push('Có fluoride trong công thức, nên truyền thông theo hướng hỗ trợ chăm sóc răng miệng');
+  if(has('cetylpyridinium','cpc')) benefits.push('Có CPC, chỉ nên nói hỗ trợ làm sạch/kháng khuẩn theo nhãn, tránh claim chữa bệnh');
+  if(!benefits.length) benefits.push('Cần làm rõ công dụng, đối tượng dùng, cách dùng và điểm khác biệt sản phẩm');
+  const situations=[];
+  if(has('sau khi ăn','sau ăn')) situations.push('Sau bữa trưa/sau ăn đồ nặng mùi');
+  if(has('buổi sáng','thức dậy')) situations.push('Buổi sáng trước khi ra khỏi nhà');
+  if(has('trước khi đi ngủ','buổi tối')) situations.push('Routine buổi tối trước khi ngủ');
+  situations.push('Trước cuộc họp/gặp khách/hẹn hò');
+  situations.push('Khi đi làm, đi học, du lịch, công tác');
+  const insights=[
+    'Người dùng không chỉ cần “sạch miệng”, họ sợ khoảnh khắc phải nói chuyện gần sau ăn/cà phê/đồ nặng mùi.',
+    'Dạng gói nhỏ tạo insight “cứu nguy nhanh”: bỏ túi, ngăn bàn, balo, túi mẹ và bé, không phải mang chai lớn.',
+    'Mốc 30 giây - 1 phút phù hợp content ngắn: trước meeting, sau ăn trưa, trước khi gặp người yêu/khách hàng.',
+    'Nhóm phụ huynh quan tâm sản phẩm dễ dùng cho trẻ trên 6 tuổi nhưng cần nhắc đúng: không nuốt, dùng theo hướng dẫn.',
+    'Có thể thắng bằng demo tình huống đời thường thay vì liệt kê thành phần khô cứng.'
+  ];
+  const niches=[
+    {name:'Dân văn phòng / sales / CSKH', angle:'Sau ăn trưa, cà phê, meeting gấp, cần tự tin nói chuyện gần.'},
+    {name:'Mẹ & bé trên 6 tuổi', angle:'Mẹ chuẩn bị routine vệ sinh răng miệng cho con, nhấn mạnh dùng đúng hướng dẫn, không nuốt.'},
+    {name:'Dating / giao tiếp gần', angle:'Trước hẹn, trước gặp khách, trước livestream, xử lý nỗi ngại hơi thở.'},
+    {name:'Du lịch / công tác / gym', angle:'Gói stick nhỏ gọn, dùng nhanh ở văn phòng, sân bay, khách sạn, phòng gym.'},
+    {name:'Lifestyle “desk essentials”', angle:'Một món nhỏ trong túi/ngăn bàn giúp routine chăm sóc cá nhân trông chuyên nghiệp hơn.'},
+    {name:'KOC review thực tế', angle:'Test cảm giác sau 30 giây, so sánh bối cảnh mang chai lớn vs dùng gói stick.'}
+  ];
+  const hooks=[
+    'Ăn trưa xong mà 5 phút nữa vào họp thì làm gì?',
+    'Một gói nhỏ trong túi nhưng cứu được mấy khoảnh khắc ngại nói chuyện gần.',
+    'Routine 30 giây sau ăn cho dân văn phòng hay gặp khách.',
+    'Mẹ chuẩn bị gì cho bé trên 6 tuổi khi cần chăm sóc răng miệng sau bữa ăn?',
+    'Đi công tác không muốn mang chai súc miệng cồng kềnh thì thử dạng stick này.',
+    'Đừng đợi đến lúc thiếu tự tin vì hơi thở mới nhớ chăm sóc răng miệng.'
+  ];
+  const briefs=[
+    {title:'POV dân văn phòng sau bữa trưa', format:'TikTok 25-35s', body:'Mở bằng cảnh ăn trưa/cà phê xong có meeting. KOC lấy 1 gói stick, súc 30 giây - 1 phút. Chốt: nhỏ gọn, dùng sau ăn, giúp sạch răng miệng và thơm miệng.'},
+    {title:'What’s in my bag/ngăn bàn', format:'Lifestyle review', body:'Show các món nhỏ cần có: son, xịt thơm, gói súc miệng. Insight: không phải lúc nào cũng tiện đánh răng, nên có phương án chăm sóc nhanh sau ăn.'},
+    {title:'Mẹ chuẩn bị routine cho bé trên 6 tuổi', format:'Mẹ & bé', body:'Mẹ nói về thói quen sau ăn/tối trước ngủ. Nhấn đúng đối tượng trẻ trên 6 tuổi và người lớn, nhắc không được nuốt, dùng theo hướng dẫn.'},
+    {title:'Travel/gym/công tác', format:'Mini vlog', body:'KOC bỏ vài gói vào túi khi đi công tác/gym. Hook: không mang chai lớn, dùng nhanh khi cần cảm giác sạch miệng.'},
+    {title:'30 giây trước hẹn/gặp khách', format:'Drama ngắn', body:'Tình huống sắp gặp khách/người yêu, lo hơi thở sau ăn. Giải pháp: 1 gói súc miệng, CTA mua hộp 20 gói để dùng hằng ngày.'},
+    {title:'Giải thích thành phần dễ hiểu', format:'Educate nhẹ', body:'Nói ngắn về Xylitol/Fluoride/CPC theo hướng hỗ trợ chăm sóc răng miệng. Tránh nói trị bệnh, chữa hôi miệng, diệt khuẩn tuyệt đối.'}
+  ];
+  const risk=[
+    'Tránh claim “chữa hôi miệng tận gốc”, “trị viêm lợi/sâu răng”, “diệt 99,9% vi khuẩn” nếu chưa có căn cứ duyệt.',
+    'Dùng từ an toàn hơn: “giúp làm sạch”, “giúp thơm miệng”, “hỗ trợ chăm sóc răng miệng hằng ngày”.',
+    'Luôn nhắc đối tượng: trẻ em trên 6 tuổi và người lớn; không được nuốt; dùng theo hướng dẫn.',
+    'Nếu KOC nhận booking/quà tặng, caption/video cần nhận diện quảng cáo/phối hợp với nhãn hàng.'
+  ];
+  return {productName:productName||'Sản phẩm', benefits, situations, insights, niches, hooks, briefs, risk, sourceLength:src.length, raw:src, createdAt:new Date().toISOString()};
+}
+function analyzeProductInsights(){
+  const text=_productGetInputText();
+  const productName=(document.getElementById('product-ai-name')?.value||'Laforin Stick').trim();
+  if(!text){ toast('⚠️ Hãy dán thông tin sản phẩm hoặc đọc file trước.'); return; }
+  productInsightDraft=_productAnalyzeText(text, productName);
+  try{ localStorage.setItem(PRODUCT_INSIGHT_STORE_KEY, JSON.stringify(productInsightDraft)); }catch(e){}
+  renderProductInsightResult(productInsightDraft);
+  _productSetStatus(`Đã phân tích ${productInsightDraft.sourceLength} ký tự. Có thể dùng các brief này để viết kịch bản KOC.`);
+}
+function _productList(items){ return `<ul>${items.map(x=>`<li>${esc(String(x))}</li>`).join('')}</ul>`; }
+function renderProductInsightResult(data){
+  const box=document.getElementById('product-ai-result');
+  if(!box) return;
+  if(!data){ box.innerHTML='<div class="product-ai-panel full"><h4>Kết quả</h4><div class="product-ai-sub">Dán nội dung sản phẩm hoặc upload file rồi bấm Phân tích insight.</div></div>'; return; }
+  box.innerHTML=`
+    <div class="product-ai-panel"><h4>Điểm bán nên khai thác</h4>${_productList(data.benefits)}</div>
+    <div class="product-ai-panel"><h4>Tình huống sử dụng</h4>${_productList(data.situations)}</div>
+    <div class="product-ai-panel full"><h4>Insight khách hàng</h4>${_productList(data.insights)}</div>
+    <div class="product-ai-panel full"><h4>Ngách content win</h4>${data.niches.map(n=>`<span class="product-ai-pill">${esc(n.name)}</span><div class="product-ai-sub" style="margin-bottom:6px">${esc(n.angle)}</div>`).join('')}</div>
+    <div class="product-ai-panel full"><h4>Hook có thể triển khai</h4>${data.hooks.map(h=>`<div class="product-ai-hook">${esc(h)}</div>`).join('')}</div>
+    <div class="product-ai-panel full"><h4>Brief kịch bản gợi ý</h4>${data.briefs.map((b,i)=>`<div class="product-ai-brief"><div class="product-ai-brief-title">${i+1}. ${esc(b.title)}</div><div class="product-ai-brief-meta">${esc(b.format)}</div><div class="product-ai-brief-body">${esc(b.body)}</div><button class="btn" style="margin-top:8px" onclick="_productCreateScriptFromBrief(${i})">＋ Tạo kịch bản nháp</button></div>`).join('')}</div>
+    <div class="product-ai-panel full"><h4>Lưu ý kiểm duyệt nội dung</h4><div class="product-ai-warn">${data.risk.map(x=>`• ${esc(x)}`).join('<br>')}</div></div>`;
+}
+async function _productCreateScriptFromBrief(index){
+  const data=productInsightDraft || (()=>{try{return JSON.parse(localStorage.getItem(PRODUCT_INSIGHT_STORE_KEY)||'null')}catch(e){return null}})();
+  const b=data?.briefs?.[index];
+  if(!b){ toast('⚠️ Chưa có brief để tạo kịch bản.'); return; }
+  const caller=demoCurrentUser();
+  if(!caller || !caller.id){ toast('⚠️ Đăng nhập lại.'); return; }
+  const content=`${b.title}\n\nFormat: ${b.format}\n\n${b.body}\n\nHook gợi ý:\n${(data.hooks||[]).slice(0,3).map(x=>'- '+x).join('\n')}\n\nLưu ý pháp lý:\n${(data.risk||[]).map(x=>'- '+x).join('\n')}`;
+  try{
+    toast('⏳ Đang tạo kịch bản nháp...');
+    const id=await mktApi.scriptCreate(caller.id, b.title, content, document.getElementById('product-ai-code')?.value||null, null, data.hooks?.[0]||null, 'Mua ngay / tìm hiểu sản phẩm', ['product-insight','koc-brief']);
+    toast('✅ Đã tạo kịch bản nháp. Đang AI check nội dung...');
+    mktApi.aiCheck(id,b.title,content).then(()=>_scriptsLoad(true)).catch(()=>_scriptsLoad(true));
+  }catch(e){ toast('❌ Lỗi tạo kịch bản: '+(e.message||e)); }
+}
+function _productAnalyzerHtml(){
+  const saved=(()=>{try{return JSON.parse(localStorage.getItem(PRODUCT_INSIGHT_STORE_KEY)||'null')}catch(e){return null}})();
+  if(saved) productInsightDraft=saved;
+  setTimeout(()=>renderProductInsightResult(saved),0);
+  return `<div class="product-ai-card">
+    <div class="product-ai-head">
+      <div><div class="product-ai-title">🤖 AI phân tích sản phẩm → insight & ngách content</div><div class="product-ai-sub">Dán nội dung tờ toa/nhãn sản phẩm hoặc upload PDF/ảnh. Bản demo phân tích local để tìm insight khách hàng, ngách content win, hook và brief KOC; không dùng secret key.</div></div>
+      <button class="btn" onclick="_productUseExample()">Điền ví dụ Laforin</button>
+    </div>
+    <div class="product-ai-grid">
+      <div class="product-ai-inputs">
+        <div class="product-ai-row"><input id="product-ai-name" class="product-ai-input" placeholder="Tên sản phẩm" value="Laforin Stick"><input id="product-ai-code" class="product-ai-input" placeholder="Mã sản phẩm / campaign" value="L01248"></div>
+        <input type="file" id="product-ai-file" accept=".pdf,.txt,.md,image/*" style="display:none" onchange="readProductInsightFile(this.files[0]);this.value=''">
+        <textarea id="product-ai-input" class="product-ai-textarea" placeholder="Dán thông tin sản phẩm: thành phần, công dụng, đối tượng sử dụng, cách dùng, lưu ý, claim được duyệt..."></textarea>
+        <div class="product-ai-actions"><button class="btn" onclick="document.getElementById('product-ai-file').click()">📎 Đọc PDF/ảnh</button><button class="btn btn-primary" onclick="analyzeProductInsights()">✨ Phân tích insight</button><button class="btn" onclick="document.getElementById('product-ai-input').value='';renderProductInsightResult(null);_productSetStatus('')">Xóa nội dung</button><span id="product-ai-status" class="product-ai-status"></span></div>
+      </div>
+      <div id="product-ai-result" class="product-ai-results"></div>
+    </div>
+  </div>`;
+}
 function _kocScripts(){
   // Lazy load lần đầu
   if (_scriptsCache === null && !_scriptsLoading) {
     _scriptsLoad(false);
-    return `<div style="padding:40px;text-align:center;color:#64748b">⏳ Đang tải kịch bản từ Supabase...</div>`;
+    return _productAnalyzerHtml() + `<div style="padding:40px;text-align:center;color:#64748b">⏳ Đang tải kịch bản từ Supabase...</div>`;
   }
   const tabBar = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
     ${SCRIPT_TABS.map(t=>`<button onclick="_scriptSwitch('${t.id}')" style="padding:6px 12px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;border:1.5px solid ${scriptTab===t.id?'#1e2e4a':'#e2e8f0'};background:${scriptTab===t.id?'#1e2e4a':'#fff'};color:${scriptTab===t.id?'#fff':'#475569'}">${t.l}</button>`).join('')}
@@ -2220,7 +2421,7 @@ function _kocScripts(){
   const all = _scriptsCache || [];
   const list = scriptTab === 'all' ? all : all.filter(s => s.status === scriptTab);
   if (!list.length) {
-    return tabBar + actions + `<div style="padding:50px;text-align:center;background:#fff;border:1px dashed #e2e8f0;border-radius:14px;color:#64748b">Không có kịch bản nào ở trạng thái <strong>${scriptTab}</strong>.</div>`;
+    return _productAnalyzerHtml() + tabBar + actions + `<div style="padding:50px;text-align:center;background:#fff;border:1px dashed #e2e8f0;border-radius:14px;color:#64748b">Không có kịch bản nào ở trạng thái <strong>${scriptTab}</strong>.</div>`;
   }
   const rows = list.map(s => {
     const dt = new Date(s.updated_at).toLocaleString('vi-VN');
@@ -2253,7 +2454,7 @@ function _kocScripts(){
       <tbody>${rows}</tbody>
     </table>
   </div>`;
-  return tabBar + actions + table;
+  return _productAnalyzerHtml() + tabBar + actions + table;
 }
 
 /* ── Shared cell helpers ── */
