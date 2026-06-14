@@ -133,6 +133,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .koc-mini-chip.blue{background:#eff6ff;color:#2563eb}.koc-mini-chip.green{background:#dcfce7;color:#15803d}.koc-mini-chip.orange{background:#fff7ed;color:#c2410c}.koc-mini-chip.red{background:#fee2e2;color:#b91c1c}.koc-mini-chip.purple{background:#f5f3ff;color:#7c3aed}
 .koc-source-pill{display:inline-block;border-radius:999px;background:#f8fafc;border:1px solid #e2e8f0;color:#334155;padding:3px 8px;font-size:11px;font-weight:800;white-space:nowrap}
 .koc-summary-link{display:inline-block;max-width:210px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#2563eb;text-decoration:underline;font-size:11.5px;vertical-align:middle}
+.follower-box{display:flex;flex-direction:column;gap:4px;min-width:150px}.follower-main{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.follower-count{font-size:13px;font-weight:900;color:#0f172a}.follower-meta{font-size:11px;color:#64748b;line-height:1.35}.follower-warn{display:inline-flex;align-items:center;border-radius:999px;background:#fff7ed;color:#c2410c;padding:2px 7px;font-size:10.5px;font-weight:800}.follower-ok{display:inline-flex;align-items:center;border-radius:999px;background:#dcfce7;color:#15803d;padding:2px 7px;font-size:10.5px;font-weight:800}.follower-actions{display:flex;gap:5px;align-items:center;flex-wrap:wrap}.follower-actions button{border:1px solid #dbe3ef;background:#fff;border-radius:7px;padding:3px 7px;font-size:11px;font-weight:700;color:#334155;cursor:pointer}.follower-actions button:hover{background:#f8fafc}
 .product-ai-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 1px 3px rgba(15,23,42,.05)}
 .product-ai-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:12px;flex-wrap:wrap}
 .product-ai-title{font-size:16px;font-weight:900;color:#0f172a;margin-bottom:4px}.product-ai-sub{font-size:12.5px;color:#64748b;line-height:1.45}
@@ -1679,6 +1680,7 @@ const KOC_NEN_TANG     = ['','TikTok','Facebook','Instagram','YouTube','Shopee A
 const KOC_NHOM_ND      = ['','Beauty & Skincare','Mẹ & Bé','Lifestyle','Review sản phẩm','Khác'];
 const KOC_HINH_THUC_SP = ['','TikTok Shop','Shopee','CPN','EMS','Vận chuyển ngoài','Nhận trực tiếp','Khác'];
 const KOC_DEMO_OPTS    = ['','Chưa có','Đã gửi','Cần sửa','Đã duyệt','Không đạt'];
+const KOC_FOLLOWER_SOURCE = ['','Google Sheet','Nhập tay','TikTok manual','TikTok export','Creator Marketplace','Chưa rõ'];
 const KOC_TT_COLOR     = {
   'Đồng ý hợp tác':'#16a34a','Không hợp tác':'#dc2626','Chờ phản hồi':'#ea580c',
   'Đã liên hệ':'#2563eb','Chưa liên hệ':'#94a3b8','Đã air':'#16a34a','Hoàn thành':'#16a34a',
@@ -1885,14 +1887,24 @@ function saleLoad() {
     });
     if (kocMstRows.length || kocProdRows.length) _kocSaveAll();
   }
-  if (_kocSyncProductNamesFromMaster()) _kocSaveAll();
+  const followerMetaChanged = _kocBackfillFollowerMeta();
+  if (_kocSyncProductNamesFromMaster() || followerMetaChanged) _kocSaveAll();
 }
 
 /* ── CRUD KOC MASTER ── */
 function kocMstUpd(id,k,v){
   const r=kocMstRows.find(r=>r.id==id); if(!r)return;
   const oldMa=r.maKoc, oldTen=r.ten;
-  r[k]=v;
+  if(k==='follower'){
+    r.follower=_kocParseFollower(v);
+    r.followerUpdatedAt=_kocTodayIso();
+    r.followerSource=r.followerSource || 'Nhập tay';
+    r.followerNeedsCheck=false;
+  } else if(k==='followerNeedsCheck') {
+    r.followerNeedsCheck = v===true || v==='true' || v==='on';
+  } else {
+    r[k]=v;
+  }
   if(k==='maKoc' && oldMa && oldMa!==v){
     kocProdRows.forEach(p=>{ if(p.maKoc===oldMa) p.maKoc=v; });
   }
@@ -1901,7 +1913,7 @@ function kocMstUpd(id,k,v){
   }
   _kocSaveAll();
 }
-function kocMstAdd()       { kocMstRows.push({id:Date.now()+Math.random(),maKoc:_kocNextMa()}); _kocSaveAll(); saleRerender(); }
+function kocMstAdd()       { kocMstRows.push({id:Date.now()+Math.random(),maKoc:_kocNextMa(),follower:0,followerSource:'Nhập tay',followerUpdatedAt:'',followerNeedsCheck:true}); _kocSaveAll(); saleRerender(); }
 function kocMstDel(id)     { if(!confirm('Xóa KOC master này?'))return; kocMstRows=kocMstRows.filter(r=>r.id!=id); _kocSaveAll(); saleRerender(); }
 
 /* ── CRUD KOC × SP/CD ── */
@@ -2556,6 +2568,65 @@ function _kocEffBadge(gmvCp) {
   if(gmvCp>=1)    return `<span style="background:#ffedd5;color:#ea580c;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700">⚠️ Cần theo dõi</span>`;
   return `<span style="background:#fee2e2;color:#dc2626;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700">❌ Không HQ</span>`;
 }
+function _kocTodayIso(){ return new Date().toISOString().slice(0,10); }
+function _kocParseFollower(v){
+  if(typeof v === 'number') return Math.max(0, Math.round(v||0));
+  let s=String(v||'').trim().toLowerCase();
+  if(!s) return 0;
+  s=s.replace(/followers?|follower|người theo dõi|nguoi theo doi/g,'').trim();
+  const hasK=/\bk\b|nghìn|ngan|ngàn/.test(s);
+  const hasM=/\bm\b|triệu|trieu/.test(s);
+  let n=0;
+  const m=s.replace(/,/g,'.').match(/\d+(?:[\.,]\d+)?/);
+  if(m){
+    n=Number(m[0].replace(/,/g,'.'))||0;
+    if(hasM) n*=1000000;
+    else if(hasK) n*=1000;
+    else if(/\d{1,3}(?:\.\d{3})+/.test(s)) n=Number(s.replace(/[^\d]/g,''))||n;
+  }
+  return Math.max(0, Math.round(n));
+}
+function _kocFollowerLabel(v){
+  const n=_kocParseFollower(v);
+  if(!n) return 'Chưa có';
+  if(n>=1000000) return (n/1000000).toFixed(n%1000000?1:0).replace('.0','')+'M';
+  if(n>=1000) return (n/1000).toFixed(n%1000?1:0).replace('.0','')+'K';
+  return String(n);
+}
+function _kocFollowerNeedsCheck(row){
+  if(row?.followerNeedsCheck === true || row?.followerNeedsCheck === 'true') return true;
+  if(!_kocParseFollower(row?.follower)) return true;
+  if(!row?.followerUpdatedAt) return true;
+  const d=new Date(row.followerUpdatedAt); if(Number.isNaN(d.getTime())) return true;
+  return (Date.now()-d.getTime()) > 1000*60*60*24*30;
+}
+function _kocFollowerCell(row, editable=false){
+  const n=_kocParseFollower(row?.follower);
+  const need=_kocFollowerNeedsCheck(row);
+  const source=row?.followerSource || (String(row?.ghiChu||'').includes('Import')?'Google Sheet':'Chưa rõ');
+  const updated=row?.followerUpdatedAt ? formatDateVN(row.followerUpdatedAt) : 'Chưa có ngày';
+  const input=editable ? `<input type="text" value="${esc(row?.follower||'')}" placeholder="VD: 50k, 4044" onchange="kocMstUpd(${row.id},'follower',this.value)" style="width:100%;font-size:12px;border:1px solid #e2e8f2;border-radius:6px;padding:4px 7px">` : '';
+  return `<div class="follower-box"><div class="follower-main"><span class="follower-count">${esc(_kocFollowerLabel(n))}</span>${need?'<span class="follower-warn">Cần kiểm tra</span>':'<span class="follower-ok">Đã cập nhật</span>'}</div>${input}<div class="follower-meta">Nguồn: ${esc(source)}<br>Cập nhật: ${esc(updated)}</div>${editable?`<div class="follower-actions"><button type="button" onclick="kocFollowerVerified(${row.id})">Đã kiểm tra hôm nay</button></div>`:''}</div>`;
+}
+function kocFollowerVerified(id){
+  const r=kocMstRows.find(x=>x.id==id); if(!r) return;
+  r.follower=_kocParseFollower(r.follower);
+  r.followerUpdatedAt=_kocTodayIso();
+  r.followerSource=r.followerSource && r.followerSource!=='Google Sheet' ? r.followerSource : 'TikTok manual';
+  r.followerNeedsCheck=false;
+  _kocSaveAll(); saleRerender(); toast('✅ Đã cập nhật trạng thái follower hôm nay.');
+}
+function _kocBackfillFollowerMeta(){
+  let changed=false;
+  kocMstRows.forEach(r=>{
+    const n=_kocParseFollower(r.follower);
+    if(n && r.follower!==n){ r.follower=n; changed=true; }
+    if(n && !r.followerSource){ r.followerSource=String(r.ghiChu||'').includes('Import')?'Google Sheet':'Chưa rõ'; changed=true; }
+    if(n && !r.followerUpdatedAt && r.followerSource==='Google Sheet'){ r.followerUpdatedAt=_kocTodayIso(); changed=true; }
+    if(r.followerNeedsCheck==null){ r.followerNeedsCheck=!n; changed=true; }
+  });
+  return changed;
+}
 function _kocMasterInfo(row){ return _kocMasterByCode(row?.maKoc) || {}; }
 function _kocNotePart(note,label){
   const parts=String(note||'').split('|').map(x=>x.trim());
@@ -2590,15 +2661,16 @@ function _kocPersonSummaryCell(r){
   const name=m.ten || r.tenKoc || '—';
   const code=r.maKoc || m.maKoc || '';
   const contact=m.lienHe || r.lienHe || '';
-  const follower=+(m.follower||r.follower||0);
+  const followerRow=Object.assign({}, r, m);
   const link=m.socialLink || r.socialLink || '';
   return `<td class="koc-read-cell">
     <div class="koc-read-title">${esc(name)}</div>
     <div class="koc-mini-row">
       ${code?`<span class="koc-mini-chip blue">${esc(code)}</span>`:''}
-      ${follower?`<span class="koc-mini-chip purple">${fmtK(follower)} follower</span>`:''}
+      ${_kocParseFollower(followerRow.follower)?`<span class="koc-mini-chip purple">${esc(_kocFollowerLabel(followerRow.follower))} follower</span>`:''}
     </div>
     ${contact?`<div class="koc-read-sub">Liên hệ: ${esc(contact)}</div>`:''}
+    ${followerRow.followerSource||followerRow.followerUpdatedAt?`<div class="koc-read-sub">Follower: ${esc(followerRow.followerSource||'Chưa rõ')} · ${esc(followerRow.followerUpdatedAt?formatDateVN(followerRow.followerUpdatedAt):'chưa có ngày')}</div>`:''}
     ${_kocTinyLink(link,'Social link')}
   </td>`;
 }
@@ -2725,7 +2797,10 @@ function _kocMaster() {
     <th style="min-width:95px">Mã KOC</th>
     <th style="min-width:150px">Tên KOC</th>
     <th style="min-width:160px">Social link</th>
-    <th style="min-width:100px">Follower</th>
+    <th style="min-width:170px">Follower</th>
+    <th style="min-width:130px">Ngày cập nhật follower</th>
+    <th style="min-width:140px">Nguồn follower</th>
+    <th style="min-width:115px">Cần kiểm tra</th>
     <th style="min-width:130px">Liên hệ</th>
     <th style="min-width:140px">Nền tảng chính</th>
     <th style="min-width:160px">Nhóm nội dung</th>
@@ -2742,7 +2817,10 @@ function _kocMaster() {
         <input value="${esc(r.maKoc||'')}" onchange="kocMstUpd(${r.id},'maKoc',this.value)" style="display:block;width:80px;font-size:11px;border:1px solid #e2e8f2;border-radius:4px;padding:2px 4px;margin-top:2px"></td>
       <td>${_kocInp(r.id,'ten',r.ten,'kocMstUpd','Tên KOC...')}</td>
       <td>${renderLinkCell(r.socialLink,r.id,'socialLink','kocMstUpd')}</td>
-      <td>${_kocNum(r.id,'follower',r.follower,'kocMstUpd')}</td>
+      <td>${_kocFollowerCell(r,true)}</td>
+      <td>${_kocDate(r.id,'followerUpdatedAt',r.followerUpdatedAt,'kocMstUpd')}</td>
+      <td>${_kocSel(r.id,'followerSource',r.followerSource || (String(r.ghiChu||'').includes('Import')?'Google Sheet':'Chưa rõ'),'kocMstUpd',KOC_FOLLOWER_SOURCE)}</td>
+      <td style="text-align:center"><input type="checkbox" ${_kocFollowerNeedsCheck(r)?'checked':''} onchange="kocMstUpd(${r.id},'followerNeedsCheck',this.checked)" title="Tick nếu cần mở TikTok kiểm tra lại follower"></td>
       <td>${_kocInp(r.id,'lienHe',r.lienHe,'kocMstUpd','SĐT/Zalo...')}</td>
       <td>${_kocSel(r.id,'nenTangChinh',r.nenTangChinh,'kocMstUpd',KOC_NEN_TANG)}</td>
       <td>${_kocSel(r.id,'nhomND',r.nhomND,'kocMstUpd',KOC_NHOM_ND)}</td>
@@ -3209,10 +3287,18 @@ function kocImportSheet(wb,sheetName){
     mapping.forEach((key,ci)=>{
       if(!key)return;
       let v=row[ci];
+      if(isMst && key==='follower'){
+        obj.follower=_kocParseFollower(v);
+        obj.followerSource='Google Sheet';
+        obj.followerUpdatedAt=_kocTodayIso();
+        obj.followerNeedsCheck=!obj.follower;
+        return;
+      }
       if(v instanceof Date||typeof v==='number')v=parseDateSafe(v);
       obj[key]=String(v??'').trim();
     });
     if(isMst&&!obj.maKoc)obj.maKoc=_kocNextMa();
+    if(isMst && obj.follower!=null && !obj.followerSource){ obj.followerSource='Google Sheet'; obj.followerUpdatedAt=_kocTodayIso(); obj.followerNeedsCheck=!_kocParseFollower(obj.follower); }
     imported.push(obj);
   }
   if(!imported.length){toast('⚠️ Không có dòng dữ liệu hợp lệ!');return;}
