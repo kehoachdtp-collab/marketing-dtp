@@ -357,7 +357,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .user-admin-title{font-size:18px;font-weight:800;color:#1e2e4a}
 .user-admin-sub{font-size:12.5px;color:#64748b;margin-top:3px;line-height:1.45}
 .user-mgmt-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:900px}
-.user-mgmt-table th{background:#1e2e4a;color:#fff;text-align:left;padding:9px;font-size:10.5px;text-transform:uppercase;white-space:nowrap}
+.user-mgmt-table th{position:sticky;top:0;z-index:5;background:#1e2e4a;color:#fff;text-align:left;padding:9px;font-size:10.5px;text-transform:uppercase;white-space:nowrap;box-shadow:0 1px 0 rgba(255,255,255,.12)}
 .user-mgmt-table td{border-bottom:1px solid #eef2f7;padding:8px;vertical-align:middle}
 .user-mgmt-table input,.user-mgmt-table select{width:100%;border:1px solid #dbe3ef;border-radius:8px;padding:7px 8px;font-size:12.5px;background:#fff}
 .user-mgmt-table input:disabled,.user-mgmt-table select:disabled{background:#f8fafc;color:#94a3b8}
@@ -1151,7 +1151,7 @@ function renderDataSourcesPage(){
   const rows = users.map(u => {
     const isAdmin = u.role === 'admin';
     return `<tr data-user-row="${demoEsc(u.username)}">
-      <td><input data-user-username value="${demoEsc(u.username)}" autocomplete="off" ${canManage?'':'disabled'}><div class="demo-chip">${demoEsc(u.role)}</div></td>
+      <td><input data-user-username value="${demoEsc(u.username)}" autocomplete="off" ${canManage?'':'disabled'}></td>
       <td><input data-user-display value="${demoEsc(u.displayName)}" ${(!canManage || isAdmin)?'disabled':''}></td>
       <td><input data-user-password type="password" autocomplete="new-password" placeholder="Nhập mật khẩu mới nếu cần" ${canReset?'':'disabled'}></td>
       <td>${isAdmin?'<span class="demo-chip">Toàn quyền</span>':demoPresetSelect(u.username,'dashboard',demoPresetFromPermission(u.permissions.dashboard),!canManage)}</td>
