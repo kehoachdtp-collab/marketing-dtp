@@ -1874,10 +1874,26 @@ const KOC_PROD_PAGE_SIZE = 40;
 let _kocProdTabsCache = [];
 function _kocProdShortName(s){ const t=String(s||'').trim(); if(!t) return '(Chưa gắn SP)'; return (t.split(/\s[-–—]\s/)[0]||t).trim(); }
 function _kocProdKey(r){ return (String(r.tenSp||'').trim()) || '(Chưa gắn SP)'; }
+function _kocProdUniqueKey(r){
+  const code=String(r?.maKoc||'').trim().toUpperCase();
+  if(code) return 'code:'+code;
+  const name=String(_kocDisplayName(r)||r?.tenKoc||'').trim().toLowerCase();
+  const link=String(r?.socialLink||r?.linkProfile||'').trim().toLowerCase();
+  if(name || link) return 'name:'+name+'|'+link;
+  return r?.id!=null ? 'row:'+r.id : '';
+}
+function _kocProdUniqueCount(rows){
+  return new Set((rows||[]).map(_kocProdUniqueKey).filter(Boolean)).size;
+}
 function _kocProdDistinct(){
   const m = new Map();
-  kocProdRows.forEach(r=>{ const k=_kocProdKey(r); m.set(k,(m.get(k)||0)+1); });
-  return [...m.entries()].sort((a,b)=>b[1]-a[1]);
+  kocProdRows.forEach(r=>{
+    const k=_kocProdKey(r);
+    if(!m.has(k)) m.set(k,new Set());
+    const key=_kocProdUniqueKey(r);
+    if(key) m.get(k).add(key);
+  });
+  return [...m.entries()].map(([k,set])=>[k,set.size]).sort((a,b)=>b[1]-a[1]);
 }
 function _kocProdTab(i){ const t=_kocProdTabsCache[i]; if(t){ kocProdFilter=t.name; kocProdPage=0; saleRerender(); } }
 function kocProdToggleCollab(){ kocProdOnlyCollab=!kocProdOnlyCollab; kocProdPage=0; saleRerender(); }
@@ -2058,6 +2074,7 @@ function _kocNextMa() {
 
 /* ── Save ── */
 function _kocSaveAll() {
+  _kocSyncMasterFromProductRows();
   setStore(K.kocMst,  kocMstRows);
   setStore(K.kocProd, kocProdRows);
   setStore(K.kocContracts, kocContractRows);
@@ -2079,6 +2096,46 @@ function _kocSyncProductNamesFromMaster(){
   kocProdRows.forEach(r=>{
     const m=_kocMasterByCode(r.maKoc);
     if(m?.ten && r.tenKoc!==m.ten){ r.tenKoc=m.ten; changed=true; }
+  });
+  return changed;
+}
+function _kocSyncMasterFromProductRows(){
+  let changed=false;
+  const sameText=(a,b)=>String(a||'').trim().toLowerCase()===String(b||'').trim().toLowerCase();
+  kocProdRows.forEach(r=>{
+    const code=String(r.maKoc||'').trim();
+    const name=String(r.tenKoc||'').trim();
+    const link=String(r.socialLink||r.linkProfile||'').trim();
+    if(!code && !name) return;
+    let m=code ? kocMstRows.find(x=>sameText(x.maKoc,code)) : null;
+    if(!m && name){
+      m=kocMstRows.find(x=>sameText(x.ten,name) && (!link || sameText(x.socialLink,link)));
+    }
+    if(m){
+      if(code && !m.maKoc){ m.maKoc=code; changed=true; }
+      if(name && !m.ten){ m.ten=name; changed=true; }
+      if(link && !m.socialLink){ m.socialLink=link; changed=true; }
+      if(r.lienHe && !m.lienHe){ m.lienHe=r.lienHe; changed=true; }
+      if(r.follower && !m.follower){ m.follower=r.follower; changed=true; }
+      if(r.phuTrach && !m.phuTrach){ m.phuTrach=r.phuTrach; changed=true; }
+      return;
+    }
+    kocMstRows.push({
+      id:Date.now()+Math.random(),
+      maKoc:code || _kocNextMa(),
+      ten:name,
+      socialLink:link,
+      follower:r.follower||0,
+      followerSource:r.followerSource||'KOC theo SP/CD',
+      followerUpdatedAt:r.followerUpdatedAt||'',
+      followerNeedsCheck:r.followerNeedsCheck==null ? !r.follower : r.followerNeedsCheck,
+      lienHe:r.lienHe||'',
+      nenTangChinh:r.nenTangChinh||'',
+      nhomND:r.nhomND||'',
+      phuTrach:r.phuTrach||'',
+      ghiChu:'Tu bo sung tu KOC hop tac'
+    });
+    changed=true;
   });
   return changed;
 }
@@ -2161,7 +2218,8 @@ function saleLoad() {
     if (kocMstRows.length || kocProdRows.length) _kocSaveAll();
   }
   const followerMetaChanged = _kocBackfillFollowerMeta();
-  if (_kocSyncProductNamesFromMaster() || followerMetaChanged) _kocSaveAll();
+  const masterSyncChanged = _kocSyncMasterFromProductRows();
+  if (_kocSyncProductNamesFromMaster() || followerMetaChanged || masterSyncChanged) _kocSaveAll();
 }
 
 /* ── CRUD KOC MASTER ── */
@@ -3242,7 +3300,7 @@ function _kocProdCamp() {
   const dist=_kocProdDistinct();
   if(!_kocProdTabsCache.some(t=>t.name===kocProdFilter)) { /* filter cũ không còn → reset */ }
   if(kocProdFilter!=='all' && !dist.some(d=>d[0]===kocProdFilter)) kocProdFilter='all';
-  _kocProdTabsCache=[{name:'all',label:'Tất cả',count:kocProdRows.length},
+  _kocProdTabsCache=[{name:'all',label:'Tất cả',count:_kocProdUniqueCount(kocProdRows)},
     ...dist.map(d=>({name:d[0],label:_kocProdShortName(d[0]),count:d[1]}))];
   const prodTabBar=`<div class="koc-prod-tabs" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px;border-bottom:1px solid #eef2f7;padding-bottom:10px">
     ${_kocProdTabsCache.map((t,i)=>`<button type="button" onclick="_kocProdTab(${i})" title="${esc(t.name)}" style="padding:7px 14px;border-radius:9px;font-size:12.5px;font-weight:700;cursor:pointer;border:1.5px solid ${kocProdFilter===t.name?'#7c3aed':'#e2e8f0'};background:${kocProdFilter===t.name?'#7c3aed':'#fff'};color:${kocProdFilter===t.name?'#fff':'#475569'}">${esc(t.label)} <span style="display:inline-block;min-width:18px;text-align:center;background:${kocProdFilter===t.name?'rgba(255,255,255,.25)':'#f1f5f9'};color:${kocProdFilter===t.name?'#fff':'#64748b'};border-radius:999px;padding:0 6px;font-size:11px;margin-left:3px">${t.count}</span></button>`).join('')}
