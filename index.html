@@ -510,9 +510,25 @@ const supa = window.supabase.createClient(SUPA_URL, SUPA_KEY, { auth: { persistS
 
 const mktApi = {
   async login(username, password) {
-    const { data, error } = await supa.rpc('verify_password', { p_username: username, p_password: password });
-    if (error) throw error;
-    return (data && data.length) ? data[0] : null;
+    const normalized = demoNormalizeUsername(username);
+    const tryLogin = async (uname) => {
+      const { data, error } = await supa.rpc('verify_password', { p_username: uname, p_password: password });
+      if (error) throw error;
+      return (data && data.length) ? data[0] : null;
+    };
+    let user = await tryLogin(normalized);
+    const aliases = await demoLoadUsernameAliasesForLogin();
+    const aliasForId = user ? aliases.byId?.[user.id] : '';
+    if (user && aliasForId && aliasForId !== user.username && normalized === user.username) return null;
+    if (user && aliasForId) return { ...user, real_username: user.username, username: aliasForId };
+    if (!user) {
+      const realUsername = aliases.byAlias?.[normalized];
+      if (realUsername && realUsername !== normalized) {
+        user = await tryLogin(realUsername);
+        if (user) return { ...user, real_username: realUsername, username: normalized };
+      }
+    }
+    return user;
   },
   async listUsers(callerId) {
     const { data, error } = await supa.rpc('list_users', { p_caller_id: callerId });
@@ -525,10 +541,11 @@ const mktApi = {
     return data;
   },
   async updateUser(callerId, id, username, displayName, role, permissions, status, usernameChanged) {
+    const oldParams = { p_caller_id: callerId, p_id: id, p_display_name: displayName, p_role: role, p_permissions: permissions, p_status: status };
     if (!usernameChanged) {
-      const oldRes = await supa.rpc('update_user', { p_caller_id: callerId, p_id: id, p_display_name: displayName, p_role: role, p_permissions: permissions, p_status: status });
+      const oldRes = await supa.rpc('update_user', oldParams);
       if (oldRes.error) throw oldRes.error;
-      return;
+      return { usernameUpdated: false };
     }
     const nextUsername = demoNormalizeUsername(username);
     const v2Params = { p_caller_id: callerId, p_id: id, p_username: nextUsername, p_display_name: displayName, p_role: role, p_permissions: permissions, p_status: status };
@@ -536,9 +553,14 @@ const mktApi = {
     if (res.error) {
       const msg = String(res.error.message || res.error.details || res.error.code || res.error);
       const missingV2 = /p_username|PGRST202|function|schema cache|Could not find/i.test(msg);
-      if (missingV2) throw new Error('Supabase chua co ham doi username. Hay chay file supabase/04_update_user_username.sql trong SQL Editor roi luu lai.');
+      if (missingV2) {
+        const oldRes = await supa.rpc('update_user', oldParams);
+        if (oldRes.error) throw oldRes.error;
+        return { usernameUpdated: false, aliasFallback: true };
+      }
       throw res.error;
     }
+    return { usernameUpdated: true };
   },
 
   async resetPassword(callerId, id, newPassword) {
@@ -553,6 +575,11 @@ const mktApi = {
     const { data, error } = await supa.rpc('kv_get_all');
     if (error) throw error;
     return data || [];
+  },
+  async kvGet(key) {
+    const { data, error } = await supa.rpc('kv_get', { p_key: key });
+    if (error) throw error;
+    return data || null;
   },
   async kvSet(key, payload, userId) {
     const { error } = await supa.rpc('kv_set', { p_key: key, p_payload: payload, p_user_id: userId });
@@ -610,7 +637,7 @@ const mktApi = {
 /* ═══════════════════════════════════════
    STORAGE — namespace mkt_ + Supabase sync
 ═══════════════════════════════════════ */
-const SYNC_KEYS = ['mkt_b2b_crm_data','mkt_b2b_cost_data','mkt_b2b_assignee_options','mkt_sale_campaigns','mkt_sale_orders','mkt_sale_ads_data','mkt_sale_koc_data','mkt_sale_koc_master','mkt_sale_koc_product_campaigns','mkt_sale_koc_prospects','mkt_sale_koc_collaborations','mkt_sale_koc_collab','mkt_sale_koc_ptlist','mkt_sale_koc_contracts','mkt_sale_inventory','mkt_sale_product_master','mkt_recruitment_campaign_data','mkt_recruitment_msg_data','mkt_data_sources','mkt_google_sheet_configs','mkt_google_sheet_mappings','mkt_sync_logs','mkt_compliance_reviews','mkt_compliance_rules','mkt_product_approved_claims','mkt_product_banned_claims','mkt_compliance_draft'];
+const SYNC_KEYS = ['mkt_b2b_crm_data','mkt_b2b_cost_data','mkt_b2b_assignee_options','mkt_sale_campaigns','mkt_sale_orders','mkt_sale_ads_data','mkt_sale_koc_data','mkt_sale_koc_master','mkt_sale_koc_product_campaigns','mkt_sale_koc_prospects','mkt_sale_koc_collaborations','mkt_sale_koc_collab','mkt_sale_koc_ptlist','mkt_sale_koc_contracts','mkt_sale_inventory','mkt_sale_product_master','mkt_recruitment_campaign_data','mkt_recruitment_msg_data','mkt_data_sources','mkt_google_sheet_configs','mkt_google_sheet_mappings','mkt_sync_logs','mkt_compliance_reviews','mkt_compliance_rules','mkt_product_approved_claims','mkt_product_banned_claims','mkt_compliance_draft','mkt_demo_username_aliases'];
 
 function isSyncKey(k){ return SYNC_KEYS.includes(k); }
 
@@ -686,6 +713,7 @@ let curMod = 'overview';
 /* DEMO_AUTH_VERSION 1 - localStorage login for internal demo only */
 const DEMO_USERS_KEY = 'mkt_demo_users';
 const DEMO_SESSION_KEY = 'mkt_demo_session';
+const DEMO_USERNAME_ALIASES_KEY = 'mkt_demo_username_aliases';
 const DEMO_MODULE_LABELS = {dashboard:'Tổng quan MKT',b2b:'B2B',sale:'Sale Online',hr:'Tuyển dụng',dataSources:'Nguồn dữ liệu',users:'Quản lý user'};
 const DEMO_PERMISSION_PRESETS = {
   none:{label:'Không truy cập', value:{view:false,edit:false,import:false,export:false,manageUsers:false,resetPassword:false}},
@@ -701,6 +729,50 @@ function demoUser(username, password, displayName, role, presets){
   return {username,password,displayName,role,permissions};
 }
 
+function demoCleanUsernameAliases(payload){
+  const src = payload && typeof payload === 'object' ? payload : {};
+  const byId = src.byId && typeof src.byId === 'object' ? src.byId : {};
+  const byAlias = src.byAlias && typeof src.byAlias === 'object' ? src.byAlias : {};
+  return { byId: {...byId}, byAlias: {...byAlias}, updatedAt: src.updatedAt || null };
+}
+function demoGetUsernameAliases(){
+  try { return demoCleanUsernameAliases(JSON.parse(localStorage.getItem(DEMO_USERNAME_ALIASES_KEY) || '{}')); }
+  catch(_) { return demoCleanUsernameAliases(null); }
+}
+function demoSetUsernameAliases(payload){
+  const clean = demoCleanUsernameAliases(payload);
+  try { localStorage.setItem(DEMO_USERNAME_ALIASES_KEY, JSON.stringify(clean)); } catch(_) {}
+  return clean;
+}
+async function demoLoadUsernameAliasesForLogin(){
+  try {
+    const cloud = await mktApi.kvGet(DEMO_USERNAME_ALIASES_KEY);
+    if (cloud) return demoSetUsernameAliases(cloud);
+  } catch(e) { console.warn('[users] alias load failed', e); }
+  return demoGetUsernameAliases();
+}
+function demoApplyUsernameAliases(users){
+  const aliases = demoGetUsernameAliases();
+  return (users||[]).map(u => {
+    const alias = aliases.byId?.[u.id];
+    return alias && alias !== u.username ? { ...u, realUsername: u.username, username: alias } : u;
+  });
+}
+async function demoSaveUsernameAlias(userId, realUsername, aliasUsername, callerId){
+  const aliases = demoGetUsernameAliases();
+  Object.keys(aliases.byAlias || {}).forEach(k => { if (aliases.byAlias[k] === realUsername || k === aliasUsername) delete aliases.byAlias[k]; });
+  if (aliasUsername && realUsername && aliasUsername !== realUsername) {
+    aliases.byId[userId] = aliasUsername;
+    aliases.byAlias[aliasUsername] = realUsername;
+  } else {
+    delete aliases.byId[userId];
+  }
+  aliases.updatedAt = new Date().toISOString();
+  demoSetUsernameAliases(aliases);
+  try { await mktApi.kvSet(DEMO_USERNAME_ALIASES_KEY, aliases, callerId || null); } catch(e) { console.warn('[users] alias save failed', e); }
+  return aliases;
+}
+
 /* Chuyển user từ Supabase (display_name, permissions là preset string) → format demoUser */
 function _supaToDemoUser(supaUser){
   if (!supaUser) return null;
@@ -713,6 +785,7 @@ function _supaToDemoUser(supaUser){
   return {
     id: supaUser.id,
     username: supaUser.username,
+    realUsername: supaUser.real_username || supaUser.realUsername || null,
     displayName: supaUser.display_name || supaUser.displayName || supaUser.username,
     role: supaUser.role,
     status: supaUser.status || 'active',
@@ -743,7 +816,9 @@ async function demoRefreshUsers(){
   if (!u || !u.id) return [];
   try {
     const raw = await mktApi.listUsers(u.id);
-    const users = raw.map(_supaToDemoUser);
+    const cloudAliases = await mktApi.kvGet(DEMO_USERNAME_ALIASES_KEY).catch(()=>null);
+    if (cloudAliases) demoSetUsernameAliases(cloudAliases);
+    const users = demoApplyUsernameAliases(raw.map(_supaToDemoUser));
     demoSetUsers(users);
     return users;
   } catch(e) {
@@ -908,8 +983,14 @@ async function demoSaveUser(oldUsername){
 
   const usernameChanged = newUsername !== u.username;
   try {
+    let updateResult = null;
     if (canManageDemoUsers()) {
-      await mktApi.updateUser(caller.id, u.id, newUsername, newDisplay, u.role, newPresets, null, usernameChanged);
+      updateResult = await mktApi.updateUser(caller.id, u.id, newUsername, newDisplay, u.role, newPresets, null, usernameChanged);
+      if (usernameChanged) {
+        const realUsername = u.realUsername || u.username;
+        if (updateResult?.aliasFallback) await demoSaveUsernameAlias(u.id, realUsername, newUsername, caller.id);
+        else await demoSaveUsernameAlias(u.id, realUsername, realUsername, caller.id);
+      }
     }
     if (canResetDemoPasswords()) {
       const pass = row.querySelector('[data-user-password]')?.value.trim();
@@ -920,7 +1001,7 @@ async function demoSaveUser(oldUsername){
       const fresh = demoGetUsers().find(x => x.id === u.id);
       if (fresh) demoWriteSession({ user: fresh, loginAt: Date.now() });
     }
-    toast('Da luu user.');
+    toast(updateResult?.aliasFallback ? 'Da luu user tu dong. Username moi dung duoc khi dang nhap.' : 'Da luu user.');
     render();
   } catch(e) {
     console.error('[saveUser]', e);
