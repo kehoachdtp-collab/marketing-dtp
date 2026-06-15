@@ -392,34 +392,34 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="login-header">
     <div class="login-company">DTP Sale Online</div>
     <div class="login-dept">MKT <span>Dashboard</span></div>
-    <div class="login-tagline">Vui lÃ²ng Ä‘Äƒng nháº­p báº±ng tÃ i khoáº£n Ä‘Æ°á»£c cáº¥p.</div>
+    <div class="login-tagline">Vui l&#242;ng &#273;&#259;ng nh&#7853;p b&#7857;ng t&#224;i kho&#7843;n &#273;&#432;&#7907;c c&#7845;p.</div>
   </div>
 
   <div class="login-card">
     <section class="login-panel">
-      <div class="login-panel-title">ÄÄƒng nháº­p</div>
-      <div class="login-sub">Nháº­p tÃ i khoáº£n ná»™i bá»™ Ä‘á»ƒ truy cáº­p há»‡ thá»‘ng MKT Dashboard.</div>
+      <div class="login-panel-title">&#272;&#259;ng nh&#7853;p</div>
+      <div class="login-sub">Nh&#7853;p t&#224;i kho&#7843;n n&#7897;i b&#7897; &#273;&#7875; truy c&#7853;p h&#7879; th&#7889;ng MKT Dashboard.</div>
       <form class="login-form" onsubmit="demoLogin(event)">
         <div class="login-field">
-          <label for="demo-username">TÃªn Ä‘Äƒng nháº­p</label>
-          <input id="demo-username" name="username" autocomplete="username" placeholder="username hoáº·c email" required>
+          <label for="demo-username">T&#234;n &#273;&#259;ng nh&#7853;p</label>
+          <input id="demo-username" name="username" autocomplete="username" placeholder="username ho&#7863;c email" required>
         </div>
         <div class="login-field">
-          <label for="demo-password">Máº­t kháº©u</label>
-          <input id="demo-password" name="password" type="password" autocomplete="current-password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢" required>
+          <label for="demo-password">M&#7853;t kh&#7849;u</label>
+          <input id="demo-password" name="password" type="password" autocomplete="current-password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" required>
         </div>
         <div class="login-error" id="login-error"></div>
-        <button class="login-btn" type="submit">ÄÄƒng nháº­p</button>
+        <button class="login-btn" type="submit">&#272;&#259;ng nh&#7853;p</button>
       </form>
-      <div class="login-change-pw"><a onclick="demoChangePwPrompt()">Äá»•i máº­t kháº©u</a></div>
+      <div class="login-change-pw"><a onclick="demoChangePwPrompt()">&#272;&#7893;i m&#7853;t kh&#7849;u</a></div>
     </section>
   </div>
 
   <div class="login-badges" aria-hidden="true">
-    <span>ÄÃºng khÃ¡ch hÃ ng</span>
-    <span>Marketing hiá»‡u quáº£</span>
-    <span>BÃ¡n hÃ ng tá»± Ä‘á»™ng</span>
-    <span>PhÃ¡t triá»ƒn má»—i ngÃ y</span>
+    <span>&#272;&#250;ng kh&#225;ch h&#224;ng</span>
+    <span>Marketing hi&#7879;u qu&#7843;</span>
+    <span>B&#225;n h&#224;ng t&#7921; &#273;&#7897;ng</span>
+    <span>Ph&#225;t tri&#7875;n m&#7895;i ng&#224;y</span>
   </div>
 </div>
 
@@ -3198,7 +3198,7 @@ function readProductApprovedClaims(){ return getStore(COMPLIANCE_KEYS.approvedCl
 function readProductBannedClaims(){ return getStore(COMPLIANCE_KEYS.bannedClaims, []); }
 function splitComplianceLines(text){ return String(text||'').split(/[\n,;]+/).map(s=>s.trim()).filter(Boolean); }
 function saveProductClaims(productCode, approvedText, bannedText){ const approved=readProductApprovedClaims().filter(x=>x.productCode!==productCode); const banned=readProductBannedClaims().filter(x=>x.productCode!==productCode); if(productCode){ approved.push({productCode,claims:splitComplianceLines(approvedText)}); banned.push({productCode,claims:splitComplianceLines(bannedText)}); setStore(COMPLIANCE_KEYS.approvedClaims,approved); setStore(COMPLIANCE_KEYS.bannedClaims,banned); } }
-function complianceNormalize(text){ return String(text||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/Ä‘/g,'d').replace(/\s+/g,' ').trim(); }
+function complianceNormalize(text){ return String(text||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\u0111/g,'d').replace(/\s+/g,' ').trim(); }
 function complianceContains(text, phrase){ const raw=String(text||'').toLowerCase(); const p=String(phrase||'').toLowerCase(); return raw.includes(p)||complianceNormalize(raw).includes(complianceNormalize(p)); }
 function complianceRiskMax(a,b){ return (COMPLIANCE_RISK_ORDER[b]||0)>(COMPLIANCE_RISK_ORDER[a]||0)?b:a; }
 function complianceLooksLikeTPBVSK(input){ const hay=`${input.productType||''} ${input.productName||''} ${input.contentText||''}`; return /tpbvsk|thá»±c pháº©m báº£o vá»‡ sá»©c khá»e|thuc pham bao ve suc khoe|viÃªn uá»‘ng|siro|bá»• sung/i.test(hay)||complianceNormalize(hay).includes('thuc pham bao ve suc khoe'); }
@@ -3979,8 +3979,8 @@ function b2bWriteDupNotes() {
 /* â”€â”€ Excel import â”€â”€ */
 function normH(s) {
   return String(s||'').toLowerCase()
-    .normalize('NFD').replace(/[Ì€-Í¯]/g,'')
-    .replace(/Ä‘/g,'d').replace(/[^a-z0-9]/g,'');
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/\u0111/g,'d').replace(/[^a-z0-9]/g,'');
 }
 function b2bImport(file) {
   if (!file) return;
@@ -4078,7 +4078,7 @@ const GS_COL_MAP = {
   'tinhtranlvvoikhach':        '_tinhTrang',
 };
 
-function _gsNorm(s){ return String(s||'').toLowerCase().replace(/[\s\-\/\(\)\.]/g,'').normalize('NFD').replace(/[Ì€-Í¯]/g,''); }
+function _gsNorm(s){ return String(s||'').toLowerCase().replace(/[\s\-\/\(\)\.]/g,'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
 
 function _parseGsheetCsv(text){
   const rows = []; let cur = [], field = '', inQ = false;
