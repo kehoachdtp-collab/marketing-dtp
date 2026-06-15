@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
@@ -188,6 +188,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .link-cell.editing .link-url-input{display:block}
 .link-edit-btn{border:none;background:#eff6ff;color:#2563eb;border-radius:6px;padding:2px 6px;font-size:11px;cursor:pointer;opacity:.75}
 .link-edit-btn:hover{opacity:1;background:#dbeafe}
+
+.koc-contract-grid{display:grid;grid-template-columns:minmax(360px,1fr) minmax(420px,1.1fr);gap:14px;margin-bottom:14px}
+.koc-contract-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:16px;box-shadow:0 1px 4px rgba(15,23,42,.06)}
+.koc-contract-title{font-size:16px;font-weight:900;color:#0f172a;margin-bottom:4px}.koc-contract-sub{font-size:12.5px;color:#64748b;line-height:1.45;margin-bottom:12px}
+.koc-contract-form{display:grid;grid-template-columns:repeat(2,minmax(160px,1fr));gap:9px}.koc-contract-form .full{grid-column:1/-1}.koc-contract-field{display:grid;gap:5px}
+.koc-contract-field label{font-size:11px;font-weight:850;color:#475569;text-transform:uppercase;letter-spacing:.35px}.koc-contract-field input,.koc-contract-field select,.koc-contract-field textarea{width:100%;border:1px solid #dbe3ef;border-radius:9px;padding:8px 9px;font-size:12.5px;color:#0f172a;background:#fff;outline:none;font-family:inherit}.koc-contract-field textarea{min-height:64px;resize:vertical}.koc-contract-field input:focus,.koc-contract-field select:focus,.koc-contract-field textarea:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.koc-contract-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}.koc-contract-note{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.5;margin-bottom:12px}.koc-contract-warn{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:10px;padding:9px 11px;font-size:12.5px;line-height:1.45;margin-top:10px}
+.koc-contract-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:1080px}.koc-contract-table th{background:#1e2e4a;color:#fff;padding:9px 8px;font-size:10.5px;text-transform:uppercase;text-align:left;white-space:nowrap}.koc-contract-table td{border-bottom:1px solid #eef2f7;padding:8px;vertical-align:top;background:#fff}
+.koc-contract-badge{display:inline-flex;align-items:center;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:850;background:#f1f5f9;color:#334155;white-space:nowrap}.koc-contract-badge.ok{background:#dcfce7;color:#166534}.koc-contract-badge.warn{background:#fff7ed;color:#9a3412}.koc-contract-badge.blue{background:#eff6ff;color:#1d4ed8}.koc-contract-mini{font-size:11.5px;color:#64748b;line-height:1.4;margin-top:3px}.koc-contract-ocr{white-space:pre-wrap;background:#0f172a;color:#dbeafe;border-radius:10px;padding:10px;max-height:170px;overflow:auto;font-size:11.5px;line-height:1.45;margin-top:10px}
+@media(max-width:1100px){.koc-contract-grid{grid-template-columns:1fr}.koc-contract-form{grid-template-columns:1fr}}
+
 /* Compliance moderation - demo local rules only */
 .compliance-grid{display:grid;grid-template-columns:minmax(340px,1fr) minmax(360px,1.2fr);gap:16px;margin-bottom:16px}
 @media(max-width:1100px){.compliance-grid{grid-template-columns:1fr}}
@@ -580,7 +591,7 @@ const mktApi = {
 /* ═══════════════════════════════════════
    STORAGE — namespace mkt_ + Supabase sync
 ═══════════════════════════════════════ */
-const SYNC_KEYS = ['mkt_b2b_crm_data','mkt_b2b_cost_data','mkt_b2b_assignee_options','mkt_sale_campaigns','mkt_sale_orders','mkt_sale_ads_data','mkt_sale_koc_data','mkt_sale_koc_master','mkt_sale_koc_product_campaigns','mkt_sale_koc_prospects','mkt_sale_koc_collaborations','mkt_sale_koc_collab','mkt_sale_koc_ptlist','mkt_sale_inventory','mkt_sale_product_master','mkt_recruitment_campaign_data','mkt_recruitment_msg_data','mkt_data_sources','mkt_google_sheet_configs','mkt_google_sheet_mappings','mkt_sync_logs','mkt_compliance_reviews','mkt_compliance_rules','mkt_product_approved_claims','mkt_product_banned_claims','mkt_compliance_draft'];
+const SYNC_KEYS = ['mkt_b2b_crm_data','mkt_b2b_cost_data','mkt_b2b_assignee_options','mkt_sale_campaigns','mkt_sale_orders','mkt_sale_ads_data','mkt_sale_koc_data','mkt_sale_koc_master','mkt_sale_koc_product_campaigns','mkt_sale_koc_prospects','mkt_sale_koc_collaborations','mkt_sale_koc_collab','mkt_sale_koc_ptlist','mkt_sale_koc_contracts','mkt_sale_inventory','mkt_sale_product_master','mkt_recruitment_campaign_data','mkt_recruitment_msg_data','mkt_data_sources','mkt_google_sheet_configs','mkt_google_sheet_mappings','mkt_sync_logs','mkt_compliance_reviews','mkt_compliance_rules','mkt_product_approved_claims','mkt_product_banned_claims','mkt_compliance_draft'];
 
 function isSyncKey(k){ return SYNC_KEYS.includes(k); }
 
@@ -642,6 +653,7 @@ const K = {
   kocColl  : 'mkt_sale_koc_collaborations',    /* legacy — migration */
   kocCollab: 'mkt_sale_koc_collab',            /* legacy — migration */
   kocPtList: 'mkt_sale_koc_ptlist',
+  kocContracts: 'mkt_sale_koc_contracts',
   saleInv  : 'mkt_sale_inventory',
   saleMst  : 'mkt_sale_product_master',
   rcCamp   : 'mkt_recruitment_campaign_data',
@@ -1546,7 +1558,6 @@ function _b2bLeads() {
         <input type="file" accept=".xlsx,.xls,.csv" style="display:none"
           onchange="b2bImport(this.files[0]);this.value=''">
       </label>
-      <button class="btn" style="background:#34a853;color:#fff;border-color:#34a853" onclick="b2bImportGSheet()">📊 Đồng bộ Google Sheets</button>
       <button class="btn btn-primary" onclick="b2bAddRow()">＋ Thêm lead mới</button>
       <button class="btn" onclick="b2bSaveData()">💾 Lưu</button>
     </div>
@@ -1706,6 +1717,7 @@ const KOC_SUBTABS = [
   {id:'scripts',  l:'📝 Kịch bản'},
   {id:'prod',     l:'🔗 KOC theo SP/CD'},
   {id:'collab',   l:'🤝 KOC hợp tác'},
+  {id:'contracts', l:'&#128196; H&#7907;p &#273;&#7891;ng'},
   {id:'report',   l:'📈 Báo cáo'},
 ];
 const KOC_NEN_TANG     = ['','TikTok','Facebook','Instagram','YouTube','Shopee Affiliate','Khác'];
@@ -1805,6 +1817,7 @@ let saleTab = 'overview';
 /* ── KOC 2-layer state ── */
 let kocMstRows  = [];   // KOC MASTER — mkt_sale_koc_master
 let kocProdRows = [];   // KOC × SP/CD — mkt_sale_koc_product_campaigns
+let kocContractRows = []; // KOC contracts by KOC + product
 let kocSubTab   = 'overview'; // overview | master | prod | collab | report
 let kocPtList   = ['Hạ','Ngân','Hồng','Nghi','Chị Hiền','Agency'];
 let _kocImportPendingWb = null;
@@ -1821,6 +1834,7 @@ function _kocNextMa() {
 function _kocSaveAll() {
   setStore(K.kocMst,  kocMstRows);
   setStore(K.kocProd, kocProdRows);
+  setStore(K.kocContracts, kocContractRows);
   setStore(K.saleKoc, kocProdRows); /* backward compat cho calcSale */
 }
 
@@ -1861,6 +1875,7 @@ function saleLoad() {
   saleInvRows   = getSaleInventory();
   saleMstRows   = getSaleMaster();
   kocPtList     = getStore(K.kocPtList, kocPtList);
+  kocContractRows = getStore(K.kocContracts, []);
 
   const hasMst  = getStore(K.kocMst, null);
   const hasProd = getStore(K.kocProd, null);
@@ -2153,7 +2168,7 @@ function _saleKocTab() {
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 12px;align-items:center">
       ${actions.join('')}
     </div>`;
-  const renderers = {overview:renderKocOverview,master:renderKocMaster,scripts:renderKocScripts,prod:renderKocProductCampaign,collab:renderKocCollaboration,compliance:renderKocCompliance,report:renderKocReport};
+  const renderers = {overview:renderKocOverview,master:renderKocMaster,scripts:renderKocScripts,prod:renderKocProductCampaign,collab:renderKocCollaboration,contracts:renderKocContracts,compliance:renderKocCompliance,report:renderKocReport};
   const body = (renderers[kocSubTab] || renderKocOverview)();
   return nav + body;
 }
@@ -2163,10 +2178,38 @@ function renderKocScripts(){ return _kocScripts(); }
 function renderKocProductCampaign(){ return _kocProdCamp(); }
 function renderKocCollaboration(){ return _kocCollabView(); }
 function renderKocReport(){ return _kocReport(); }
+function renderKocContracts(){ return _kocContracts(); }
 
 /* ════════════════════════════════════════════════════════════
    KỊCH BẢN — placeholder UI (chờ wire Supabase + OpenAI)
 ════════════════════════════════════════════════════════════ */
+
+/* KOC contracts - demo static Word export */
+const KOC_CONTRACT_TEMPLATES=[{id:'nadi_food_contract',kind:'contract',productType:'food',label:'H&#272; Booking KOC Nadi (th&#7921;c ph&#7849;m)',file:'assets/contracts/hd-booking-koc-nadi.docx'},{id:'nadi_acceptance',kind:'acceptance',productType:'food',label:'Bi&#234;n b&#7843;n nghi&#7879;m thu Nadi',file:'assets/contracts/bien-ban-nghiem-thu-nadi.docx'},{id:'dtp_laforin_contract',kind:'contract',productType:'cosmetic',label:'H&#7907;p &#273;&#7891;ng KOC Laforin Stick (m&#7929; ph&#7849;m)',file:'assets/contracts/hop-dong-koc-stick-2.docx'}];
+const KOC_CONTRACT_STATUS=[['draft','Nh&#225;p'],['exported','&#272;&#227; xu&#7845;t file'],['sent','&#272;&#227; g&#7917;i KOC'],['signed','&#272;&#227; k&#253;'],['accepted','&#272;&#227; nghi&#7879;m thu']];
+function kocContractTpl(id){return KOC_CONTRACT_TEMPLATES.find(t=>t.id===id)||KOC_CONTRACT_TEMPLATES[0]}function kocContractSaveRows(){setStore(K.kocContracts,kocContractRows)}function kocContractId(){return 'kc_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8)}function kocContractMoney(v){const n=+v||0;return n?n.toLocaleString('vi-VN')+' &#273;':''}function kocContractText(v){return esc(v==null?'':String(v))}function kocContractDateToday(){const d=new Date();return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`}function kocContractFileName(s){return String(s||'hop-dong-koc').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\u0111/g,'d').replace(/[^a-zA-Z0-9 _.-]+/g,'-').replace(/\s+/g,' ').trim().slice(0,120)||'hop-dong-koc'}
+function kocContractDealOptions(){const opts=['<option value="">Ch&#7885;n d&#242;ng KOC + s&#7843;n ph&#7849;m/chi&#7871;n d&#7883;ch</option>'];kocProdRows.forEach(r=>{const label=`${r.maKoc||''} - ${_kocDisplayName(r)||r.tenKoc||''} | ${r.tenSp||r.maSp||'Chua co SP'} | ${r.tenCd||r.maCd||''}`;opts.push(`<option value="${esc(r.id)}">${esc(label)}</option>`)});return opts.join('')}function kocContractKocOptions(selected){return '<option value="">Ch&#7885;n KOC</option>'+kocMstRows.map(k=>`<option value="${esc(k.maKoc||'')}" ${selected===k.maKoc?'selected':''}>${esc(k.maKoc||'')} - ${esc(k.ten||'')}</option>`).join('')}function kocContractTplOptions(selected){return KOC_CONTRACT_TEMPLATES.map(t=>`<option value="${t.id}" ${selected===t.id?'selected':''}>${t.label}</option>`).join('')}function kocContractStatusOptions(selected){return KOC_CONTRACT_STATUS.map(([id,label])=>`<option value="${id}" ${selected===id?'selected':''}>${label}</option>`).join('')}function kocContractSet(id,value){const el=document.getElementById(id);if(el)el.value=value||''}function kocContractVal(id){return document.getElementById(id)?.value?.trim()||''}
+function kocContractPickDeal(dealId){const r=kocProdRows.find(x=>String(x.id)===String(dealId));if(!r)return;kocContractSet('kc_deal_id',String(r.id));kocContractSet('kc_ma_koc',r.maKoc||'');kocContractSet('kc_product',r.tenSp||r.maSp||'');kocContractSet('kc_campaign',r.tenCd||r.maCd||'');kocContractSet('kc_fee',+r.chiPhiBooking||'');kocContractSet('kc_video_link',r.linkVideo||'');const master=_kocMasterByCode(r.maKoc);if(master){kocContractSet('kc_full_name',master.ten||r.tenKoc||'');kocContractSet('kc_phone',master.lienHe||'')}const p=`${r.tenSp||''} ${r.maSp||''}`.toLowerCase();kocContractSet('kc_template',/laforin|stick/.test(p)?'dtp_laforin_contract':'nadi_food_contract')}
+function kocContractReadForm(){const maKoc=kocContractVal('kc_ma_koc');const master=_kocMasterByCode(maKoc);return{id:kocContractVal('kc_record_id')||kocContractId(),dealId:kocContractVal('kc_deal_id'),maKoc,kocName:kocContractVal('kc_full_name')||master?.ten||'',templateId:kocContractVal('kc_template')||'nadi_food_contract',status:kocContractVal('kc_status')||'draft',contractNo:kocContractVal('kc_contract_no'),signDate:kocContractVal('kc_sign_date')||kocContractDateToday(),productName:kocContractVal('kc_product'),campaignName:kocContractVal('kc_campaign'),fee:+kocContractVal('kc_fee')||0,videoLink:kocContractVal('kc_video_link'),cccd:kocContractVal('kc_cccd'),dob:kocContractVal('kc_dob'),issueDate:kocContractVal('kc_issue_date'),issuePlace:kocContractVal('kc_issue_place')||'B\u1ed9 C\u00f4ng An',address:kocContractVal('kc_address'),phone:kocContractVal('kc_phone'),taxCode:kocContractVal('kc_tax'),bankNo:kocContractVal('kc_bank_no'),bankName:kocContractVal('kc_bank_name'),email:kocContractVal('kc_email'),notes:kocContractVal('kc_notes'),updatedAt:new Date().toISOString()}}
+
+function kocContractClearForm(){['kc_record_id','kc_deal_id','kc_ma_koc','kc_full_name','kc_contract_no','kc_product','kc_campaign','kc_fee','kc_video_link','kc_cccd','kc_dob','kc_issue_date','kc_address','kc_phone','kc_tax','kc_bank_no','kc_bank_name','kc_email','kc_notes'].forEach(id=>kocContractSet(id,''));kocContractSet('kc_template','nadi_food_contract');kocContractSet('kc_status','draft');kocContractSet('kc_sign_date',kocContractDateToday());kocContractSet('kc_issue_place','B\u1ed9 C\u00f4ng An');const o=document.getElementById('kc_ocr_output');if(o)o.textContent=''}
+
+function kocContractSaveFromForm(downloadAfter){if(!canEditMod('sale')){toast('Ban khong co quyen sua Sale Online.');return}const row=kocContractReadForm();if(!row.maKoc&&!row.kocName){toast('Vui long chon KOC hoac nhap ten KOC.');return}if(!row.productName){toast('Vui long nhap san pham cho hop dong.');return}const old=kocContractRows.find(x=>x.id===row.id);if(old)Object.assign(old,row);else kocContractRows.unshift({...row,createdAt:new Date().toISOString()});kocContractSaveRows();toast(downloadAfter?'Da luu ho so, dang xuat Word...':'Da luu ho so hop dong.');const id=row.id;saleRerender();if(downloadAfter)setTimeout(()=>kocContractExport(id),80)}
+
+function kocContractEdit(id){const r=kocContractRows.find(x=>x.id===id);if(!r)return;const set=(k,v)=>kocContractSet(k,v||'');set('kc_record_id',r.id);set('kc_deal_id',r.dealId);set('kc_ma_koc',r.maKoc);set('kc_template',r.templateId);set('kc_status',r.status);set('kc_full_name',r.kocName);set('kc_contract_no',r.contractNo);set('kc_sign_date',r.signDate);set('kc_product',r.productName);set('kc_campaign',r.campaignName);set('kc_fee',r.fee||'');set('kc_video_link',r.videoLink);set('kc_cccd',r.cccd);set('kc_dob',r.dob);set('kc_issue_date',r.issueDate);set('kc_issue_place',r.issuePlace);set('kc_address',r.address);set('kc_phone',r.phone);set('kc_tax',r.taxCode);set('kc_bank_no',r.bankNo);set('kc_bank_name',r.bankName);set('kc_email',r.email);set('kc_notes',r.notes);document.getElementById('kc_contract_form')?.scrollIntoView({behavior:'smooth',block:'start'})}function kocContractDelete(id){if(!confirm('Xoa ho so hop dong nay?'))return;kocContractRows=kocContractRows.filter(x=>x.id!==id);kocContractSaveRows();saleRerender()}function kocContractStatusLabel(status){return KOC_CONTRACT_STATUS.find(x=>x[0]===status)?.[1]||status||'Nh&#225;p'}function kocContractTemplateLabel(id){return kocContractTpl(id).label}function kocContractTemplateLink(){const t=kocContractTpl(kocContractVal('kc_template'));window.open(t.file,'_blank','noopener')}
+
+function kocContractParseCccdText(text){const raw=String(text||'').replace(/\r/g,'\n');const lines=raw.split('\n').map(s=>s.trim()).filter(Boolean);const flat=lines.join(' ');const dates=flat.match(/\b\d{2}[\/.-]\d{2}[\/.-]\d{4}\b/g)||[];const cccd=(flat.match(/\b\d{12}\b/)||flat.match(/\b\d{9}\b/)||[''])[0];let name='';for(let i=0;i<lines.length;i++){const n=complianceNormalize(lines[i]);if(/ho va ten|full name|name/.test(n)&&lines[i+1]){name=lines[i+1];break}}if(!name){const skip=/can cuoc|cong hoa|socialist|identity|viet nam|quoc tich|nationality|gioi tinh|sex|sinh|date|noi thuong tru|place|ngay cap|expiry/i;name=lines.find(l=>{const n=complianceNormalize(l);return n.split(/\s+/).length>=2&&/[a-z]/i.test(n)&&!skip.test(n)&&!/[0-9]{4,}/.test(n)})||''}let address='';for(let i=0;i<lines.length;i++){const n=complianceNormalize(lines[i]);if(/noi thuong tru|place of residence|dia chi/.test(n)){address=[lines[i].replace(/.*?:/, '').trim(),lines[i+1],lines[i+2]].filter(Boolean).join(' ');break}}return{name,cccd,dob:dates[0]||'',issueDate:dates[1]||dates[dates.length-1]||'',address,issuePlace:'B\u1ed9 C\u00f4ng An',raw}}
+
+async function kocContractReadCccd(file){if(!file)return;if(typeof Tesseract==='undefined'){toast('Tesseract OCR chua san sang.');return}const out=document.getElementById('kc_ocr_output');if(out)out.textContent='Dang doc anh CCCD...';try{let res;try{res=await Tesseract.recognize(file,'vie+eng')}catch(_){res=await Tesseract.recognize(file,'eng')}const text=res?.data?.text||'';const p=kocContractParseCccdText(text);if(p.name)kocContractSet('kc_full_name',p.name);if(p.cccd)kocContractSet('kc_cccd',p.cccd);if(p.dob)kocContractSet('kc_dob',p.dob);if(p.issueDate)kocContractSet('kc_issue_date',p.issueDate);if(p.issuePlace)kocContractSet('kc_issue_place',p.issuePlace);if(p.address)kocContractSet('kc_address',p.address);if(out)out.textContent=text||'Khong doc duoc noi dung anh.';toast('Da doc CCCD, vui long kiem tra lai thong tin.')}catch(e){if(out)out.textContent='Loi OCR: '+(e.message||e);toast('Khong doc duoc CCCD. Hay nhap tay thong tin.')}}
+
+function kocContractSimpleWord(d){const t=kocContractTpl(d.templateId);const isAcc=t.kind==='acceptance';const company=t.productType==='food'?'C&#212;NG TY TNHH D&#431;&#7906;C PH&#7848;M NADIPHARCO':'C&#212;NG TY C&#7892; PH&#7846;N D&#431;&#7906;C PH&#7848;M DTP';const product=d.productName||'';const fee=kocContractMoney(d.fee)||'................................';const title=isAcc?'BI&#202;N B&#7842;N NGHI&#7878;M THU & X&#193;C NH&#7852;N HI&#7878;U QU&#7842; VIDEO KOC':'H&#7906;P &#272;&#7890;NG D&#7882;CH V&#7908;';const action=isAcc?'nghi&#7879;m thu':'h&#7907;p t&#225;c d&#7883;ch v&#7909;';return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>@page{size:A4;margin:2cm}body{font-family:'Times New Roman',serif;font-size:13pt;line-height:1.35}.center{text-align:center}.bold{font-weight:bold}.title{font-size:16pt;font-weight:bold;text-align:center;margin:18px 0}.sec{font-weight:bold;margin-top:12px}.sig{display:flex;justify-content:space-between;margin-top:42px}.sig>div{width:44%;text-align:center}.table{width:100%;border-collapse:collapse}.table td{border:1px solid #000;padding:6px}</style></head><body><div class="center bold">${company}</div><div class="center bold">C&#7896;NG H&#210;A X&#195; H&#7896;I CH&#7910; NGH&#296;A VI&#7878;T NAM</div><div class="center">&#272;&#7897;c l&#7853;p - T&#7921; do - H&#7841;nh ph&#250;c</div><div class="title">${title}</div><div class="center bold">S&#7889;: ${kocContractText(d.contractNo||'.../KOC/2026')}</div><p>H&#244;m nay, ng&#224;y ${kocContractText(d.signDate)}, hai b&#234;n th&#7889;ng nh&#7845;t n&#7897;i dung ${action} KOC nh&#432; sau:</p><p class="sec">B&#202;N A: ${company}</p><p class="sec">B&#202;N B: ${kocContractText(d.kocName)}</p><p>Sinh ng&#224;y: ${kocContractText(d.dob)}; S&#7889; CCCD: ${kocContractText(d.cccd)}; Ng&#224;y c&#7845;p: ${kocContractText(d.issueDate)}; N&#417;i c&#7845;p: ${kocContractText(d.issuePlace||'B\u1ed9 C\u00f4ng An')}</p><p>&#272;&#7883;a ch&#7881;: ${kocContractText(d.address)}</p><p>&#272;i&#7879;n tho&#7841;i: ${kocContractText(d.phone)}; MST c&#225; nh&#226;n: ${kocContractText(d.taxCode||d.cccd)}; Email: ${kocContractText(d.email)}</p><p>T&#224;i kho&#7843;n: ${kocContractText(d.bankNo)} t&#7841;i ${kocContractText(d.bankName)}</p><p class="sec">&#272;i&#7873;u 1. N&#7897;i dung c&#244;ng vi&#7879;c</p><table class="table"><tr><td>S&#7843;n ph&#7849;m/chi&#7871;n d&#7883;ch</td><td>${kocContractText(product)} ${d.campaignName?'- '+kocContractText(d.campaignName):''}</td></tr><tr><td>Link video/profile</td><td>${kocContractText(d.videoLink)}</td></tr><tr><td>Chi ph&#237;/th&#249; lao</td><td>${fee}</td></tr><tr><td>Ghi ch&#250;/KPI</td><td>${kocContractText(d.notes)}</td></tr></table><p class="sec">&#272;i&#7873;u 2. Cam k&#7871;t</p><p>B&#234;n B cam k&#7871;t th&#7921;c hi&#7879;n &#273;&#250;ng brief, &#273;&#259;ng video c&#244;ng khai theo th&#7887;a thu&#7853;n, kh&#244;ng vi ph&#7841;m quy &#273;&#7883;nh qu&#7843;ng c&#225;o v&#224; cung c&#7845;p th&#244;ng tin nghi&#7879;m thu/thanh to&#225;n h&#7907;p l&#7879;.</p><p class="sec">&#272;i&#7873;u 3. Hi&#7879;u l&#7921;c</p><p>V&#259;n b&#7843;n n&#224;y &#273;&#432;&#7907;c l&#7853;p th&#224;nh 02 b&#7843;n c&#243; gi&#225; tr&#7883; ph&#225;p l&#253; nh&#432; nhau, m&#7895;i b&#234;n gi&#7919; 01 b&#7843;n.</p><div class="sig"><div><b>&#272;&#7840;I DI&#7878;N B&#202;N A</b><br><br><br><br></div><div><b>B&#202;N B</b><br><br><br><br>${kocContractText(d.kocName)}</div></div></body></html>`}
+
+function kocContractExport(id){const d=kocContractRows.find(x=>x.id===id)||kocContractReadForm();const blob=new Blob(['\ufeff',kocContractSimpleWord(d)],{type:'application/msword;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=kocContractFileName(`${kocContractTpl(d.templateId).kind==='acceptance'?'bien-ban-nghiem-thu':'hop-dong'}-${d.kocName||d.maKoc}-${d.productName}`)+'.doc';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},300);if(d.id){const r=kocContractRows.find(x=>x.id===d.id);if(r&&r.status==='draft'){r.status='exported';kocContractSaveRows()}}}
+function kocContractAttachSigned(id,file){if(!file)return;const r=kocContractRows.find(x=>x.id===id);if(!r)return;const meta={name:file.name,size:file.size,type:file.type,attachedAt:new Date().toISOString()};const finish=()=>{r.signedFile=meta;r.status='signed';kocContractSaveRows();saleRerender();toast('Da dinh kem file da ky.')};if(file.size>850000){meta.note='File lon, chi luu ten file trong demo de tranh qua dung luong localStorage.';finish();return}const reader=new FileReader();reader.onload=()=>{meta.dataUrl=reader.result;finish()};reader.readAsDataURL(file)}
+
+function kocContractRenderRows(){if(!kocContractRows.length)return `<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:20px">Ch&#432;a c&#243; h&#7907;p &#273;&#7891;ng n&#224;o. Ch&#7885;n KOC, nh&#7853;p CCCD v&#224; b&#7845;m L&#432;u h&#7891; s&#417;.</td></tr>`;return kocContractRows.map(r=>{const signed=r.signedFile?(r.signedFile.dataUrl?`<a class="link-url" href="${r.signedFile.dataUrl}" download="${esc(r.signedFile.name)}">${esc(r.signedFile.name)}</a>`:`<span class="koc-contract-badge ok">${esc(r.signedFile.name)}</span><div class="koc-contract-mini">File l&#7899;n: demo ch&#7881; l&#432;u t&#234;n.</div>`):'<span class="koc-contract-badge warn">Ch&#432;a &#273;&#237;nh k&#232;m</span>';return `<tr><td><b>${esc(r.kocName||'')}</b><div class="koc-contract-mini">${esc(r.maKoc||'')}</div></td><td>${esc(r.productName||'')}<div class="koc-contract-mini">${esc(r.campaignName||'')}</div></td><td>${kocContractTemplateLabel(r.templateId)}</td><td><span class="koc-contract-badge blue">${kocContractStatusLabel(r.status)}</span></td><td>${esc(r.contractNo||'')}<div class="koc-contract-mini">${esc(r.signDate||'')}</div></td><td>${kocContractMoney(r.fee)}</td><td>${signed}</td><td><button class="btn" onclick="kocContractEdit('${r.id}')">S&#7917;a</button> <button class="btn" onclick="kocContractExport('${r.id}')">T&#7843;i Word</button><label class="btn" style="display:inline-block;margin-top:6px"><input type="file" style="display:none" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onchange="kocContractAttachSigned('${r.id}',this.files[0])">&#272;&#237;nh k&#232;m &#273;&#227; k&#253;</label> <button class="btn" style="color:#dc2626;border-color:#fecaca" onclick="kocContractDelete('${r.id}')">X&#243;a</button></td></tr>`}).join('')}
+function _kocContracts(){if(!canViewMod('sale'))return demoAccessDeniedHtml();const canEdit=canEditMod('sale');return `<div class="page-header"><div class="page-title">&#128196; H&#7907;p &#273;&#7891;ng KOC</div><div class="page-sub">T&#7841;o h&#7907;p &#273;&#7891;ng/bi&#234;n b&#7843;n nghi&#7879;m thu theo t&#7915;ng KOC + s&#7843;n ph&#7849;m. OCR CCCD l&#224; demo, lu&#244;n ki&#7875;m tra l&#7841;i tr&#432;&#7899;c khi g&#7917;i KOC k&#253;.</div></div><div class="koc-contract-note">M&#7851;u g&#7889;c &#273;&#227; l&#432;u: Nadi th&#7921;c ph&#7849;m, Bi&#234;n b&#7843;n nghi&#7879;m thu Nadi, Laforin Stick m&#7929; ph&#7849;m. B&#7843;n demo xu&#7845;t Word .doc t&#7915; d&#7919; li&#7879;u &#273;&#227; &#273;i&#7873;n; file DOCX g&#7889;c c&#243; th&#7875; t&#7843;i v&#7873; &#273;&#7875; &#273;&#7889;i chi&#7871;u.</div><div class="koc-contract-grid" id="kc_contract_form"><section class="koc-contract-card"><div class="koc-contract-title">1. Th&#244;ng tin h&#7907;p &#273;&#7891;ng</div><div class="koc-contract-sub">Ch&#7885;n d&#242;ng KOC theo s&#7843;n ph&#7849;m/chi&#7871;n d&#7883;ch &#273;&#7875; t&#7921; &#273;i&#7873;n t&#234;n, s&#7843;n ph&#7849;m, chi ph&#237; booking.</div><div class="koc-contract-form"><input type="hidden" id="kc_record_id"><input type="hidden" id="kc_deal_id"><div class="koc-contract-field full"><label>D&#242;ng KOC + s&#7843;n ph&#7849;m/chi&#7871;n d&#7883;ch</label><select onchange="kocContractPickDeal(this.value)">${kocContractDealOptions()}</select></div><div class="koc-contract-field"><label>KOC</label><select id="kc_ma_koc" onchange="const m=_kocMasterByCode(this.value); if(m){kocContractSet('kc_full_name',m.ten); kocContractSet('kc_phone',m.lienHe)}">${kocContractKocOptions('')}</select></div><div class="koc-contract-field"><label>M&#7851;u</label><select id="kc_template">${kocContractTplOptions('nadi_food_contract')}</select></div><div class="koc-contract-field"><label>Tr&#7841;ng th&#225;i</label><select id="kc_status">${kocContractStatusOptions('draft')}</select></div><div class="koc-contract-field"><label>S&#7889; H&#272;/BBNT</label><input id="kc_contract_no" placeholder="VD: .../KOC/2026"></div><div class="koc-contract-field"><label>Ng&#224;y k&#253;</label><input id="kc_sign_date" value="${kocContractDateToday()}" placeholder="DD/MM/YYYY"></div><div class="koc-contract-field"><label>S&#7843;n ph&#7849;m</label><input id="kc_product" placeholder="Laforin Stick / Nadibaby..."></div><div class="koc-contract-field"><label>Chi&#7871;n d&#7883;ch</label><input id="kc_campaign"></div><div class="koc-contract-field"><label>Chi ph&#237; booking</label><input id="kc_fee" type="number" min="0"></div><div class="koc-contract-field"><label>Link video/profile</label><input id="kc_video_link" placeholder="https://..."></div><div class="koc-contract-field full"><label>Ghi ch&#250; / KPI nghi&#7879;m thu</label><textarea id="kc_notes" placeholder="VD: KPI view, deadline, ghi ch&#250; thanh to&#225;n..."></textarea></div></div><div class="koc-contract-actions"><button class="btn" onclick="kocContractClearForm()">H&#7891; s&#417; m&#7899;i</button><button class="btn" onclick="kocContractTemplateLink()">T&#7843;i m&#7851;u g&#7889;c</button><button class="btn btn-primary" onclick="kocContractSaveFromForm(false)" ${canEdit?'':'disabled'}>L&#432;u h&#7891; s&#417;</button><button class="btn btn-primary" onclick="kocContractSaveFromForm(true)" ${canEdit?'':'disabled'}>T&#7841;o & t&#7843;i Word</button></div></section><section class="koc-contract-card"><div class="koc-contract-title">2. CCCD & th&#244;ng tin thanh to&#225;n</div><div class="koc-contract-sub">&#272;&#237;nh k&#232;m &#7843;nh CCCD &#273;&#7875; OCR t&#7921; g&#7907;i &#253;. C&#7847;n ki&#7875;m tra l&#7841;i v&#236; OCR c&#243; th&#7875; sai d&#7845;u/s&#7889;.</div><div class="koc-contract-form"><div class="koc-contract-field full"><label>&#7842;nh CCCD</label><input type="file" accept="image/*" onchange="kocContractReadCccd(this.files[0])"></div><div class="koc-contract-field"><label>H&#7885; t&#234;n</label><input id="kc_full_name"></div><div class="koc-contract-field"><label>S&#7889; CCCD</label><input id="kc_cccd"></div><div class="koc-contract-field"><label>Ng&#224;y sinh</label><input id="kc_dob" placeholder="DD/MM/YYYY"></div><div class="koc-contract-field"><label>Ng&#224;y c&#7845;p</label><input id="kc_issue_date" placeholder="DD/MM/YYYY"></div><div class="koc-contract-field"><label>N&#417;i c&#7845;p</label><input id="kc_issue_place" value="B&#7897; C&#244;ng An"></div><div class="koc-contract-field"><label>S&#272;T</label><input id="kc_phone"></div><div class="koc-contract-field full"><label>&#272;&#7883;a ch&#7881; th&#432;&#7901;ng tr&#250;/qu&#234; qu&#225;n</label><input id="kc_address"></div><div class="koc-contract-field"><label>MST c&#225; nh&#226;n</label><input id="kc_tax"></div><div class="koc-contract-field"><label>Email</label><input id="kc_email"></div><div class="koc-contract-field"><label>S&#7889; t&#224;i kho&#7843;n</label><input id="kc_bank_no"></div><div class="koc-contract-field"><label>Ng&#226;n h&#224;ng</label><input id="kc_bank_name"></div></div><div class="koc-contract-ocr" id="kc_ocr_output"></div><div class="koc-contract-warn">L&#432;u &#253; b&#7843;o m&#7853;t: &#7843;nh CCCD kh&#244;ng &#273;&#432;&#7907;c upload l&#234;n server trong phase demo; OCR ch&#7841;y tr&#234;n tr&#236;nh duy&#7879;t. Ch&#7881; l&#432;u th&#244;ng tin text b&#7841;n x&#225;c nh&#7853;n v&#224;o h&#7891; s&#417; h&#7907;p &#273;&#7891;ng.</div></section></div><section class="koc-contract-card"><div class="user-admin-head"><div><div class="koc-contract-title">Danh s&#225;ch h&#7907;p &#273;&#7891;ng theo KOC + s&#7843;n ph&#7849;m</div><div class="koc-contract-sub">M&#7895;i d&#242;ng l&#432;u m&#7897;t h&#7891; s&#417; h&#7907;p &#273;&#7891;ng/bi&#234;n b&#7843;n v&#224; file &#273;&#227; k&#253; n&#7871;u c&#243;.</div></div></div><div class="tbl-wrap"><table class="koc-contract-table"><thead><tr><th>KOC</th><th>S&#7843;n ph&#7849;m/CD</th><th>M&#7851;u</th><th>Tr&#7841;ng th&#225;i</th><th>S&#7889;/ng&#224;y</th><th>Chi ph&#237;</th><th>File &#273;&#227; k&#253;</th><th>Thao t&#225;c</th></tr></thead><tbody>${kocContractRenderRows()}</tbody></table></div></section>`}
+
 let scriptTab = 'all';
 let _scriptsCache = null;
 let _scriptsLoading = false;
@@ -4035,502 +4078,6 @@ function b2bImport(file) {
   reader.readAsBinaryString(file);
 }
 
-/* ── Import từ Google Sheets (CSV export công khai) ── */
-const B2B_GSHEET_URL = 'https://docs.google.com/spreadsheets/d/1_dv5ookBwgPnZkavXtM8ZjU3_fXPRTqcHQYEclqQ7nc/export?format=csv&gid=1327429157';
-
-// Map header Google Sheet → field B2B
-const GS_COL_MAP = {
-  'ngàynhậndata':       'ngayNhanData',
-  'ngaynhandata':       'ngayNhanData',
-  'kênh':               'kenh',
-  'kenh':               'kenh',
-  'têncôngty':          'tenCty',
-  'tencongty':          'tenCty',
-  'mst':                'mst',
-  'địachỉ':             'diaChi',
-  'diachi':             'diaChi',
-  'ngườiliênhệ':        'nguoiLH',
-  'nguoilienhe':        'nguoiLH',
-  'sốđiệnthoại':        'sdt',
-  'sodienthoai':        'sdt',
-  'quymonhansu':        'quyMo',
-  'quymônhânsự':        'quyMo',
-  'giờhẹn':             'gioGoi',
-  'giohen':             'gioGoi',
-  'ngườitrực':          'ptTruc',
-  'nguoitruc':          'ptTruc',
-  'ngàyphâncônggọi':    'ngayPhanCong',
-  'ngayphancongqoi':    'ngayPhanCong',
-  'ngayphancong':       'ngayPhanCong',
-  'đãgọiđiệnhaychưa':   '_daGoi',
-  'dagoidienhaychua':   '_daGoi',
-  'đãgọi':              '_daGoi',
-  'ngườigọi':           'ptGoi',
-  'nguoigoi':           'ptGoi',
-  'phụtráchauhikigặp':  'ptSauGap',
-  'phutrachsaukhigap':  'ptSauGap',
-  'đánhgiásaugặp':      'danhGiaSauGap',
-  'danhgiasaugap':      'danhGiaSauGap',
-  'đánhgiásơbộ':        'danhGiaSoBo',
-  'danhgiasonbo':       'danhGiaSoBo',
-  'tìnhtrạnglàmviệcvớikhách': '_tinhTrang',
-  'tinhtrạnglvvoikhach':       '_tinhTrang',
-  'tinhtranlvvoikhach':        '_tinhTrang',
-};
-
-function _gsNorm(s){ return String(s||'').toLowerCase().replace(/[\s\-\/\(\)\.]/g,'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
-
-function _parseGsheetCsv(text){
-  const rows = []; let cur = [], field = '', inQ = false;
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    if (inQ) {
-      if (ch === '"') { if (text[i+1]==='"') { field += '"'; i++; } else inQ = false; }
-      else field += ch;
-    } else {
-      if (ch === '"') { inQ = true; }
-      else if (ch === ',') { cur.push(field); field = ''; }
-      else if (ch === '\n') { cur.push(field); rows.push(cur); cur = []; field = ''; }
-      else if (ch !== '\r') field += ch;
-    }
-  }
-  if (field || cur.length) { cur.push(field); rows.push(cur); }
-  return rows;
-}
-
-async function b2bImportGSheet(){
-  toast('📊 Đang tải dữ liệu từ Google Sheets...');
-  try {
-    const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(B2B_GSHEET_URL);
-    let csvText;
-    try {
-      const r = await fetch(proxyUrl);
-      const j = await r.json();
-      csvText = j.contents;
-    } catch {
-      // Thử trực tiếp nếu proxy fail
-      const r = await fetch(B2B_GSHEET_URL);
-      csvText = await r.text();
-    }
-    if (!csvText || csvText.length < 50) { toast('❌ Không tải được dữ liệu từ Google Sheets.'); return; }
-
-    const rows = _parseGsheetCsv(csvText);
-    if (!rows.length) { toast('⚠️ Sheet trống!'); return; }
-
-    // Build column index
-    const headers = (rows[0]||[]).map(h => _gsNorm(h));
-    const colIdx = {}; // field → column index
-    headers.forEach((h, i) => {
-      const field = GS_COL_MAP[h];
-      if (field && !(field in colIdx)) colIdx[field] = i;
-    });
-
-    // Columns không map được → gộp vào ghiChu
-    const extraIdxs = [];
-    headers.forEach((h, i) => {
-      if (!GS_COL_MAP[h]) extraIdxs.push({i, label: (rows[0]||[])[i]});
-    });
-
-    const imported = [];
-    for (let ri = 1; ri < rows.length; ri++) {
-      const row = rows[ri];
-      if (row.every(c => !c.trim())) continue;
-      const obj = {id: Date.now() + Math.random() + ri};
-      // Map các field chính
-      Object.entries(colIdx).forEach(([field, ci]) => {
-        let v = (row[ci] || '').trim();
-        if (field === '_daGoi') {
-          obj['daGoi'] = /true|đã gọi|có|x/i.test(v) ? 'Đã gọi' : (v ? 'Chưa gọi' : '');
-        } else if (field === '_tinhTrang') {
-          if (v) obj['ghiChu2'] = v;
-        } else {
-          obj[field] = v;
-        }
-      });
-      // Gộp extra columns vào ghiChu
-      const extra = extraIdxs
-        .map(({i, label}) => { const v=(row[i]||'').trim(); return v ? `${label}: ${v}` : ''; })
-        .filter(Boolean).join(' | ');
-      if (extra) obj['ghiChu'] = (obj['ghiChu'] ? obj['ghiChu'] + '\n' : '') + extra;
-      if (obj.ghiChu2) { obj['ghiChu'] = (obj['ghiChu']?obj['ghiChu']+'\n':'')+obj.ghiChu2; delete obj.ghiChu2; }
-      imported.push(obj);
-    }
-    if (!imported.length) { toast('⚠️ Không có dòng dữ liệu!'); return; }
-
-    const mode = b2bRows.length ? (
-      await new Promise(res => {
-        _mdkShow('📊 Đồng bộ Google Sheets',
-          `<div class="mdk-info">Sheet có <strong>${imported.length}</strong> lead.\nHiện đang có <strong>${b2bRows.length}</strong> lead trong hệ thống.\n\nChọn cách import:</div>`,
-          [
-            {label: 'Ghi đè toàn bộ', action: '_mdkClose("overwrite")'},
-            {label: '➕ Cộng thêm', action: '_mdkClose("append")', primary: true},
-          ]
-        ).then(res);
-      })
-    ) : 'overwrite';
-    if (!mode) return;
-
-    if (mode === 'overwrite') b2bRows = imported; else b2bRows.push(...imported);
-    b2bWriteDupNotes();
-    b2bAutoSave();
-    b2bRerender();
-    toast(`✅ Đã đồng bộ ${imported.length} lead từ Google Sheets — đã kiểm tra trùng!`);
-  } catch(e) {
-    console.error('[gsheet import]', e);
-    toast('❌ Lỗi import Google Sheets: ' + (e.message||e));
-  }
-}
-
-/* ═══════════════════════════════════════
-   INIT
-═══════════════════════════════════════ */
-/* ═══════════════════════════════════════════════════════
-   AI EXECUTIVE SUMMARY — rule-based, no API required
-═══════════════════════════════════════════════════════ */
-let _mktData = null, _mktInsight = null;
-
-/* ── 1. Tổng hợp dữ liệu từ 3 module ── */
-function aggregateMktData() {
-  const b2bRows = getStore(K.b2bCrm, []);
-  const orders  = getStore(K.saleOrder, []);
-  const ads     = getStore(K.saleAds,   []);
-  const koc     = getStore(K.saleKoc,   []);
-  const camps   = getStore(K.saleCamp,  []);
-  const inv     = getStore(K.saleInv,   []);
-  const hr      = getStore(K.rcCamp,    []);
-
-  /* B2B metrics */
-  const bN    = b2bRows.length;
-  const bGoi  = b2bRows.filter(r => r.daGoiChua==='Đã gọi'||r.ngayGoiThucTe).length;
-  const bGap  = b2bRows.filter(r => r.daGapChua==='Đã gặp').length;
-  const bChot = b2bRows.filter(r => r.trangThaiLead==='Đã chốt').length;
-  const bTreGoi = b2bRows.filter(r => {
-    if (!r.ngayNhanData || r.ngayGoiThucTe || r.daGoiChua==='Đã gọi') return false;
-    return (Date.now() - new Date(r.ngayNhanData||'').getTime()) / 86400000 > 2;
-  }).length;
-  const bByPT = {};
-  b2bRows.forEach(r => {
-    const k = r.nguoiPhuTrach||r.ptTruc||'(Chưa phân)';
-    if (!bByPT[k]) bByPT[k]={total:0,goi:0,gap:0};
-    bByPT[k].total++; if(r.ngayGoiThucTe||r.daGoiChua==='Đã gọi') bByPT[k].goi++;
-    if(r.daGapChua==='Đã gặp') bByPT[k].gap++;
-  });
-  const bByKenh = {};
-  b2bRows.forEach(r => { const k=r.kenh||'Khác'; bByKenh[k]=(bByKenh[k]||0)+1; });
-
-  /* Sale metrics */
-  const sumO = f => orders.reduce((s,r)=>s+(+r[f]||0),0);
-  const sumA = f => ads.reduce((s,r)=>s+(+r[f]||0),0);
-  const dt   = sumO('dtThucThu')||sumO('dtGross');
-  const gv   = sumO('giaVon');
-  const cpA  = sumA('chiPhiAds');
-  const cpK  = koc.reduce((s,r)=>s+(+r.chiPhiBooking||0),0);
-  const cpT  = cpA+cpK;
-  const kocNoOrder = koc.filter(r => (+r.videoAir||0)>0 && !(+r.donKOC||0));
-  const invLow     = inv.filter(r => (+r.ton||0)<=0 && r.tenSP);
-  const campProfit = {};
-  camps.forEach(c => {
-    const cd=c.maCd;
-    const o=orders.filter(x=>x.maCd===cd), a=ads.filter(x=>x.maCd===cd), k=koc.filter(x=>x.maCd===cd);
-    const cDt=o.reduce((s,x)=>s+(+x.dtThucThu||+x.dtGross||0),0);
-    campProfit[cd]={dt:cDt, gv:o.reduce((s,x)=>s+(+x.giaVon||0),0),
-      cpA:a.reduce((s,x)=>s+(+x.chiPhiAds||0),0), cpK:k.reduce((s,x)=>s+(+x.chiPhiBooking||0),0),
-      laiRong:cDt-(o.reduce((s,x)=>s+(+x.giaVon||0),0))-(a.reduce((s,x)=>s+(+x.chiPhiAds||0),0))-(k.reduce((s,x)=>s+(+x.chiPhiBooking||0),0)),
-      don:o.length, tenCd:c.tenCd||cd};
-  });
-
-  /* HR metrics */
-  const hS = f => hr.reduce((s,r)=>s+(+r[f]||0),0);
-  const hCP=hS('chiPhi'),hTN=hS('tinNhan'),hCV=hS('nopCV'),
-        hPV=hS('pvThat'),hDL=hS('diLam'),hT3=hS('du3T');
-
-  return {
-    b2b:{ n:bN, goi:bGoi, gap:bGap, chot:bChot, treGoi:bTreGoi, byPT:bByPT, byKenh:bByKenh,
-      tlGoi:bN?bGoi/bN*100:null, tlGap:bN?bGap/bN*100:null, tlChot:bN?bChot/bN*100:null },
-    sale:{ dt, gv, cpA, cpK, cpT, don:orders.length, camps:camps.length,
-      cpDT:dt?cpT/dt*100:null, laiRong:dt-gv-cpT,
-      kocNoOrder, invLow, campProfit },
-    hr:{ cp:hCP, tn:hTN, cv:hCV, pv:hPV, dl:hDL, t3:hT3, bai:hr.length,
-      tlCVTN:hTN?hCV/hTN*100:null, tlPVCV:hCV?hPV/hCV*100:null,
-      tlDLPV:hPV?hDL/hPV*100:null, tl3TDL:hDL?hT3/hDL*100:null },
-  };
-}
-
-/* ── 2. Phân tích rule-based ── */
-function generateLocalInsight(d) {
-  const {b2b,sale,hr} = d;
-  const issues=[], opps=[], alerts=[], urgent=[], week=[], month=[];
-  const sc = {b2b:50, sale:50, hr:50};
-  const hasB2B=b2b.n>0, hasSale=sale.don>0||sale.cpA>0, hasHR=hr.tn>0||hr.bai>0;
-
-  /* ─ B2B ─ */
-  if (hasB2B) {
-    if (b2b.treGoi > 0) {
-      alerts.push({a:`${b2b.treGoi} lead chưa gọi sau 2+ ngày nhận data`, m:'B2B', cond:'Ngày nhận data > 2 ngày, chưa có lịch gọi', lvl:'Cao', todo:'Phân công gọi ngay, ưu tiên data mới nhất'});
-      sc.b2b -= 15;
-      (b2b.treGoi>5?urgent:week).push({p:'Cao', t:`Gọi ${b2b.treGoi} lead đang trễ hạn`, r:'Nhóm kinh doanh B2B'});
-    }
-    if (b2b.tlGap!==null && b2b.tlGap<15 && b2b.goi>5) {
-      issues.push({m:'B2B', vd:`Tỷ lệ gặp thấp: ${b2b.tlGap.toFixed(1)}%`, lvl:'Cao', cause:'Kịch bản gọi chưa thuyết phục hoặc tiêu chí data không phù hợp', sx:'Review kịch bản telesales, lọc lại tiêu chí data đầu vào', p:'Cao'});
-      alerts.push({a:'Điểm nghẽn chuyển đổi gặp khách', m:'B2B', cond:`Tỷ lệ gặp = ${b2b.tlGap.toFixed(1)}% (ngưỡng 15%)`, lvl:'Cao', todo:'Cải thiện kịch bản và tiêu chí lọc data'});
-      sc.b2b -= 15; week.push({p:'Cao', t:'Cải thiện kịch bản telesales B2B', r:'Trưởng kinh doanh'});
-    }
-    if (b2b.tlChot!==null && b2b.tlChot<5 && b2b.gap>3) {
-      issues.push({m:'B2B', vd:`Tỷ lệ chốt thấp: ${b2b.tlChot.toFixed(1)}%`, lvl:'Trung bình', cause:'Báo giá chưa cạnh tranh hoặc follow-up sau gặp yếu', sx:'Review quy trình báo giá và tần suất follow-up', p:'Trung bình'});
-      sc.b2b -= 10;
-    }
-    /* Người trực chậm */
-    const slowPT = Object.entries(b2b.byPT).filter(([,v])=>v.total>=5&&v.goi/v.total<0.5);
-    slowPT.forEach(([name,v])=>{
-      issues.push({m:'B2B', vd:`${name}: chỉ gọi ${(v.goi/v.total*100).toFixed(0)}% data phân công`, lvl:'Trung bình', cause:'Quá tải hoặc thiếu follow-up', sx:'Kiểm tra workload và nhắc nhở kịp thời', p:'Trung bình'});
-    });
-    /* Kênh tốt */
-    const topKenh = Object.entries(b2b.byKenh).sort((a,b)=>b[1]-a[1])[0];
-    if (topKenh && b2b.n>10) opps.push({m:'B2B', co:`Kênh ${topKenh[0]} tạo ${topKenh[1]} lead`, dl:`${topKenh[1]}/${b2b.n} lead từ kênh này`, hd:'Tăng effort vào kênh hiệu quả nhất', td:'Tăng 20-30% lead chất lượng'});
-  }
-
-  /* ─ Sale ─ */
-  if (hasSale) {
-    if (sale.cpDT!==null && sale.cpDT>30) {
-      issues.push({m:'Sale Online', vd:`CP/DT = ${sale.cpDT.toFixed(1)}% (ngưỡng 30%)`, lvl:'Cao', cause:'Chi phí MKT quá cao so với doanh thu', sx:'Tối ưu Ads, renegotiate KOC, tập trung kênh hiệu quả', p:'Cao'});
-      alerts.push({a:'Chi phí bán hàng vượt ngưỡng lợi nhuận', m:'Sale Online', cond:`CP/DT = ${sale.cpDT.toFixed(1)}%`, lvl:'Cao', todo:'Dừng Ads/KOC kém hiệu quả, review giá bán'});
-      sc.sale -= 20; urgent.push({p:'Cao', t:`Tối ưu CP/DT đang ở ${sale.cpDT.toFixed(1)}%`, r:'Trưởng Sale Online'});
-    }
-    if (sale.laiRong < 0 && sale.dt > 0) {
-      alerts.push({a:'Lãi ròng sau chi phí MKT đang âm', m:'Sale Online', cond:`Lãi ròng = ${fmtK(Math.abs(sale.laiRong))}đ (âm)`, lvl:'Cao', todo:'Dừng hoặc điều chỉnh ngay chiến dịch đang lỗ'});
-      sc.sale -= 20; urgent.push({p:'Cao', t:'Xử lý chiến dịch bán lỗ', r:'Trưởng Sale + Giám đốc'});
-    }
-    if (sale.kocNoOrder.length > 0) {
-      alerts.push({a:`${sale.kocNoOrder.length} KOC đã air nhưng 0 đơn`, m:'Sale Online', cond:'videoAir>0, donKOC=0', lvl:'Trung bình', todo:'Audit content KOC, xem xét kéo dài hoặc dừng hợp tác'});
-      sc.sale -= 8; week.push({p:'Trung bình', t:'Review hiệu quả KOC không có đơn', r:'Nhóm KOC/Affiliate'});
-    }
-    if (sale.invLow.length > 0) {
-      alerts.push({a:`${sale.invLow.length} sản phẩm tồn kho = 0`, m:'Sale Online', cond:'Cột tồn cuối = 0', lvl:'Cao', todo:'Lên đơn nhập hàng ngay, thông báo kho'});
-      sc.sale -= 10; urgent.push({p:'Cao', t:`Nhập hàng khẩn ${sale.invLow.length} SP hết kho`, r:'Quản lý kho'});
-    }
-    /* Chiến dịch lỗ */
-    Object.entries(sale.campProfit).filter(([,p])=>p.laiRong<0&&p.dt>0)
-      .forEach(([cd,p])=>{ issues.push({m:'Sale Online', vd:`CD ${cd} (${p.tenCd}): lỗ ${fmtK(Math.abs(p.laiRong))}đ`, lvl:'Cao', cause:'CP > doanh thu chiến dịch', sx:'Dừng hoặc cắt giảm ngân sách chiến dịch này', p:'Cao'}); });
-    /* Cơ hội */
-    if (sale.laiRong>0 && (sale.cpDT===null||sale.cpDT<=30)) {
-      opps.push({m:'Sale Online', co:'Biên lợi nhuận dương sau MKT', dl:`Lãi ròng: ${fmtK(sale.laiRong)}đ`, hd:'Scale các chiến dịch đang có lãi', td:'Tăng 20-30% doanh thu kỳ tới'});
-      sc.sale += 10;
-    }
-  }
-
-  /* ─ HR ─ */
-  if (hasHR) {
-    if (hr.tlCVTN!==null && hr.tlCVTN<10 && hr.tn>=20) {
-      issues.push({m:'Tuyển dụng', vd:`TL CV/TN = ${hr.tlCVTN.toFixed(1)}% (ngưỡng 10%)`, lvl:'Cao', cause:'Người trực TN chưa chốt CV hoặc content bài chạy chưa hấp dẫn', sx:'Review kịch bản nhắn tin, đào tạo lại người trực', p:'Cao'});
-      alerts.push({a:'Người trực/content chưa chốt CV tốt', m:'Tuyển dụng', cond:`TL CV/TN = ${hr.tlCVTN.toFixed(1)}%`, lvl:'Cao', todo:'Review kịch bản TN và huấn luyện người trực'});
-      sc.hr -= 15; week.push({p:'Cao', t:'Review kịch bản nhắn tin tuyển dụng', r:'Quản lý tuyển dụng'});
-    }
-    if (hr.tlPVCV!==null && hr.tlPVCV<30 && hr.cv>=5) {
-      issues.push({m:'Tuyển dụng', vd:`TL PV/CV = ${hr.tlPVCV.toFixed(1)}% (ngưỡng 30%)`, lvl:'Trung bình', cause:'Ứng viên không nghiêm túc hoặc quy trình hẹn PV yếu', sx:'Cải thiện quy trình xác nhận PV, filter CV kỹ hơn', p:'Trung bình'});
-      alerts.push({a:'Ứng viên không nghiêm túc/quy trình hẹn PV yếu', m:'Tuyển dụng', cond:`TL PV/CV = ${hr.tlPVCV.toFixed(1)}%`, lvl:'Trung bình', todo:'Review quy trình xác nhận PV'});
-      sc.hr -= 10;
-    }
-    if (hr.tlDLPV!==null && hr.tlDLPV<50 && hr.pv>=3) {
-      issues.push({m:'Tuyển dụng', vd:`TL đi làm/PV = ${hr.tlDLPV.toFixed(1)}% (ngưỡng 50%)`, lvl:'Trung bình', cause:'Offer/vị trí chưa hấp dẫn hoặc mất ứng viên sau PV', sx:'Review lương, điều kiện làm việc và tốc độ offer', p:'Trung bình'});
-      sc.hr -= 8;
-    }
-    if (hr.tl3TDL!==null && hr.tl3TDL<70 && hr.dl>=3) {
-      issues.push({m:'Tuyển dụng', vd:`TL giữ 3T = ${hr.tl3TDL.toFixed(1)}% (ngưỡng 70%)`, lvl:'Cao', cause:'Sai kỳ vọng khi tuyển hoặc onboarding yếu', sx:'Cải thiện JD, nâng chất lượng onboarding 30 ngày đầu', p:'Cao'});
-      alerts.push({a:'Đi làm nhưng rớt trước 3T', m:'Tuyển dụng', cond:`TL giữ 3T/DL = ${hr.tl3TDL.toFixed(1)}%`, lvl:'Cao', todo:'Review JD, quy trình onboarding và kỳ vọng với ứng viên'});
-      sc.hr -= 15; week.push({p:'Cao', t:'Cải thiện JD và quy trình onboarding', r:'HR/Quản lý tuyển dụng'});
-    }
-    if (hr.tl3TDL!==null && hr.tl3TDL>=80) {
-      opps.push({m:'Tuyển dụng', co:`Tỷ lệ giữ 3T tốt: ${hr.tl3TDL.toFixed(1)}%`, dl:`${hr.dl} đi làm, ${hr.t3} giữ 3T`, hd:'Nhân rộng kênh tuyển và bài chạy đang hiệu quả', td:'Tăng tốc độ tuyển dụng'});
-    }
-  }
-
-  /* ─ Cross-module ─ */
-  if (hasSale && hasB2B && sale.cpA>0 && b2b.chot===0 && sale.don===0)
-    alerts.push({a:'Ngân sách MKT đang chi nhưng chưa có chuyển đổi cụ thể', m:'Tổng quan', cond:'Đơn hàng = 0, B2B chốt = 0', lvl:'Cao', todo:'Rà soát toàn bộ phễu chuyển đổi các mảng'});
-
-  /* Tháng */
-  month.push({p:'Thấp', t:'Đánh giá hiệu quả tổng hợp theo tháng', r:'Trưởng MKT'});
-  if (sale.camps>0) month.push({p:'Trung bình', t:'Review ROI từng chiến dịch Sale', r:'Trưởng Sale'});
-  if (hr.bai>0) month.push({p:'Trung bình', t:'Phân tích phễu tuyển dụng theo kênh/vị trí', r:'HR'});
-  if (!urgent.length) urgent.push({p:'Thấp', t:'Hệ thống MKT đang ổn định, không có việc khẩn', r:'Tất cả'});
-
-  /* Score & summary */
-  const hasAny = hasB2B||hasSale||hasHR;
-  const avg = (sc.b2b+sc.sale+sc.hr)/3;
-  const risk = !hasAny?null:avg>=65?'Thấp':avg>=45?'Trung bình':'Cao';
-  const mNames = {b2b:'B2B',sale:'Sale Online',hr:'Tuyển dụng'};
-  const best  = Object.entries(sc).sort((a,b)=>b[1]-a[1])[0];
-  const worst = Object.entries(sc).sort((a,b)=>a[1]-b[1])[0];
-  const hlights = [];
-  if (b2b.tlGoi!==null && b2b.tlGoi>=80) hlights.push(`B2B tỷ lệ gọi tốt: ${b2b.tlGoi.toFixed(0)}%`);
-  if (b2b.chot>0) hlights.push(`B2B đã chốt ${b2b.chot} hợp đồng`);
-  if (sale.laiRong>0) hlights.push(`Sale Online lãi ròng: ${fmtK(sale.laiRong)}đ`);
-  if (hr.tl3TDL!==null && hr.tl3TDL>=80) hlights.push(`Tuyển dụng giữ 3T: ${hr.tl3TDL.toFixed(0)}%`);
-
-  const summary = !hasAny
-    ? 'Chưa đủ dữ liệu để phân tích. Vui lòng nhập dữ liệu vào các module B2B, Sale Online và Tuyển dụng.'
-    : `${[hasB2B,hasSale,hasHR].filter(Boolean).length}/3 mảng có dữ liệu. `
-      +(risk==='Cao'?'Phát hiện nhiều điểm cần xử lý khẩn cấp.':risk==='Trung bình'?'Có một số vấn đề cần theo dõi.':'Tổng thể đang ổn định.');
-
-  return { summary, hlights, risk, sc, best:mNames[best[0]], worst:mNames[worst[0]],
-    issues, opps, alerts, actions:{urgent, week, month}, hasAny };
-}
-
-/* ── 3. Render HTML ── */
-function renderMktExecutiveSummary() {
-  _mktData    = aggregateMktData();
-  _mktInsight = generateLocalInsight(_mktData);
-  const ins = _mktInsight;
-
-  const bdg = l => `<span class="${l==='Cao'?'bdg-r':l==='Trung bình'?'bdg-o':'bdg-g'}">${l}</span>`;
-  const riskCls = ins.risk==='Cao'?'cao':ins.risk==='Trung bình'?'tb':'thap';
-
-  /* Header card */
-  const hdr = `<div class="ai-card">
-    <div class="ai-hd">
-      <div>
-        <div class="ai-title">🤖 AI Executive Summary</div>
-        <div class="ai-sub">Phân tích rule-based từ dữ liệu thực • ${new Date().toLocaleDateString('vi-VN','vi-VN')}</div>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        ${ins.risk?`<span class="ai-risk ${riskCls}">Rủi ro tổng thể: ${ins.risk}</span>`:''}
-        <button class="btn" onclick="_refreshAI()">🔄 Tạo phân tích</button>
-        <button class="btn" onclick="copyMktReport()">📋 Copy báo cáo</button>
-        <button class="btn btn-primary" onclick="saveMktInsight()">💾 Lưu nhận định</button>
-      </div>
-    </div>
-    <div class="ai-3col">
-      <div class="ai-col">
-        <div class="ai-col-t">📊 Tình hình chung</div>
-        <p>${ins.summary}</p>
-        ${ins.hasAny?`<p style="margin-top:6px">Mảng tốt nhất: <strong style="color:#16a34a">${ins.best}</strong></p>
-        <p>Cần ưu tiên xử lý: <strong style="color:#ea580c">${ins.worst}</strong></p>`:''}
-      </div>
-      <div class="ai-col">
-        <div class="ai-col-t">✨ Điểm sáng</div>
-        ${ins.hlights.length
-          ? ins.hlights.map(h=>`<div class="ai-hl">✅ ${h}</div>`).join('')
-          : '<div class="ai-empty">Chưa có điểm nổi bật rõ ràng</div>'}
-      </div>
-      <div class="ai-col">
-        <div class="ai-col-t">🚨 Rủi ro lớn nhất</div>
-        ${ins.alerts.filter(a=>a.lvl==='Cao').slice(0,4).map(a=>
-          `<div class="ai-al"><span class="bdg-r">Cao</span> ${a.a}</div>`).join('')
-          || '<div class="ai-empty">Không có rủi ro nghiêm trọng</div>'}
-      </div>
-    </div>
-  </div>`;
-
-  /* Issues table */
-  const issHtml = ins.issues.length ? `<div class="ai-card">
-    <div class="ai-sect-t">⚠️ Vấn đề cần xử lý (${ins.issues.length})</div>
-    <div style="overflow-x:auto"><table class="ai-tbl">
-      <thead><tr>${['Mảng','Vấn đề','Mức độ','Nguyên nhân khả nghi','Đề xuất xử lý','Ưu tiên'].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
-      <tbody>${ins.issues.map(r=>`<tr>
-        <td class="ai-tag">${r.m}</td><td style="font-weight:600">${r.vd}</td>
-        <td>${bdg(r.lvl)}</td><td style="color:#64748b">${r.cause}</td>
-        <td>${r.sx}</td><td>${bdg(r.p)}</td></tr>`).join('')}
-      </tbody></table></div></div>` : '';
-
-  /* Opportunities table */
-  const oppHtml = ins.opps.length ? `<div class="ai-card">
-    <div class="ai-sect-t">🚀 Cơ hội tăng trưởng (${ins.opps.length})</div>
-    <div style="overflow-x:auto"><table class="ai-tbl">
-      <thead><tr>${['Mảng','Cơ hội','Dữ liệu hỗ trợ','Đề xuất hành động','Tác động kỳ vọng'].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
-      <tbody>${ins.opps.map(r=>`<tr>
-        <td class="ai-tag">${r.m}</td><td style="font-weight:600;color:#16a34a">${r.co}</td>
-        <td style="color:#64748b">${r.dl}</td><td>${r.hd}</td>
-        <td style="font-weight:600">${r.td}</td></tr>`).join('')}
-      </tbody></table></div></div>` : '';
-
-  /* Alerts table */
-  const altHtml = ins.alerts.length ? `<div class="ai-card">
-    <div class="ai-sect-t">🔔 Cảnh báo quản trị (${ins.alerts.length})</div>
-    <div style="overflow-x:auto"><table class="ai-tbl">
-      <thead><tr>${['Cảnh báo','Mảng','Điều kiện phát hiện','Mức độ','Việc cần làm'].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
-      <tbody>${ins.alerts.map(r=>`<tr>
-        <td style="font-weight:600">${r.a}</td><td class="ai-tag">${r.m}</td>
-        <td style="color:#64748b;font-size:12px">${r.cond}</td>
-        <td>${bdg(r.lvl)}</td><td>${r.todo}</td></tr>`).join('')}
-      </tbody></table></div></div>` : '';
-
-  /* Action plan */
-  const pCls = p => p==='Cao'?'p-cao':p==='Trung bình'?'p-tb':'p-thap';
-  const actHtml = `<div class="ai-card">
-    <div class="ai-sect-t">📋 Kế hoạch hành động</div>
-    <div class="ai-3col">
-      ${[
-        {title:'⚡ Trong 24h',  items:ins.actions.urgent, bg:'#fef2f2'},
-        {title:'📅 Trong tuần', items:ins.actions.week,   bg:'#fff7ed'},
-        {title:'📆 Theo tháng', items:ins.actions.month,  bg:'#f0fdf4'},
-      ].map(g=>`<div class="ai-act-col" style="background:${g.bg}">
-        <div style="font-size:12.5px;font-weight:700;margin-bottom:10px">${g.title}</div>
-        ${g.items.map(a=>`<div class="ai-act-item ${pCls(a.p)}">
-          <span style="font-size:10.5px;font-weight:700;color:${a.p==='Cao'?'#dc2626':a.p==='Trung bình'?'#ea580c':'#16a34a'}">[${a.p}]</span>
-          ${a.t}${a.r?`<div style="font-size:11px;color:#94a3b8;margin-top:2px">👤 ${a.r}</div>`:''}</div>`).join('')
-        || '<div class="ai-empty">Không có việc cần làm</div>'}
-      </div>`).join('')}
-    </div>
-  </div>`;
-
-  return hdr + issHtml + oppHtml + altHtml + actHtml;
-}
-
-function _refreshAI() {
-  const el = document.getElementById('ai-section');
-  if (el) el.innerHTML = renderMktExecutiveSummary();
-  toast('✅ Đã cập nhật phân tích!');
-}
-
-/* ── 4. Copy báo cáo text ── */
-function copyMktReport() {
-  if (!_mktInsight || !_mktData) { toast('⚠️ Nhấn "Tạo phân tích" trước!'); return; }
-  const ins = _mktInsight, d = _mktData, dt = new Date().toLocaleDateString('vi-VN');
-  const nl = s => s||'';
-  const lines = [
-    `BÁO CÁO TỔNG QUAN MKT — ${dt}`, '═'.repeat(48), '',
-    '1. TÌNH HÌNH CHUNG', ins.summary,
-    ins.risk ? `Mức độ rủi ro: ${ins.risk}` : '',
-    ins.hasAny ? `Mảng tốt: ${ins.best} | Cần ưu tiên: ${ins.worst}` : '', '',
-    '2. B2B',
-    d.b2b.n ? `Tổng data: ${d.b2b.n} lead | Gọi: ${d.b2b.goi} | Gặp: ${d.b2b.gap} | Chốt: ${d.b2b.chot}` : 'Chưa có dữ liệu',
-    d.b2b.tlGoi!=null ? `TL gọi: ${d.b2b.tlGoi.toFixed(1)}% | TL gặp: ${d.b2b.tlGap?.toFixed(1)}% | TL chốt: ${d.b2b.tlChot?.toFixed(1)}%` : '',
-    d.b2b.treGoi ? `⚠ ${d.b2b.treGoi} lead trễ gọi hơn 2 ngày` : '', '',
-    '3. SALE ONLINE',
-    d.sale.don ? `Đơn hàng: ${d.sale.don} | Doanh thu: ${fmtK(d.sale.dt)}đ` : 'Chưa có dữ liệu đơn hàng',
-    d.sale.cpDT!=null ? `CP/DT: ${d.sale.cpDT.toFixed(1)}%${d.sale.cpDT>30?' ⚠ VƯỢT NGƯỠNG':''}` : '',
-    d.sale.dt ? `Lãi ròng: ${fmtK(d.sale.laiRong)}đ${d.sale.laiRong<0?' ⚠ ÂM':''}` : '',
-    d.sale.kocNoOrder.length ? `⚠ ${d.sale.kocNoOrder.length} KOC không ra đơn` : '',
-    d.sale.invLow.length ? `⚠ ${d.sale.invLow.length} SP tồn kho = 0` : '', '',
-    '4. TUYỂN DỤNG',
-    d.hr.tn ? `Tin nhắn: ${d.hr.tn} | CV: ${d.hr.cv} | PV thật: ${d.hr.pv} | Đi làm: ${d.hr.dl}` : 'Chưa có dữ liệu',
-    d.hr.tlCVTN!=null ? `TL CV/TN: ${d.hr.tlCVTN.toFixed(1)}%${d.hr.tlCVTN<10?' ⚠':''}  |  TL đi làm/PV: ${d.hr.tlDLPV?.toFixed(1)||'—'}%  |  TL giữ 3T: ${d.hr.tl3TDL?.toFixed(1)||'—'}%` : '', '',
-    '5. RỦI RO CẦN XỬ LÝ',
-    ...ins.alerts.filter(a=>a.lvl==='Cao').map(a=>`[Cao] ${a.a} → ${a.todo}`),
-    ...ins.alerts.filter(a=>a.lvl==='Trung bình').map(a=>`[Trung bình] ${a.a} → ${a.todo}`), '',
-    '6. ĐỀ XUẤT HÀNH ĐỘNG',
-    ...ins.actions.urgent.map(a=>`[24h/${a.p}] ${a.t} (${a.r||'—'})`),
-    ...ins.actions.week.map(a=>`[Tuần/${a.p}] ${a.t} (${a.r||'—'})`),
-    ...ins.actions.month.map(a=>`[Tháng/${a.p}] ${a.t} (${a.r||'—'})`), '',
-    '─'.repeat(48), `Tạo tự động bởi MKT Dashboard — ${dt}`,
-  ].filter(l=>l!==null&&l!==undefined);
-  const text = lines.join('\n');
-  navigator.clipboard.writeText(text)
-    .then(()=>toast('✅ Đã copy báo cáo!'))
-    .catch(()=>{ const ta=document.createElement('textarea'); ta.value=text;
-      document.body.appendChild(ta); ta.select(); document.execCommand('copy');
-      document.body.removeChild(ta); toast('✅ Đã copy báo cáo!'); });
-}
-
-function saveMktInsight() {
-  if (!_mktInsight) { toast('⚠️ Nhấn "Tạo phân tích" trước!'); return; }
-  setStore('mkt_ai_insight_saved', {ins:_mktInsight, ts:Date.now()});
-  toast('💾 Đã lưu nhận định AI!');
-}
-
-/* ═══════════════════════════════════════
-   INIT
-═══════════════════════════════════════ */
 window.addEventListener('load', async () => {
   initSidebarToggle();
   bindKocTabEvents();
