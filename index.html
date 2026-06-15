@@ -1458,6 +1458,30 @@ function render() {
 }
 
 /* ── Tổng quan ── */
+function renderMktExecutiveSummary() {
+  const b = calcB2B(), s = calcSale(), h = calcHR();
+  const moduleState = [
+    {name:'B2B', ok:!!b, main:b?fmt(b.n)+' lead':'Chua co data', note:b?'Ty le goi '+(b.tlGoi||0)+'%':'Can cap nhat lead/follow-up'},
+    {name:'Sale Online', ok:!!s, main:s?fmtK(s.dt)+'d doanh thu':'Chua co data', note:s?fmt(s.don)+' don hang, ROAS '+(s.roas||0)+'x':'Can cap nhat don hang/doanh thu'},
+    {name:'Tuyen dung', ok:!!h, main:h?fmt(h.diLam)+' di lam':'Chua co data', note:h?fmt(h.tinNhan)+' tin nhan, '+fmt(h.nopCV)+' CV':'Can cap nhat chien dich tuyen dung'}
+  ];
+  const missing = moduleState.filter(x=>!x.ok);
+  const alerts = [];
+  if (!b) alerts.push({level:'Cao', text:'B2B chua co du lieu de phan tich.'});
+  else { if ((b.tlGoi||0) < 50) alerts.push({level:'Trung binh', text:'B2B can tang ty le goi/follow-up.'}); if ((b.daChot||0)===0) alerts.push({level:'Trung binh', text:'B2B chua ghi nhan data da chot.'}); }
+  if (!s) alerts.push({level:'Cao', text:'Sale Online chua co doanh thu/don hang.'});
+  else { if ((s.roas||0) < 1) alerts.push({level:'Cao', text:'Sale Online ROAS dang thap, can kiem tra Ads/KOC.'}); if ((s.cpDt||0) > 35) alerts.push({level:'Trung binh', text:'Chi phi/Doanh thu Sale Online dang cao.'}); }
+  if (!h) alerts.push({level:'Trung binh', text:'Tuyen dung chua co du lieu chien dich.'});
+  else if ((h.diLam||0)===0 && (h.tinNhan||0)>0) alerts.push({level:'Trung binh', text:'Tuyen dung co tin nhan nhung chua ghi nhan ung vien di lam.'});
+  const risk = alerts.some(x=>x.level==='Cao') ? 'Cao' : (alerts.length ? 'Trung binh' : 'Thap');
+  const riskClass = risk==='Cao' ? 'cao' : (risk==='Trung binh' ? 'tb' : 'thap');
+  const priority = alerts[0]?.text || 'Du lieu hien tai chua co canh bao nghiem trong.';
+  const stateHtml = moduleState.map(x=>'<div class="ai-hl"><b>'+esc(x.name)+':</b> '+esc(x.main)+'<br><span style="color:#64748b">'+esc(x.note)+'</span></div>').join('');
+  const alertHtml = alerts.length ? alerts.slice(0,6).map(x=>'<div class="ai-al"><span class="bdg-o">'+esc(x.level)+'</span> '+esc(x.text)+'</div>').join('') : '<div class="ai-empty">Chua co canh bao lon.</div>';
+  const actionHtml = ['Cap nhat du lieu cac module truoc khi hop giao ban.', 'Uu tien kiem tra module co canh bao cao/trung binh.', 'Khi nhap them data, bam Cap nhat de tai lai dashboard.'].map((x,i)=>'<div class="ai-act-item p-'+(i===0?'cao':i===1?'tb':'thap')+'">'+esc(x)+'</div>').join('');
+  return '<div class="ai-card"><div class="ai-hd"><div><div class="ai-title">AI Executive Summary</div><div class="ai-sub">Phan tich rule-based tu du lieu hien co trong dashboard.</div></div><span class="ai-risk '+riskClass+'">Rui ro tong the: '+risk+'</span></div><div class="ai-3col"><div class="ai-col"><div class="ai-col-t">Tinh hinh chung</div><p>'+moduleState.filter(x=>x.ok).length+'/'+moduleState.length+' module co du lieu. '+(missing.length?'Con thieu: '+missing.map(x=>x.name).join(', ')+'.':'Tat ca module chinh da co du lieu.')+'</p><p><b>Uu tien:</b> '+esc(priority)+'</p></div><div class="ai-col"><div class="ai-col-t">Diem sang</div>'+stateHtml+'</div><div class="ai-col"><div class="ai-col-t">Rui ro lon nhat</div>'+alertHtml+'</div></div><div class="ai-3col" style="margin-top:14px"><div class="ai-act-col" style="grid-column:1/-1"><div class="ai-sect-t">Viec can lam tiep</div>'+actionHtml+'</div></div></div>';
+}
+
 function renderOverview() {
   const b = calcB2B(), s = calcSale(), h = calcHR();
   return `<div class="ov-grid">
