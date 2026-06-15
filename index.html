@@ -1736,13 +1736,14 @@ const KOC_TT_COLOR     = {
 /* ── Import header maps ── */
 const KOC_MST_MAP = {
   'makoc':'maKoc','idkoc':'maKoc',
-  'ten':'ten','tenkoc':'ten','hoten':'ten',
-  'sociallink':'socialLink','linkkoc':'socialLink','link':'socialLink','linksocial':'socialLink',
-  'follower':'follower','sofollower':'follower','followers':'follower',
+  'ten':'ten','tenkoc':'ten','hoten':'ten','tennhasangtao':'ten','nhasangtao':'ten','creator':'ten',
+  'sociallink':'socialLink','linkkoc':'socialLink','link':'socialLink','linksocial':'socialLink','linktiktok':'socialLink',
+  'follower':'follower','sofollower':'follower','followers':'follower','luongtheodoi':'follower','luongfollow':'follower',
   'lienhe':'lienHe','sdt':'lienHe','dienthoai':'lienHe','contact':'lienHe',
   'nentangchinh':'nenTangChinh','nentang':'nenTangChinh','platform':'nenTangChinh',
   'nhomnoipdung':'nhomND','nhom':'nhomND','nhomnd':'nhomND',
   'phutrach':'phuTrach','phuttrach':'phuTrach','owner':'phuTrach',
+  'taikhoannst':'tiktokHandle','taikhoan':'tiktokHandle','handle':'tiktokHandle','username':'tiktokHandle',
   'ghichu':'ghiChu','note':'ghiChu','remark':'ghiChu',
 };
 const KOC_PROD_MAP = {
@@ -2727,6 +2728,18 @@ function _kocFollowerLabel(v){
   if(n>=1000) return (n/1000).toFixed(n%1000?1:0).replace('.0','')+'K';
   return String(n);
 }
+/* Phân nấc follower để xếp loại KOC; hover hiện số chính xác */
+function _kocFollowerTier(n){
+  if(!n)            return {label:'Chưa có',     bg:'#f1f5f9', color:'#94a3b8'};
+  if(n<1000)        return {label:'< 1K',        bg:'#f1f5f9', color:'#64748b'};
+  if(n<5000)        return {label:'1K – 5K',     bg:'#eff6ff', color:'#2563eb'};
+  if(n<10000)       return {label:'5K – 10K',    bg:'#e0f2fe', color:'#0284c7'};
+  if(n<50000)       return {label:'10K – 50K',   bg:'#dcfce7', color:'#16a34a'};
+  if(n<100000)      return {label:'50K – 100K',  bg:'#d1fae5', color:'#059669'};
+  if(n<500000)      return {label:'100K – 500K', bg:'#fef9c3', color:'#ca8a04'};
+  if(n<1000000)     return {label:'500K – 1M',   bg:'#ffedd5', color:'#ea580c'};
+  return {label:'1M+', bg:'#fce7f3', color:'#db2777'};
+}
 function _kocFollowerNeedsCheck(row){
   if(row?.followerNeedsCheck === true || row?.followerNeedsCheck === 'true') return true;
   if(!_kocParseFollower(row?.follower)) return true;
@@ -2736,11 +2749,11 @@ function _kocFollowerNeedsCheck(row){
 }
 function _kocFollowerCell(row, editable=false){
   const n=_kocParseFollower(row?.follower);
-  const need=_kocFollowerNeedsCheck(row);
-  const source=row?.followerSource || (String(row?.ghiChu||'').includes('Import')?'Google Sheet':'Chưa rõ');
-  const updated=row?.followerUpdatedAt ? formatDateVN(row.followerUpdatedAt) : 'Chưa có ngày';
-  const input=editable ? `<input type="text" value="${esc(row?.follower||'')}" placeholder="VD: 50k, 4044" onchange="kocMstUpd(${row.id},'follower',this.value)" style="width:100%;font-size:12px;border:1px solid #e2e8f2;border-radius:6px;padding:4px 7px">` : '';
-  return `<div class="follower-box"><div class="follower-main"><span class="follower-count">${esc(_kocFollowerLabel(n))}</span>${need?'<span class="follower-warn">Cần kiểm tra</span>':'<span class="follower-ok">Đã cập nhật</span>'}</div>${input}<div class="follower-meta">Nguồn: ${esc(source)}<br>Cập nhật: ${esc(updated)}</div>${editable?`<div class="follower-actions"><button type="button" onclick="kocFollowerVerified(${row.id})">Đã kiểm tra hôm nay</button></div>`:''}</div>`;
+  const tier=_kocFollowerTier(n);
+  const exact = n ? n.toLocaleString('vi-VN')+' người theo dõi' : 'Chưa có dữ liệu follower';
+  const pill=`<span class="follower-tier" title="${esc(exact)}" style="display:inline-block;background:${tier.bg};color:${tier.color};border-radius:999px;padding:3px 11px;font-size:12px;font-weight:800;cursor:help">${tier.label}</span>`;
+  const input=editable ? `<input type="text" value="${esc(row?.follower||'')}" placeholder="VD: 526800, 50k" title="${esc(exact)}" onchange="kocMstUpd(${row.id},'follower',this.value)" style="width:100%;font-size:12px;border:1px solid #e2e8f2;border-radius:6px;padding:4px 7px;margin-top:4px">` : '';
+  return `<div class="follower-box" title="${esc(exact)}">${pill}${input}</div>`;
 }
 function kocFollowerVerified(id){
   const r=kocMstRows.find(x=>x.id==id); if(!r) return;
@@ -2931,10 +2944,8 @@ function _kocMaster() {
     <th style="min-width:95px">Mã KOC</th>
     <th style="min-width:150px">Tên KOC</th>
     <th style="min-width:160px">Social link</th>
-    <th style="min-width:170px">Follower</th>
+    <th style="min-width:140px">Follower</th>
     <th style="min-width:130px">Ngày cập nhật follower</th>
-    <th style="min-width:140px">Nguồn follower</th>
-    <th style="min-width:115px">Cần kiểm tra</th>
     <th style="min-width:130px">Liên hệ</th>
     <th style="min-width:140px">Nền tảng chính</th>
     <th style="min-width:160px">Nhóm nội dung</th>
@@ -2953,8 +2964,6 @@ function _kocMaster() {
       <td>${renderLinkCell(r.socialLink,r.id,'socialLink','kocMstUpd')}</td>
       <td>${_kocFollowerCell(r,true)}</td>
       <td>${_kocDate(r.id,'followerUpdatedAt',r.followerUpdatedAt,'kocMstUpd')}</td>
-      <td>${_kocSel(r.id,'followerSource',r.followerSource || (String(r.ghiChu||'').includes('Import')?'Google Sheet':'Chưa rõ'),'kocMstUpd',KOC_FOLLOWER_SOURCE)}</td>
-      <td style="text-align:center"><input type="checkbox" ${_kocFollowerNeedsCheck(r)?'checked':''} onchange="kocMstUpd(${r.id},'followerNeedsCheck',this.checked)" title="Tick nếu cần mở TikTok kiểm tra lại follower"></td>
       <td>${_kocInp(r.id,'lienHe',r.lienHe,'kocMstUpd','SĐT/Zalo...')}</td>
       <td>${_kocSel(r.id,'nenTangChinh',r.nenTangChinh,'kocMstUpd',KOC_NEN_TANG)}</td>
       <td>${_kocSel(r.id,'nhomND',r.nhomND,'kocMstUpd',KOC_NHOM_ND)}</td>
@@ -3422,10 +3431,14 @@ function kocImportSheet(wb,sheetName){
       if(!key)return;
       let v=row[ci];
       if(isMst && key==='follower'){
-        obj.follower=_kocParseFollower(v);
-        obj.followerSource='Google Sheet';
-        obj.followerUpdatedAt=_kocTodayIso();
-        obj.followerNeedsCheck=!obj.follower;
+        const parsed=_kocParseFollower(v);
+        // Không ghi đè số đã có bằng cột trống (sheet có cả "Lượng theo dõi" lẫn "Follower" rỗng)
+        if(parsed>0 || obj.follower==null){
+          obj.follower=parsed;
+          obj.followerSource='Google Sheet';
+          obj.followerUpdatedAt=_kocTodayIso();
+          obj.followerNeedsCheck=!parsed;
+        }
         return;
       }
       if(v instanceof Date||typeof v==='number')v=parseDateSafe(v);
