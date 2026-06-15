@@ -2891,13 +2891,45 @@ function _kocFollowerNeedsCheck(row){
   const d=new Date(row.followerUpdatedAt); if(Number.isNaN(d.getTime())) return true;
   return (Date.now()-d.getTime()) > 1000*60*60*24*30;
 }
+let _kocFollowerEditId = null;
+function _kocFollowerInputId(id){ return 'koc-follower-input-' + String(id).replace(/[^a-zA-Z0-9_-]/g,'_'); }
+function kocFollowerEdit(id){
+  if(!canEditMod('sale')) return;
+  _kocFollowerEditId = String(id);
+  saleRerender();
+  setTimeout(()=>{ const el=document.getElementById(_kocFollowerInputId(id)); if(el){ el.focus(); el.select(); } }, 30);
+}
+function kocFollowerSave(id, value){
+  _kocFollowerEditId = null;
+  kocMstUpd(id,'follower',value);
+}
+function kocFollowerKey(ev,id){
+  const key=String(ev.key||'').toLowerCase();
+  if((ev.ctrlKey||ev.metaKey) && key==='s'){
+    ev.preventDefault();
+    kocFollowerSave(id, ev.currentTarget.value);
+    return false;
+  }
+  if(key==='enter'){
+    ev.preventDefault();
+    kocFollowerSave(id, ev.currentTarget.value);
+    return false;
+  }
+  return true;
+}
 function _kocFollowerCell(row, editable=false){
   const n=_kocParseFollower(row?.follower);
   const tier=_kocFollowerTier(n);
-  const exact = n ? n.toLocaleString('vi-VN')+' người theo dõi' : 'Chưa có dữ liệu follower';
-  const pill=`<span class="follower-tier" title="${esc(exact)}" style="display:inline-block;background:${tier.bg};color:${tier.color};border-radius:999px;padding:3px 11px;font-size:12px;font-weight:800;cursor:help">${tier.label}</span>`;
-  const input=editable ? `<input type="text" value="${esc(row?.follower||'')}" placeholder="VD: 526800, 50k" title="${esc(exact)}" onchange="kocMstUpd(${row.id},'follower',this.value)" style="width:100%;font-size:12px;border:1px solid #e2e8f2;border-radius:6px;padding:4px 7px;margin-top:4px">` : '';
-  return `<div class="follower-box" title="${esc(exact)}">${pill}${input}</div>`;
+  const exact = n ? n.toLocaleString('vi-VN')+' ng\u01b0\u1eddi theo d\u00f5i' : 'Ch\u01b0a c\u00f3 d\u1eef li\u1ec7u follower';
+  const id=row?.id;
+  const isEditing = editable && String(_kocFollowerEditId)===String(id);
+  if(isEditing){
+    return '<div class="follower-box" title="'+esc(exact)+'"><input id="'+_kocFollowerInputId(id)+'" class="follower-edit-input" type="text" value="'+esc(n||row?.follower||'')+'" placeholder="VD: 4999, 50k" title="Ctrl+S \u0111\u1ec3 l\u01b0u" onkeydown="return kocFollowerKey(event,'+id+')" onblur="kocFollowerSave('+id+',this.value)" style="width:100%;font-size:12px;border:1px solid #2563eb;border-radius:6px;padding:5px 8px;box-shadow:0 0 0 3px rgba(37,99,235,.12)"><div class="follower-meta">Ctrl+S \u0111\u1ec3 l\u01b0u s\u1ed1 ch\u00ednh x\u00e1c</div></div>';
+  }
+  const dbl = editable ? ' ondblclick="kocFollowerEdit('+id+')"' : '';
+  const cursor = editable ? 'cursor:pointer' : 'cursor:help';
+  const pill='<span class="follower-tier" title="'+esc(exact)+'"'+dbl+' style="display:inline-block;background:'+tier.bg+';color:'+tier.color+';border-radius:999px;padding:3px 11px;font-size:12px;font-weight:800;'+cursor+'">'+tier.label+'</span>';
+  return '<div class="follower-box" title="'+esc(exact)+'">'+pill+'</div>';
 }
 function kocFollowerVerified(id){
   const r=kocMstRows.find(x=>x.id==id); if(!r) return;
