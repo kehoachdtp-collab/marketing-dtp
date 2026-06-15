@@ -519,10 +519,23 @@ const mktApi = {
     if (error) throw error;
     return data;
   },
-  async updateUser(callerId, id, displayName, role, permissions, status) {
-    const { error } = await supa.rpc('update_user', { p_caller_id: callerId, p_id: id, p_display_name: displayName, p_role: role, p_permissions: permissions, p_status: status });
-    if (error) throw error;
+  async updateUser(callerId, id, username, displayName, role, permissions, status, usernameChanged) {
+    if (!usernameChanged) {
+      const oldRes = await supa.rpc('update_user', { p_caller_id: callerId, p_id: id, p_display_name: displayName, p_role: role, p_permissions: permissions, p_status: status });
+      if (oldRes.error) throw oldRes.error;
+      return;
+    }
+    const nextUsername = demoNormalizeUsername(username);
+    const v2Params = { p_caller_id: callerId, p_id: id, p_username: nextUsername, p_display_name: displayName, p_role: role, p_permissions: permissions, p_status: status };
+    const res = await supa.rpc('update_user', v2Params);
+    if (res.error) {
+      const msg = String(res.error.message || res.error.details || res.error.code || res.error);
+      const missingV2 = /p_username|PGRST202|function|schema cache|Could not find/i.test(msg);
+      if (missingV2) throw new Error('Supabase chua co ham doi username. Hay chay file supabase/04_update_user_username.sql trong SQL Editor roi luu lai.');
+      throw res.error;
+    }
   },
+
   async resetPassword(callerId, id, newPassword) {
     const { error } = await supa.rpc('reset_password', { p_caller_id: callerId, p_id: id, p_new_password: newPassword });
     if (error) throw error;
@@ -862,19 +875,25 @@ function demoReadSession(){
 }
 function demoWriteSession(session){ localStorage.setItem(DEMO_SESSION_KEY, JSON.stringify(session)); }
 async function demoSaveUser(oldUsername){
-  if (!canManageDemoUsers() && !canResetDemoPasswords()) { toast('⚠️ Bạn không có quyền quản lý user.'); return; }
+  if (!canManageDemoUsers() && !canResetDemoPasswords()) { toast('Ban khong co quyen quan ly user.'); return; }
   const caller = demoCurrentUser();
-  if (!caller || !caller.id) { toast('⚠️ Phiên hết hạn, đăng nhập lại.'); return; }
+  if (!caller || !caller.id) { toast('Phien het han, dang nhap lai.'); return; }
   const users = demoGetUsers();
   const u = users.find(x => x.username === oldUsername);
   if (!u || !u.id) return;
   const row = document.querySelector(`[data-user-row="${CSS.escape(oldUsername)}"]`);
   if (!row) return;
 
+  let newUsername = u.username;
   let newDisplay = u.displayName;
   let newPresets = { ...(u.presets || {}) };
 
   if (canManageDemoUsers() && u.role !== 'admin') {
+    const usernameInput = row.querySelector('[data-user-username]');
+    newUsername = demoNormalizeUsername(usernameInput?.value || '');
+    if (!newUsername) { toast('Username khong duoc de trong.'); usernameInput?.focus(); return; }
+    if (!demoUsernameIsValid(newUsername)) { toast('Username chi dung chu thuong, so, dau cham, gach ngang hoac gach duoi.'); usernameInput?.focus(); return; }
+    if (users.some(x => x.id !== u.id && x.username === newUsername)) { toast('Username da ton tai.'); usernameInput?.focus(); return; }
     newDisplay = row.querySelector('[data-user-display]')?.value.trim() || u.displayName;
     ['dashboard','b2b','sale','hr','users'].forEach(module => {
       const sel = row.querySelector(`[data-demo-module="${module}"]`);
@@ -882,20 +901,25 @@ async function demoSaveUser(oldUsername){
     });
   }
 
+  const usernameChanged = newUsername !== u.username;
   try {
     if (canManageDemoUsers()) {
-      await mktApi.updateUser(caller.id, u.id, newDisplay, u.role, newPresets, null);
+      await mktApi.updateUser(caller.id, u.id, newUsername, newDisplay, u.role, newPresets, null, usernameChanged);
     }
     if (canResetDemoPasswords()) {
       const pass = row.querySelector('[data-user-password]')?.value.trim();
       if (pass) await mktApi.resetPassword(caller.id, u.id, pass);
     }
     await demoRefreshUsers();
-    toast('💾 Đã lưu user!');
+    if (caller.id === u.id) {
+      const fresh = demoGetUsers().find(x => x.id === u.id);
+      if (fresh) demoWriteSession({ user: fresh, loginAt: Date.now() });
+    }
+    toast('Da luu user.');
     render();
   } catch(e) {
     console.error('[saveUser]', e);
-    toast('❌ Lỗi: ' + (e.message || e));
+    toast('Loi: ' + (e.message || e));
   }
 }
 
@@ -1151,7 +1175,7 @@ function renderDataSourcesPage(){
   const rows = users.map(u => {
     const isAdmin = u.role === 'admin';
     return `<tr data-user-row="${demoEsc(u.username)}">
-      <td><input data-user-username value="${demoEsc(u.username)}" autocomplete="off" ${canManage?'':'disabled'}></td>
+      <td><input data-user-username value="${demoEsc(u.username)}" autocomplete="off" ${(!canManage || isAdmin)?'disabled':''}></td>
       <td><input data-user-display value="${demoEsc(u.displayName)}" ${(!canManage || isAdmin)?'disabled':''}></td>
       <td><input data-user-password type="password" autocomplete="new-password" placeholder="Nhập mật khẩu mới nếu cần" ${canReset?'':'disabled'}></td>
       <td>${isAdmin?'<span class="demo-chip">Toàn quyền</span>':demoPresetSelect(u.username,'dashboard',demoPresetFromPermission(u.permissions.dashboard),!canManage)}</td>
