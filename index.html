@@ -1862,11 +1862,23 @@ const KOC_SUBTABS = [
   {id:'overview', l:'📊 Tổng quan'},
   {id:'master',   l:'📋 Danh sách KOC'},
   {id:'scripts',  l:'📝 Kịch bản'},
-  {id:'prod',     l:'🔗 KOC theo SP/CD'},
-  {id:'collab',   l:'🤝 KOC hợp tác'},
-  {id:'contracts', l:'&#128196; H&#7907;p &#273;&#7891;ng'},
+  {id:'prod',     l:'🤝 KOC hợp tác'},
+  {id:'contracts', l:'📄 Hợp đồng'},
   {id:'report',   l:'📈 Báo cáo'},
 ];
+/* Tab con theo sản phẩm trong "KOC hợp tác" */
+let kocProdFilter = 'all';
+let kocProdOnlyCollab = false;
+let _kocProdTabsCache = [];
+function _kocProdShortName(s){ const t=String(s||'').trim(); if(!t) return '(Chưa gắn SP)'; return (t.split(/\s[-–—]\s/)[0]||t).trim(); }
+function _kocProdKey(r){ return (String(r.tenSp||'').trim()) || '(Chưa gắn SP)'; }
+function _kocProdDistinct(){
+  const m = new Map();
+  kocProdRows.forEach(r=>{ const k=_kocProdKey(r); m.set(k,(m.get(k)||0)+1); });
+  return [...m.entries()].sort((a,b)=>b[1]-a[1]);
+}
+function _kocProdTab(i){ const t=_kocProdTabsCache[i]; if(t){ kocProdFilter=t.name; saleRerender(); } }
+function kocProdToggleCollab(){ kocProdOnlyCollab=!kocProdOnlyCollab; saleRerender(); }
 const KOC_NEN_TANG     = ['','TikTok','Facebook','Instagram','YouTube','Shopee Affiliate','Khác'];
 const KOC_NHOM_ND      = ['','Beauty & Skincare','Mẹ & Bé','Lifestyle','Review sản phẩm','Khác'];
 const KOC_HINH_THUC_SP = ['','TikTok Shop','Shopee','CPN','EMS','Vận chuyển ngoài','Nhận trực tiếp','Khác'];
@@ -2126,7 +2138,7 @@ function kocProdUpd(id,k,v){
   if(k==='maCd')   { const cd=saleCampaigns.find(c=>c.maCd===v); if(cd){ r.tenCd=cd.tenCd||''; if(!r.maSp&&cd.sanPham) r.tenSp=cd.sanPham; } }
   _kocSaveAll();
 }
-function kocProdAdd(tt)    { kocProdRows.push({id:Date.now()+Math.random(),trangThai:tt||''}); _kocSaveAll(); saleRerender(); }
+function kocProdAdd(tt)    { const seed={id:Date.now()+Math.random(),trangThai:tt||''}; if(kocProdFilter!=='all'&&kocProdFilter!=='(Chưa gắn SP)'){seed.tenSp=kocProdFilter;} kocProdRows.push(seed); _kocSaveAll(); saleRerender(); }
 function kocProdDel(id)    { if(!confirm('Xóa dòng này?'))return; kocProdRows=kocProdRows.filter(r=>r.id!=id); _kocSaveAll(); saleRerender(); }
 
 function switchKocTab(tab) {
@@ -2304,8 +2316,7 @@ function _saleKocTab() {
   } else if(kocSubTab==='prod'){
     actions.push(_b('＋ Lượt mời',"kocProdAdd('')",'#7c3aed','#f5f3ff'));
     actions.push(_b('＋ KOC hợp tác',"kocProdAdd('Đồng ý hợp tác')",'#16a34a','#f0fdf4'));
-  } else if(kocSubTab==='collab'){
-    actions.push(_b('→ KOC theo SP/CD',"switchKocTab('prod')",'#3b82f6','#eff6ff'));
+    actions.push(_b(kocProdOnlyCollab?'☑ Chỉ đã hợp tác':'☐ Chỉ đã hợp tác','kocProdToggleCollab()',kocProdOnlyCollab?'#16a34a':'#64748b',kocProdOnlyCollab?'#f0fdf4':'#fff'));
   }
   actions.push(`<div style="flex:1"></div>`);
   actions.push(_b('💾 Lưu',"_kocSaveAll();toast('💾 Đã lưu KOC!')",'#ea580c'));
@@ -2316,7 +2327,7 @@ function _saleKocTab() {
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 12px;align-items:center">
       ${actions.join('')}
     </div>`;
-  const renderers = {overview:renderKocOverview,master:renderKocMaster,scripts:renderKocScripts,prod:renderKocProductCampaign,collab:renderKocCollaboration,contracts:renderKocContracts,compliance:renderKocCompliance,report:renderKocReport};
+  const renderers = {overview:renderKocOverview,master:renderKocMaster,scripts:renderKocScripts,prod:renderKocProductCampaign,contracts:renderKocContracts,compliance:renderKocCompliance,report:renderKocReport};
   const body = (renderers[kocSubTab] || renderKocOverview)();
   return nav + body;
 }
@@ -3165,12 +3176,27 @@ function _kocMaster() {
 
 /* ──── 3. KOC THEO SP / CHIẾN DỊCH ──── */
 function _kocProdCamp() {
-  const rows=kocProdRows;
+  /* ── Tab con theo sản phẩm (Laforin, Nadibaby care, ...) ── */
+  const dist=_kocProdDistinct();
+  if(!_kocProdTabsCache.some(t=>t.name===kocProdFilter)) { /* filter cũ không còn → reset */ }
+  if(kocProdFilter!=='all' && !dist.some(d=>d[0]===kocProdFilter)) kocProdFilter='all';
+  _kocProdTabsCache=[{name:'all',label:'Tất cả',count:kocProdRows.length},
+    ...dist.map(d=>({name:d[0],label:_kocProdShortName(d[0]),count:d[1]}))];
+  const prodTabBar=`<div class="koc-prod-tabs" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px;border-bottom:1px solid #eef2f7;padding-bottom:10px">
+    ${_kocProdTabsCache.map((t,i)=>`<button type="button" onclick="_kocProdTab(${i})" title="${esc(t.name)}" style="padding:7px 14px;border-radius:9px;font-size:12.5px;font-weight:700;cursor:pointer;border:1.5px solid ${kocProdFilter===t.name?'#7c3aed':'#e2e8f0'};background:${kocProdFilter===t.name?'#7c3aed':'#fff'};color:${kocProdFilter===t.name?'#fff':'#475569'}">${esc(t.label)} <span style="display:inline-block;min-width:18px;text-align:center;background:${kocProdFilter===t.name?'rgba(255,255,255,.25)':'#f1f5f9'};color:${kocProdFilter===t.name?'#fff':'#64748b'};border-radius:999px;padding:0 6px;font-size:11px;margin-left:3px">${t.count}</span></button>`).join('')}
+  </div>`;
+
+  /* ── Lọc dòng theo SP + (tùy chọn) chỉ đã hợp tác ── */
+  let rows=kocProdRows;
+  if(kocProdFilter!=='all') rows=rows.filter(r=>_kocProdKey(r)===kocProdFilter);
+  if(kocProdOnlyCollab)     rows=rows.filter(r=>KOC_COLLAB_VIEW_TT.has(r.trangThai));
+
+  const fLabel = kocProdFilter==='all' ? 'tất cả SP' : _kocProdShortName(kocProdFilter);
   const addBar=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-    <span style="font-size:13px;color:#64748b">${rows.length} lượt mời hợp tác</span>
+    <span style="font-size:13px;color:#64748b">${rows.length} lượt mời${kocProdOnlyCollab?' đã hợp tác':''} · <strong>${esc(fLabel)}</strong></span>
     <button class="btn btn-primary" onclick="kocProdAdd('')">＋ Thêm lượt mời</button>
   </div>`;
-  if(!rows.length) return addBar+`<div class="empty-b"><div class="ei">🔗</div><div class="em">Chưa có lượt mời nào.<br>Nhấn <strong>＋ Thêm lượt mời</strong> hoặc <strong>📥 Import Excel</strong>.</div></div>`;
+  if(!rows.length) return prodTabBar+addBar+`<div class="empty-b"><div class="ei">🔗</div><div class="em">Không có dòng nào${kocProdFilter!=='all'?` cho <strong>${esc(fLabel)}</strong>`:''}${kocProdOnlyCollab?' (đã hợp tác)':''}.<br>Nhấn <strong>＋ Thêm lượt mời</strong> hoặc <strong>📥 Import Excel</strong>.</div></div>`;
   const thead=`<tr>
     <th class="stt">#</th>
     <th style="min-width:135px">Nguồn</th>
@@ -3268,7 +3294,7 @@ function _kocProdCamp() {
       <td><button class="del-btn" onclick="kocProdDel(${r.id})">✕</button></td>
     </tr>`;
   }).join('');
-  return addBar+`<div class="tbl-wrap"><table class="tbl"><thead>${thead}</thead><tbody>${tbody}</tbody></table></div>`;
+  return prodTabBar+addBar+`<div class="tbl-wrap"><table class="tbl"><thead>${thead}</thead><tbody>${tbody}</tbody></table></div>`;
 }
 
 /* ──── 4. KOC HỢP TÁC — view từ kocProdRows ──── */
