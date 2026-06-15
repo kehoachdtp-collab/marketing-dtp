@@ -654,16 +654,27 @@ function getStore(key, fallback) {
     return fallback;
   }
 }
+const _kvSyncTimers = {};
+function _flushKvSync(k) {
+  if (_kvSyncTimers[k]) { clearTimeout(_kvSyncTimers[k].t); }
+  const pending = _kvSyncTimers[k];
+  if (!pending) return;
+  delete _kvSyncTimers[k];
+  const u = demoCurrentUser();
+  const userId = u && u.id ? u.id : null;
+  mktApi.kvSet(k, pending.value, userId).catch(err => console.warn('[sync] kv_set failed for', k, err));
+}
 function setStore(key, value) {
   const k = key.startsWith('mkt_') ? key : 'mkt_' + key;
   try { localStorage.setItem(k, JSON.stringify(value)); } catch(e) {}
-  // Push lên Supabase async (fire-and-forget) cho các key cần sync
+  // Debounce push lên Supabase: gộp nhiều lần sửa liên tiếp thành 1 request
   if (isSyncKey(k)) {
-    const u = demoCurrentUser();
-    const userId = u && u.id ? u.id : null;
-    mktApi.kvSet(k, value, userId).catch(err => console.warn('[sync] kv_set failed for', k, err));
+    if (_kvSyncTimers[k]) clearTimeout(_kvSyncTimers[k].t);
+    _kvSyncTimers[k] = { value, t: setTimeout(() => _flushKvSync(k), 1200) };
   }
 }
+// Đẩy hết dữ liệu chờ sync trước khi rời trang
+window.addEventListener('beforeunload', () => { Object.keys(_kvSyncTimers).forEach(_flushKvSync); });
 
 async function syncDown() {
   try {
@@ -4323,25 +4334,20 @@ window.addEventListener('load', async () => {
         this.x = x; this.y = y; this.color = color;
         this.vx = rnd(-5, 5); this.vy = rnd(-7, 2);
         this.alpha = 1; this.decay = rnd(.012, .025);
-        this.size = rnd(2, 4); this.gravity = .12;
-        this.trail = [{x, y}];
+        this.size = rnd(2, 3.5); this.gravity = .12;
       }
       update() {
         this.vy += this.gravity;
         this.x += this.vx; this.y += this.vy;
         this.alpha -= this.decay;
-        this.trail.push({x: this.x, y: this.y});
-        if (this.trail.length > 6) this.trail.shift();
       }
       draw() {
-        ctx.save();
         ctx.globalAlpha = Math.max(0, this.alpha);
-        ctx.shadowBlur = 8; ctx.shadowColor = this.color;
         ctx.fillStyle = this.color;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
         ctx.fill();
-        ctx.restore();
+        ctx.globalAlpha = 1;
       }
       dead() { return this.alpha <= 0; }
     }
@@ -4383,46 +4389,46 @@ window.addEventListener('load', async () => {
       rockets.push(new Rocket());
     }
 
+    let running = false;
     function loop() {
-      ctx.fillStyle = 'rgba(0,5,20,.18)';
+      // Chỉ chạy khi đang ở màn login (body.auth-boot). Ngược lại dừng hẳn để khỏi đốt CPU.
+      if (!document.body.classList.contains('auth-boot')) {
+        running = false;
+        ctx.clearRect(0, 0, W, H);
+        rockets = []; particles = [];
+        return;
+      }
+      ctx.fillStyle = 'rgba(0,5,20,.20)';
       ctx.fillRect(0, 0, W, H);
 
-      // Launch rocket periodically
       frame++;
-      if (frame % 55 === 0) launch();
-      if (frame % 130 === 0) launch(); // double burst
+      if (frame % 60 === 0) launch();
+      if (frame % 150 === 0) launch();
 
-      // Update rockets
       rockets = rockets.filter(r => {
         r.update(); r.draw();
-        if (r.shouldExplode() && !r.exploded) {
-          r.exploded = true; r.explode();
-        }
+        if (r.shouldExplode() && !r.exploded) { r.exploded = true; r.explode(); }
         return !r.exploded;
       });
-
-      // Update particles
+      if (particles.length > 1200) particles.splice(0, particles.length - 1200);
       particles = particles.filter(p => { p.update(); p.draw(); return !p.dead(); });
 
       animId = requestAnimationFrame(loop);
     }
+    function start() {
+      if (running) return;
+      running = true;
+      resize();
+      loop();
+      setTimeout(launch, 200);
+      setTimeout(launch, 700);
+    }
 
-    // Start
-    loop();
-    // Launch first rockets immediately
-    setTimeout(launch, 200);
-    setTimeout(launch, 600);
-    setTimeout(launch, 1100);
-
-    // Pause when login screen hidden
-    const obs = new MutationObserver(() => {
-      if (screen.style.display === 'none' || !screen.classList.contains('visible')) {
-        cancelAnimationFrame(animId);
-      } else {
-        loop();
-      }
-    });
-    obs.observe(screen, { attributes: true, attributeFilter: ['style','class'] });
+    // Khởi động nếu đang ở màn login; theo dõi body để bật/tắt khi login/logout.
+    if (document.body.classList.contains('auth-boot')) start();
+    new MutationObserver(() => {
+      if (document.body.classList.contains('auth-boot')) start();
+    }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
   }
 
   // Wait for DOM
