@@ -323,6 +323,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .demo-users-table td{padding:8px;border-bottom:1px solid #eef2f7;vertical-align:top}
 .demo-chip{display:inline-flex;align-items:center;border-radius:999px;background:#eff6ff;color:#2563eb;padding:2px 8px;font-size:11px;font-weight:750;white-space:nowrap}
 .topbar-user{font-size:12px;color:#475569;font-weight:700;white-space:nowrap}
+/* ── Universal Modal ── */
+.mdk-overlay{display:none;position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.55);backdrop-filter:blur(3px);align-items:center;justify-content:center}
+.mdk-overlay.show{display:flex}
+.mdk-box{background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(15,23,42,.22);padding:28px;width:min(520px,94vw);max-height:88vh;overflow-y:auto;animation:mdkIn .18s ease}
+@keyframes mdkIn{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:none}}
+.mdk-title{font-size:17px;font-weight:850;color:#1e2e4a;margin-bottom:16px}
+.mdk-field{display:grid;gap:5px;margin-bottom:12px}
+.mdk-field label{font-size:11.5px;font-weight:750;color:#475569;text-transform:uppercase;letter-spacing:.3px}
+.mdk-field input,.mdk-field textarea,.mdk-field select{width:100%;border:1.5px solid #e2e8f0;border-radius:9px;padding:9px 11px;font-size:13.5px;color:#1e293b;outline:none;transition:border-color .15s}
+.mdk-field input:focus,.mdk-field textarea:focus{border-color:#2563eb;box-shadow:0 0 0 3px #dbeafe}
+.mdk-field textarea{min-height:120px;resize:vertical;font-family:inherit}
+.mdk-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+.mdk-info{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:11px 13px;font-size:13px;color:#1e40af;line-height:1.5;margin-bottom:14px;white-space:pre-wrap}
 .access-denied{background:#fff;border:1px solid #fecaca;border-radius:14px;padding:44px 24px;text-align:center;color:#991b1b;box-shadow:0 1px 4px rgba(0,0,0,.06)}
 .access-denied strong{display:block;font-size:18px;margin-bottom:8px;color:#7f1d1d}
 .user-admin-card{background:#fff;border-radius:14px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:14px}
@@ -360,6 +373,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 </head>
 <body class="auth-boot app-shell">
+<!-- Universal Modal -->
+<div class="mdk-overlay" id="mdk-overlay" onclick="if(event.target===this)_mdkClose()">
+  <div class="mdk-box" id="mdk-box">
+    <div class="mdk-title" id="mdk-title"></div>
+    <div id="mdk-body"></div>
+    <div class="mdk-actions" id="mdk-actions"></div>
+  </div>
+</div>
+
 <div class="login-screen" id="login-screen">
   <canvas id="login-canvas"></canvas>
   <div class="login-bg" id="login-bg"></div>
@@ -2170,19 +2192,38 @@ async function _scriptsLoad(force){
   }
 }
 
+/* ── Modal utility ── */
+let _mdkResolve = null;
+function _mdkClose(val){ document.getElementById('mdk-overlay').classList.remove('show'); if(_mdkResolve){_mdkResolve(val??null);_mdkResolve=null;} }
+function _mdkShow(title, bodyHtml, buttons){
+  document.getElementById('mdk-title').textContent = title;
+  document.getElementById('mdk-body').innerHTML = bodyHtml;
+  document.getElementById('mdk-actions').innerHTML = buttons.map(b=>
+    `<button onclick="${b.action}" style="padding:9px 20px;border-radius:9px;border:${b.primary?'0':'1.5px solid #e2e8f0'};background:${b.primary?'#1e2e4a':'#fff'};color:${b.primary?'#fff':'#334155'};font-weight:750;font-size:13.5px;cursor:pointer">${b.label}</button>`
+  ).join('');
+  document.getElementById('mdk-overlay').classList.add('show');
+  return new Promise(r => { _mdkResolve = r; });
+}
+function _mdkVal(id){ const el=document.getElementById(id); return el ? el.value.trim() : ''; }
+
 async function _scriptCreate(){
   const caller = demoCurrentUser();
   if (!caller || !caller.id) { toast('⚠️ Đăng nhập lại.'); return; }
-  const title = prompt('Tiêu đề kịch bản:');
-  if (!title) return;
-  const content = prompt('Nội dung kịch bản (paste toàn bộ):');
-  if (!content) return;
-  const productCode = prompt('Mã sản phẩm (optional):', '') || null;
+  const result = await _mdkShow('📝 Nhập kịch bản mới',
+    `<div class="mdk-field"><label>Tiêu đề kịch bản *</label><input id="sc-title" placeholder="VD: Review Laforin Stick – da khô vùng V"></div>
+     <div class="mdk-field"><label>Mã sản phẩm (optional)</label><input id="sc-code" placeholder="VD: L01248"></div>
+     <div class="mdk-field"><label>Nội dung kịch bản *</label><textarea id="sc-content" placeholder="Paste toàn bộ nội dung kịch bản vào đây..." style="min-height:200px"></textarea></div>`,
+    [{label:'Hủy', action:'_mdkClose(false)'}, {label:'💾 Tạo & AI check', action:'_mdkClose(true)', primary:true}]
+  );
+  if (!result) return;
+  const title = _mdkVal('sc-title');
+  const content = _mdkVal('sc-content');
+  const productCode = _mdkVal('sc-code') || null;
+  if (!title || !content) { toast('⚠️ Cần nhập tiêu đề và nội dung.'); return; }
   try {
     toast('⏳ Đang tạo kịch bản...');
     const id = await mktApi.scriptCreate(caller.id, title, content, productCode, null, null, null, []);
     toast('✅ Đã tạo. Đang chạy AI check...');
-    // Trigger AI check (chạy nền, không chờ)
     mktApi.aiCheck(id, title, content)
       .then(r => { toast(`🤖 AI score: ${r.score}/100 · ${r.issues.length} issue · $${r.cost_usd}`); _scriptsLoad(true); })
       .catch(err => { console.error('[ai_check]', err); toast('⚠️ AI check lỗi: ' + (err.message || err)); _scriptsLoad(true); });
@@ -2205,33 +2246,60 @@ async function _scriptRecheck(id, title, content){
 
 async function _scriptApprove(id){
   const caller = demoCurrentUser();
-  const note = prompt('Ghi chú duyệt (optional):', '') || '';
+  const result = await _mdkShow('✅ Duyệt kịch bản',
+    `<div class="mdk-field"><label>Ghi chú (optional)</label><input id="ap-note" placeholder="VD: Nội dung đạt, được phép sử dụng"></div>`,
+    [{label:'Hủy', action:'_mdkClose(false)'}, {label:'✅ Xác nhận duyệt', action:'_mdkClose(true)', primary:true}]
+  );
+  if (!result) return;
+  const note = _mdkVal('ap-note');
   try { await mktApi.scriptApprove(caller.id, id, note); toast('✅ Đã duyệt'); await _scriptsLoad(true); }
   catch(e){ toast('❌ ' + (e.message||e)); }
 }
+
 async function _scriptReject(id){
   const caller = demoCurrentUser();
-  const reason = prompt('Lý do từ chối:');
-  if (!reason) return;
+  const result = await _mdkShow('❌ Từ chối kịch bản',
+    `<div class="mdk-field"><label>Lý do từ chối *</label><textarea id="rj-reason" placeholder="Nêu rõ lý do để người viết sửa lại..."></textarea></div>`,
+    [{label:'Hủy', action:'_mdkClose(false)'}, {label:'❌ Xác nhận từ chối', action:'_mdkClose(true)', primary:true}]
+  );
+  if (!result) return;
+  const reason = _mdkVal('rj-reason');
+  if (!reason) { toast('⚠️ Cần nhập lý do từ chối.'); return; }
   try { await mktApi.scriptReject(caller.id, id, reason); toast('❌ Đã từ chối'); await _scriptsLoad(true); }
   catch(e){ toast('❌ ' + (e.message||e)); }
 }
+
 async function _scriptAssign(id){
   const caller = demoCurrentUser();
   const kocs = (window.kocMstRows && kocMstRows.length) ? kocMstRows.map(k=>k.maKoc).filter(Boolean) : [];
-  const placeholder = kocs.length ? `Mã KOC (gợi ý: ${kocs.slice(0,3).join(', ')}...)` : 'Mã KOC';
-  const kocCode = prompt(placeholder);
-  if (!kocCode) return;
-  const note = prompt('Ghi chú (optional):','') || '';
+  const kocOpts = kocs.length ? `<datalist id="koc-list">${kocs.map(k=>`<option value="${k}">`).join('')}</datalist>` : '';
+  const result = await _mdkShow('🤝 Giao kịch bản cho KOC',
+    `${kocOpts}
+     <div class="mdk-field"><label>Mã KOC *</label><input id="as-koc" list="koc-list" placeholder="${kocs.length?'Chọn hoặc nhập mã KOC':'Nhập mã KOC'}"></div>
+     <div class="mdk-field"><label>Ghi chú (optional)</label><input id="as-note" placeholder="VD: Ưu tiên quay TikTok trước"></div>`,
+    [{label:'Hủy', action:'_mdkClose(false)'}, {label:'🤝 Giao kịch bản', action:'_mdkClose(true)', primary:true}]
+  );
+  if (!result) return;
+  const kocCode = _mdkVal('as-koc');
+  const note = _mdkVal('as-note');
+  if (!kocCode) { toast('⚠️ Cần chọn mã KOC.'); return; }
   try { await mktApi.scriptAssign(caller.id, id, kocCode, note); toast('🤝 Đã giao cho ' + kocCode); await _scriptsLoad(true); }
   catch(e){ toast('❌ ' + (e.message||e)); }
 }
+
 async function _scriptViewSimilar(id){
   try {
     const similar = await mktApi.scriptFindSimilar(id, 5);
-    if (!similar.length) { alert('Không tìm thấy kịch bản tương tự.'); return; }
-    const msg = similar.map(s => `${(s.similarity*100).toFixed(1)}% — ${s.title} [${s.status}]`).join('\n');
-    alert('Các kịch bản tương tự:\n\n' + msg);
+    if (!similar.length) {
+      _mdkShow('🔍 Kịch bản tương tự', '<div class="mdk-info">Không tìm thấy kịch bản nào có nội dung tương tự.</div>',
+        [{label:'Đóng', action:'_mdkClose()'}]);
+      return;
+    }
+    const rows = similar.map(s=>`<tr><td style="padding:7px 8px;border-bottom:1px solid #f1f5f9;font-weight:600">${demoEsc(s.title)}</td><td style="padding:7px 8px;border-bottom:1px solid #f1f5f9">${_statusPill(s.status)}</td><td style="padding:7px 8px;border-bottom:1px solid #f1f5f9;color:#0284c7;font-weight:700">${(s.similarity*100).toFixed(1)}%</td></tr>`).join('');
+    _mdkShow('🔍 Kịch bản tương tự',
+      `<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr><th style="text-align:left;padding:7px 8px;background:#f8fafc;font-size:11px;text-transform:uppercase;color:#475569">Tiêu đề</th><th style="text-align:left;padding:7px 8px;background:#f8fafc;font-size:11px;text-transform:uppercase;color:#475569">Trạng thái</th><th style="text-align:left;padding:7px 8px;background:#f8fafc;font-size:11px;text-transform:uppercase;color:#475569">Độ giống</th></tr></thead><tbody>${rows}</tbody></table>`,
+      [{label:'Đóng', action:'_mdkClose()'}]
+    );
   } catch(e){ toast('❌ ' + (e.message||e)); }
 }
 
@@ -2453,8 +2521,8 @@ function _productAnalyzerHtml(){
 }
 function _kocScripts(){
   // Lazy load lần đầu
-  if (_scriptsCache === null && !_scriptsLoading) {
-    _scriptsLoad(false);
+  if (_scriptsCache === null) {
+    if (!_scriptsLoading) _scriptsLoad(false);
     return _productAnalyzerHtml() + `<div style="padding:40px;text-align:center;color:#64748b">⏳ Đang tải kịch bản từ Supabase...</div>`;
   }
   const tabBar = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
