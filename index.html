@@ -3195,19 +3195,22 @@ function _kocProdCamp() {
     <span style="font-size:13px;color:#64748b">${rows.length} lượt mời${kocProdOnlyCollab?' đã hợp tác':''} · <strong>${esc(fLabel)}</strong></span>
     <button class="btn btn-primary" onclick="kocProdAdd('')">＋ Thêm lượt mời</button>
   </div>`;
+  const isProductScoped = kocProdFilter !== 'all';
+  const productSummaryTh = isProductScoped ? '' : '<th style="min-width:220px">S&#7843;n ph&#7849;m / CD</th>';
+  const productRawTh = isProductScoped ? '' : '<th style="min-width:150px">M&#227; SP / T&#234;n SP</th>';
   if(!rows.length) return prodTabBar+addBar+`<div class="empty-b"><div class="ei">🔗</div><div class="em">Không có dòng nào${kocProdFilter!=='all'?` cho <strong>${esc(fLabel)}</strong>`:''}${kocProdOnlyCollab?' (đã hợp tác)':''}.<br>Nhấn <strong>＋ Thêm lượt mời</strong> hoặc <strong>📥 Import Excel</strong>.</div></div>`;
   const thead=`<tr>
     <th class="stt">#</th>
     <th style="min-width:135px">Nguồn</th>
     <th style="min-width:220px">KOC / liên hệ</th>
     <th style="min-width:150px">Phụ trách</th>
-    <th style="min-width:220px">Sản phẩm / CD</th>
+    ${productSummaryTh}
     <th style="min-width:230px">Mẫu & demo</th>
     <th style="min-width:240px">Video / hiệu quả</th>
     <th style="min-width:140px">Mã KOC</th>
     <th style="min-width:130px">Tên KOC</th>
     <th style="min-width:140px">Mã CD</th>
-    <th style="min-width:150px">Mã SP / Tên SP</th>
+    ${productRawTh}
     <th style="min-width:160px">Trạng thái</th>
     <th style="min-width:110px">CP Booking</th>
     <th style="min-width:75px">HH %</th>
@@ -3252,20 +3255,20 @@ function _kocProdCamp() {
     const i=pStart+idx;
     const dlOver=r.deadlineDemo&&new Date(r.deadlineDemo)<today&&r.demo!=='Đã duyệt';
     const inactive=r.trangThai==='Không hợp tác';
+    const productSummaryTd = isProductScoped ? '' : _kocCampaignSummaryCell(r);
+    const productRawTd = isProductScoped ? '' : '<td>' + (r.maSp ? '<span style="font-size:11px;font-weight:700;color:#7c3aed;display:block">' + esc(r.maSp) + '</span>' : '') + '<span style="font-size:12px">' + esc(r.tenSp||'') + '</span>' + _kocSpSel2(r.id,'maSp',r.maSp) + '</td>';
     return `<tr style="${dlOver?'background:#fff5f5':''}${inactive?';opacity:0.65':''}">
       <td class="stt">${i+1}</td>
       ${_kocSourceCell(r)}
       ${_kocPersonSummaryCell(r)}
       ${_kocOwnerSummaryCell(r)}
-      ${_kocCampaignSummaryCell(r)}
+      ${productSummaryTd}
       ${_kocSampleDemoSummaryCell(r,dlOver)}
       ${_kocVideoPerfSummaryCell(r)}
       <td>${_kocMaKocSel(r.id,'maKoc',r.maKoc)}</td>
       <td style="font-size:12px;color:#475569">${esc(_kocDisplayName(r))}</td>
       <td>${_kocCdSel(r.id,'maCd',r.maCd)}</td>
-      <td>${r.maSp?`<span style="font-size:11px;font-weight:700;color:#7c3aed;display:block">${esc(r.maSp)}</span>`:''}
-          <span style="font-size:12px">${esc(r.tenSp||'')}</span>
-          ${_kocSpSel2(r.id,'maSp',r.maSp)}</td>
+      ${productRawTd}
       <td>${_kocTtBadge(r.trangThai)}<br>${_kocSel(r.id,'trangThai',r.trangThai,'kocProdUpd',KOC_TT_COLLAB)}</td>
       <td>${_kocNum(r.id,'chiPhiBooking',r.chiPhiBooking,'kocProdUpd')}</td>
       <td>${_kocNum(r.id,'hoaHongPct',r.hoaHongPct,'kocProdUpd')}</td>
