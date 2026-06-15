@@ -278,45 +278,47 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 /* Demo login/auth */
 .auth-boot .sb,.auth-boot .main{display:none!important}
-.login-screen{display:none;position:fixed;inset:0;z-index:10000;overflow:hidden;font-family:'Segoe UI',sans-serif}
-.auth-boot .login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center}
-/* Canvas pháo hoa nằm dưới */
-#login-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
-/* Ảnh Sale Online làm background mờ */
-.login-bg{position:absolute;inset:0;background:url('https://i.imgur.com/placeholder.png') center/cover no-repeat;z-index:1}
-.login-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(160deg,rgba(2,12,40,.88) 0%,rgba(0,30,80,.82) 50%,rgba(0,10,30,.92) 100%)}
-/* Các chấm mạng lưới */
-.login-net{position:absolute;inset:0;z-index:2;overflow:hidden;pointer-events:none}
-.login-net::before{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,rgba(0,150,255,.18) 1px,transparent 1px);background-size:40px 40px;animation:netMove 20s linear infinite}
-@keyframes netMove{from{background-position:0 0}to{background-position:80px 80px}}
-/* Header phòng ban */
-.login-header{position:relative;z-index:10;text-align:center;margin-bottom:28px;animation:fadeDown .7s ease}
+.login-screen{display:none;position:fixed;inset:0;z-index:10000;overflow:hidden;font-family:'Segoe UI',Arial,sans-serif;background:#020815;color:#eaf6ff}
+.auth-boot .login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:36px 18px}
+#login-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none;opacity:.55}
+.login-bg{position:absolute;inset:0;z-index:0;background:#020815}
+.login-bg::before{content:'';position:absolute;inset:-4%;background-image:linear-gradient(90deg,rgba(56,189,248,.08) 1px,transparent 1px),linear-gradient(0deg,rgba(56,189,248,.08) 1px,transparent 1px),url('assets/login-sale-online.png');background-size:64px 64px,64px 64px,min(78vh,760px) auto;background-position:center,center,center 48%;background-repeat:repeat,repeat,no-repeat;filter:saturate(1.08) contrast(1.05);opacity:.72}
+.login-bg::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 42%,rgba(56,189,248,.18) 0,rgba(15,118,178,.16) 24%,rgba(2,8,21,.68) 57%,rgba(2,8,21,.96) 100%),linear-gradient(90deg,rgba(2,8,21,.94) 0%,rgba(6,20,48,.62) 48%,rgba(2,8,21,.94) 100%)}
+.login-net{position:absolute;inset:0;z-index:1;overflow:hidden;pointer-events:none}
+.login-net::before{content:'';position:absolute;left:50%;top:44%;width:min(84vh,820px);height:min(84vh,820px);border:2px solid rgba(125,211,252,.34);border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 80px rgba(56,189,248,.18),inset 0 0 60px rgba(56,189,248,.09)}
+.login-net::after{content:'';position:absolute;inset:0;background:radial-gradient(circle,rgba(186,230,253,.72) 0 2px,transparent 3px);background-size:76px 76px;opacity:.22;animation:netMove 24s linear infinite}
+@keyframes netMove{from{background-position:0 0}to{background-position:152px 76px}}
+.login-header{position:relative;z-index:10;text-align:center;margin-bottom:24px;animation:fadeDown .7s ease;text-transform:uppercase}
 @keyframes fadeDown{from{opacity:0;transform:translateY(-24px)}to{opacity:1;transform:none}}
-.login-company{font-size:13px;letter-spacing:3px;color:#7dd3fc;text-transform:uppercase;margin-bottom:6px;font-weight:600}
-.login-dept{font-size:32px;font-weight:900;color:#fff;letter-spacing:4px;text-transform:uppercase;text-shadow:0 0 30px rgba(56,189,248,.6),0 2px 12px rgba(0,0,0,.5)}
-.login-dept span{color:#38bdf8}
-.login-tagline{font-size:12px;color:#94a3b8;margin-top:6px;letter-spacing:1px}
-/* Card đăng nhập */
-.login-card{position:relative;z-index:10;width:min(420px,92vw);animation:fadeUp .7s ease .1s both}
+.login-company{font-size:14px;letter-spacing:3.5px;color:#7dd3fc;margin-bottom:8px;font-weight:850;text-shadow:0 0 20px rgba(56,189,248,.65)}
+.login-dept{font-size:clamp(30px,4.2vw,54px);font-weight:950;color:#f8fbff;letter-spacing:5px;line-height:1;text-shadow:0 0 34px rgba(56,189,248,.78),0 3px 16px rgba(0,0,0,.7)}
+.login-dept span{display:block;color:#38bdf8;margin-top:7px;font-size:.58em;letter-spacing:7px}
+.login-tagline{font-size:12px;color:rgba(203,235,255,.78);margin-top:13px;letter-spacing:1.5px;text-transform:none}
+.login-card{position:relative;z-index:10;width:min(600px,92vw);animation:fadeUp .7s ease .1s both}
+.login-card::before,.login-card::after{content:'';position:absolute;top:70px;width:96px;height:2px;background:linear-gradient(90deg,transparent,#38bdf8,#facc15,transparent);opacity:.75}
+.login-card::before{right:calc(100% + 18px)}
+.login-card::after{left:calc(100% + 18px)}
 @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
-.login-panel{background:rgba(10,20,50,.75);border:1px solid rgba(56,189,248,.25);border-radius:18px;box-shadow:0 0 40px rgba(0,100,255,.2),0 20px 60px rgba(0,0,0,.5);padding:32px;backdrop-filter:blur(18px)}
-.login-panel-title{font-size:22px;font-weight:800;color:#fff;margin-bottom:6px}
-.login-sub{font-size:13px;color:#94a3b8;margin-bottom:24px}
-.login-form{display:grid;gap:16px}
-.login-field{display:grid;gap:7px}
-.login-field label{font-size:11px;font-weight:800;color:#7dd3fc;text-transform:uppercase;letter-spacing:1.5px}
-.login-field input{height:46px;border:1.5px solid rgba(56,189,248,.3);border-radius:10px;padding:0 14px;font-size:14px;outline:none;background:rgba(255,255,255,.06);color:#fff;transition:border-color .2s,box-shadow .2s}
-.login-field input::placeholder{color:#475569}
-.login-field input:focus{border-color:#38bdf8;box-shadow:0 0 0 3px rgba(56,189,248,.2);background:rgba(255,255,255,.1)}
-.login-btn{height:48px;border:none;border-radius:10px;background:linear-gradient(90deg,#0284c7,#38bdf8);color:#fff;font-size:15px;font-weight:800;letter-spacing:1px;cursor:pointer;text-transform:uppercase;transition:opacity .2s,box-shadow .2s;box-shadow:0 4px 18px rgba(56,189,248,.35)}
-.login-btn:hover{opacity:.9;box-shadow:0 6px 24px rgba(56,189,248,.5)}
-.login-btn:active{opacity:.8}
-.login-error{display:none;background:rgba(239,68,68,.12);color:#fca5a5;border:1px solid rgba(239,68,68,.35);border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.4}
+.login-panel{background:linear-gradient(145deg,rgba(10,22,50,.9),rgba(4,12,29,.94));border:1px solid rgba(125,211,252,.28);border-radius:18px;box-shadow:0 0 0 1px rgba(14,165,233,.08),0 0 48px rgba(56,189,248,.22),0 24px 70px rgba(0,0,0,.58);padding:42px 44px 38px;backdrop-filter:blur(18px)}
+.login-panel-title{font-size:26px;font-weight:900;color:#f8fbff;margin-bottom:8px;letter-spacing:.3px}
+.login-sub{font-size:14px;color:#9fc7df;margin-bottom:28px;line-height:1.5}
+.login-form{display:grid;gap:18px}
+.login-field{display:grid;gap:9px}
+.login-field label{font-size:12px;font-weight:900;color:#7dd3fc;text-transform:uppercase;letter-spacing:1.7px}
+.login-field input{height:58px;border:1.5px solid rgba(56,189,248,.42);border-radius:13px;padding:0 18px;font-size:17px;outline:none;background:rgba(2,8,23,.78);color:#eff8ff;transition:border-color .2s,box-shadow .2s,background .2s}
+.login-field input::placeholder{color:#64748b}
+.login-field input:focus{border-color:#7dd3fc;box-shadow:0 0 0 3px rgba(56,189,248,.22),0 0 24px rgba(56,189,248,.45);background:rgba(3,10,28,.94)}
+.login-btn{height:62px;border:1px solid rgba(186,230,253,.35);border-radius:13px;background:linear-gradient(180deg,#54bdf5,#2876b4);color:#fff;font-size:18px;font-weight:950;letter-spacing:1.4px;cursor:pointer;text-transform:uppercase;transition:transform .18s,box-shadow .18s,filter .18s;box-shadow:0 0 22px rgba(56,189,248,.38),inset 0 1px 0 rgba(255,255,255,.28)}
+.login-btn:hover{transform:translateY(-1px);filter:brightness(1.06);box-shadow:0 0 32px rgba(56,189,248,.56),inset 0 1px 0 rgba(255,255,255,.32)}
+.login-btn:active{transform:translateY(0);filter:brightness(.96)}
+.login-error{display:none;background:rgba(239,68,68,.12);color:#fecaca;border:1px solid rgba(248,113,113,.45);border-radius:12px;padding:11px 13px;font-size:13px;line-height:1.4}
 .login-error.show{display:block}
-.login-change-pw{text-align:center;margin-top:14px}
-.login-change-pw a{color:#38bdf8;font-size:13px;text-decoration:none;cursor:pointer;opacity:.8}
+.login-change-pw{text-align:center;margin-top:17px}
+.login-change-pw a{color:#9bdcff;font-size:14px;text-decoration:none;cursor:pointer;opacity:.92}
 .login-change-pw a:hover{opacity:1;text-decoration:underline}
-.login-footer{position:relative;z-index:10;margin-top:22px;text-align:center;color:#334155;font-size:11.5px;letter-spacing:.5px}
+.login-badges{position:relative;z-index:10;display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:22px;color:#b9dcf3;font-size:11px;text-transform:uppercase;letter-spacing:1px}
+.login-badges span{border:1px solid rgba(125,211,252,.22);background:rgba(8,24,54,.46);border-radius:999px;padding:8px 12px;box-shadow:0 0 20px rgba(56,189,248,.08)}
+.login-footer{position:relative;z-index:10;margin-top:18px;text-align:center;color:rgba(148,163,184,.7);font-size:11.5px;letter-spacing:.5px}
 .login-note{margin-top:12px;color:#64748b;font-size:12px;line-height:1.5}
 .demo-users-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:0}
 .demo-users-table th{background:#f1f5f9;color:#334155;text-align:left;padding:8px;border-bottom:1px solid #e2e8f0;font-size:11px;text-transform:uppercase}
@@ -368,7 +370,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ds-table input,.ds-table select{width:100%;border:1px solid #dbe3ef;border-radius:7px;padding:6px 7px;font-size:12px;background:#fff}
 .ds-section-gap{margin-top:16px}
 @media(max-width:1100px){.ds-grid{grid-template-columns:1fr}.ds-form-grid{grid-template-columns:1fr}}
-@media(max-width:900px){.login-card{grid-template-columns:1fr}.login-screen{padding:16px}}
+@media(max-width:900px){.auth-boot .login-screen{padding:22px 14px}.login-header{margin-bottom:18px}.login-panel{padding:30px 22px}.login-card::before,.login-card::after{display:none}.login-badges{display:none}.login-field input{height:52px}.login-btn{height:56px}}
 </style>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 </head>
@@ -388,15 +390,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="login-net"></div>
 
   <div class="login-header">
-    <div class="login-company">Công ty cổ phần dược phẩm DTP</div>
-    <div class="login-dept">Phòng <span>Kế Hoạch</span></div>
-    <div class="login-tagline">Nội bộ — Chỉ dành cho nhân viên được phân quyền</div>
+    <div class="login-company">DTP Sale Online</div>
+    <div class="login-dept">MKT <span>Dashboard</span></div>
+    <div class="login-tagline">Vui lòng đăng nhập bằng tài khoản được cấp.</div>
   </div>
 
   <div class="login-card">
     <section class="login-panel">
       <div class="login-panel-title">Đăng nhập</div>
-      <div class="login-sub">Nhập tài khoản được cấp để truy cập hệ thống.</div>
+      <div class="login-sub">Nhập tài khoản nội bộ để truy cập hệ thống MKT Dashboard.</div>
       <form class="login-form" onsubmit="demoLogin(event)">
         <div class="login-field">
           <label for="demo-username">Tên đăng nhập</label>
@@ -409,8 +411,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="login-error" id="login-error"></div>
         <button class="login-btn" type="submit">Đăng nhập</button>
       </form>
-      <div class="login-change-pw"><a onclick="demoChangePwPrompt()">🔑 Đổi mật khẩu</a></div>
+      <div class="login-change-pw"><a onclick="demoChangePwPrompt()">Đổi mật khẩu</a></div>
     </section>
+  </div>
+
+  <div class="login-badges" aria-hidden="true">
+    <span>Đúng khách hàng</span>
+    <span>Marketing hiệu quả</span>
+    <span>Bán hàng tự động</span>
+    <span>Phát triển mỗi ngày</span>
   </div>
 </div>
 
@@ -1537,6 +1546,7 @@ function _b2bLeads() {
         <input type="file" accept=".xlsx,.xls,.csv" style="display:none"
           onchange="b2bImport(this.files[0]);this.value=''">
       </label>
+      <button class="btn" style="background:#34a853;color:#fff;border-color:#34a853" onclick="b2bImportGSheet()">📊 Đồng bộ Google Sheets</button>
       <button class="btn btn-primary" onclick="b2bAddRow()">＋ Thêm lead mới</button>
       <button class="btn" onclick="b2bSaveData()">💾 Lưu</button>
     </div>
@@ -4023,6 +4033,152 @@ function b2bImport(file) {
     } catch(err) { console.error(err); toast('❌ Lỗi đọc file!'); }
   };
   reader.readAsBinaryString(file);
+}
+
+/* ── Import từ Google Sheets (CSV export công khai) ── */
+const B2B_GSHEET_URL = 'https://docs.google.com/spreadsheets/d/1_dv5ookBwgPnZkavXtM8ZjU3_fXPRTqcHQYEclqQ7nc/export?format=csv&gid=1327429157';
+
+// Map header Google Sheet → field B2B
+const GS_COL_MAP = {
+  'ngàynhậndata':       'ngayNhanData',
+  'ngaynhandata':       'ngayNhanData',
+  'kênh':               'kenh',
+  'kenh':               'kenh',
+  'têncôngty':          'tenCty',
+  'tencongty':          'tenCty',
+  'mst':                'mst',
+  'địachỉ':             'diaChi',
+  'diachi':             'diaChi',
+  'ngườiliênhệ':        'nguoiLH',
+  'nguoilienhe':        'nguoiLH',
+  'sốđiệnthoại':        'sdt',
+  'sodienthoai':        'sdt',
+  'quymonhansu':        'quyMo',
+  'quymônhânsự':        'quyMo',
+  'giờhẹn':             'gioGoi',
+  'giohen':             'gioGoi',
+  'ngườitrực':          'ptTruc',
+  'nguoitruc':          'ptTruc',
+  'ngàyphâncônggọi':    'ngayPhanCong',
+  'ngayphancongqoi':    'ngayPhanCong',
+  'ngayphancong':       'ngayPhanCong',
+  'đãgọiđiệnhaychưa':   '_daGoi',
+  'dagoidienhaychua':   '_daGoi',
+  'đãgọi':              '_daGoi',
+  'ngườigọi':           'ptGoi',
+  'nguoigoi':           'ptGoi',
+  'phụtráchauhikigặp':  'ptSauGap',
+  'phutrachsaukhigap':  'ptSauGap',
+  'đánhgiásaugặp':      'danhGiaSauGap',
+  'danhgiasaugap':      'danhGiaSauGap',
+  'đánhgiásơbộ':        'danhGiaSoBo',
+  'danhgiasonbo':       'danhGiaSoBo',
+  'tìnhtrạnglàmviệcvớikhách': '_tinhTrang',
+  'tinhtrạnglvvoikhach':       '_tinhTrang',
+  'tinhtranlvvoikhach':        '_tinhTrang',
+};
+
+function _gsNorm(s){ return String(s||'').toLowerCase().replace(/[\s\-\/\(\)\.]/g,'').normalize('NFD').replace(/[̀-ͯ]/g,''); }
+
+function _parseGsheetCsv(text){
+  const rows = []; let cur = [], field = '', inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQ) {
+      if (ch === '"') { if (text[i+1]==='"') { field += '"'; i++; } else inQ = false; }
+      else field += ch;
+    } else {
+      if (ch === '"') { inQ = true; }
+      else if (ch === ',') { cur.push(field); field = ''; }
+      else if (ch === '\n') { cur.push(field); rows.push(cur); cur = []; field = ''; }
+      else if (ch !== '\r') field += ch;
+    }
+  }
+  if (field || cur.length) { cur.push(field); rows.push(cur); }
+  return rows;
+}
+
+async function b2bImportGSheet(){
+  toast('📊 Đang tải dữ liệu từ Google Sheets...');
+  try {
+    const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(B2B_GSHEET_URL);
+    let csvText;
+    try {
+      const r = await fetch(proxyUrl);
+      const j = await r.json();
+      csvText = j.contents;
+    } catch {
+      // Thử trực tiếp nếu proxy fail
+      const r = await fetch(B2B_GSHEET_URL);
+      csvText = await r.text();
+    }
+    if (!csvText || csvText.length < 50) { toast('❌ Không tải được dữ liệu từ Google Sheets.'); return; }
+
+    const rows = _parseGsheetCsv(csvText);
+    if (!rows.length) { toast('⚠️ Sheet trống!'); return; }
+
+    // Build column index
+    const headers = (rows[0]||[]).map(h => _gsNorm(h));
+    const colIdx = {}; // field → column index
+    headers.forEach((h, i) => {
+      const field = GS_COL_MAP[h];
+      if (field && !(field in colIdx)) colIdx[field] = i;
+    });
+
+    // Columns không map được → gộp vào ghiChu
+    const extraIdxs = [];
+    headers.forEach((h, i) => {
+      if (!GS_COL_MAP[h]) extraIdxs.push({i, label: (rows[0]||[])[i]});
+    });
+
+    const imported = [];
+    for (let ri = 1; ri < rows.length; ri++) {
+      const row = rows[ri];
+      if (row.every(c => !c.trim())) continue;
+      const obj = {id: Date.now() + Math.random() + ri};
+      // Map các field chính
+      Object.entries(colIdx).forEach(([field, ci]) => {
+        let v = (row[ci] || '').trim();
+        if (field === '_daGoi') {
+          obj['daGoi'] = /true|đã gọi|có|x/i.test(v) ? 'Đã gọi' : (v ? 'Chưa gọi' : '');
+        } else if (field === '_tinhTrang') {
+          if (v) obj['ghiChu2'] = v;
+        } else {
+          obj[field] = v;
+        }
+      });
+      // Gộp extra columns vào ghiChu
+      const extra = extraIdxs
+        .map(({i, label}) => { const v=(row[i]||'').trim(); return v ? `${label}: ${v}` : ''; })
+        .filter(Boolean).join(' | ');
+      if (extra) obj['ghiChu'] = (obj['ghiChu'] ? obj['ghiChu'] + '\n' : '') + extra;
+      if (obj.ghiChu2) { obj['ghiChu'] = (obj['ghiChu']?obj['ghiChu']+'\n':'')+obj.ghiChu2; delete obj.ghiChu2; }
+      imported.push(obj);
+    }
+    if (!imported.length) { toast('⚠️ Không có dòng dữ liệu!'); return; }
+
+    const mode = b2bRows.length ? (
+      await new Promise(res => {
+        _mdkShow('📊 Đồng bộ Google Sheets',
+          `<div class="mdk-info">Sheet có <strong>${imported.length}</strong> lead.\nHiện đang có <strong>${b2bRows.length}</strong> lead trong hệ thống.\n\nChọn cách import:</div>`,
+          [
+            {label: 'Ghi đè toàn bộ', action: '_mdkClose("overwrite")'},
+            {label: '➕ Cộng thêm', action: '_mdkClose("append")', primary: true},
+          ]
+        ).then(res);
+      })
+    ) : 'overwrite';
+    if (!mode) return;
+
+    if (mode === 'overwrite') b2bRows = imported; else b2bRows.push(...imported);
+    b2bWriteDupNotes();
+    b2bAutoSave();
+    b2bRerender();
+    toast(`✅ Đã đồng bộ ${imported.length} lead từ Google Sheets — đã kiểm tra trùng!`);
+  } catch(e) {
+    console.error('[gsheet import]', e);
+    toast('❌ Lỗi import Google Sheets: ' + (e.message||e));
+  }
 }
 
 /* ═══════════════════════════════════════

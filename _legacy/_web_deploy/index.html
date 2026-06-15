@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>MKT Dashboard — Planning Department</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f1f5f9;color:#1e293b;display:flex;height:100vh;overflow:hidden}
@@ -20,6 +21,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .sb-item:hover{background:rgba(255,255,255,.08);color:#fff}
 .sb-item.active{background:rgba(255,255,255,.16);color:#fff;font-weight:700}
 .sb-item-icon{font-size:16px;width:22px;text-align:center;flex-shrink:0}
+
+/* Nested sidebar groups */
+.sb-group{display:flex;flex-direction:column}
+.sb-group-children{display:none;flex-direction:column;margin:0 0 4px 8px;padding-left:8px;border-left:2px solid rgba(255,255,255,.08)}
+.sb-group.open>.sb-group-children{display:flex}
+.sb-chevron{margin-left:auto;font-size:10px;opacity:.55;transition:transform .15s;display:inline-block}
+.sb-group.open>.sb-item>.sb-chevron,.sb-group.open>.sb-sub-item>.sb-chevron{transform:rotate(90deg)}
+.sb-sub-item{position:relative;display:flex;align-items:center;gap:8px;padding:7px 10px 7px 30px;border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:500;color:rgba(255,255,255,.6);transition:all .15s;margin-bottom:1px;user-select:none}
+.sb-sub-item:hover{background:rgba(255,255,255,.06);color:#fff}
+.sb-sub-item.active{background:rgba(59,130,246,.22);color:#fff;font-weight:700}
+.sb-sub-item.sb-sub-sub{padding-left:46px;font-size:12px;color:rgba(255,255,255,.55)}
+.sb-sub-item.sb-sub-sub.active{background:rgba(59,130,246,.28)}
+.app-shell.sidebar-collapsed .sb-group-children{display:none !important}
 
 /* Sidebar collapse/expand */
 .app-shell{display:flex}
@@ -101,6 +115,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 /* ── B2B Module ── */
 .mod-tabs{display:flex;gap:0;border-bottom:2px solid #e2e8f0;margin-bottom:20px;overflow-x:auto}
+.sale-crumb,.koc-crumb{display:flex;align-items:center;gap:10px;padding:14px 18px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:18px;font-size:13.5px;box-shadow:0 1px 3px rgba(15,23,42,.04)}
+.sale-crumb .crumb-mod,.koc-crumb .crumb-mod{color:#64748b;font-weight:600}
+.sale-crumb .crumb-sep,.koc-crumb .crumb-sep{color:#cbd5e1;font-weight:700}
+.sale-crumb .crumb-cur,.koc-crumb .crumb-cur{color:#1e2e4a;font-weight:800;font-size:15px}
+.koc-horizontal-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,23,42,.04)}
+.koc-horizontal-btn{border:1px solid transparent;background:transparent;color:#64748b;border-radius:8px;padding:9px 13px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;transition:background .15s ease,color .15s ease,border-color .15s ease}
+.koc-horizontal-btn:hover{background:#f1f5f9;color:#1e2e4a}
+.koc-horizontal-btn.active{background:#eaf1ff;border-color:#bfd2ff;color:#1d4ed8;box-shadow:inset 0 0 0 1px rgba(37,99,235,.08)}
 .mod-tab{padding:10px 20px;font-size:13px;font-weight:600;color:#64748b;cursor:pointer;white-space:nowrap;border-bottom:2.5px solid transparent;margin-bottom:-2px;transition:all .15s;user-select:none}
 .mod-tab:hover{color:#1e2e4a;background:#f8fafc}
 .mod-tab.active{color:#1e2e4a;border-bottom-color:#1e2e4a}
@@ -332,8 +354,26 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="sb-section sidebar-section-title">Hoạt động Marketing</div>
     <div class="sb-item" id="nav-b2b" title="Business to Business" onclick="navTo('b2b',this)">
       <span class="sb-item-icon">🤝</span> <span class="sidebar-label">Business to Business</span></div>
-    <div class="sb-item" id="nav-sale" title="Sale Online" onclick="navTo('sale',this)">
-      <span class="sb-item-icon">🛒</span> <span class="sidebar-label">Sale Online</span></div>
+    <div class="sb-group" id="grp-sale">
+      <div class="sb-item" id="nav-sale" title="Sale Online" onclick="navSaleGroup(this)">
+        <span class="sb-item-icon">🛒</span>
+        <span class="sidebar-label">Sale Online</span>
+        <span class="sb-chevron sidebar-label">▶</span>
+      </div>
+      <div class="sb-group-children" id="sale-children">
+        <div class="sb-sub-item" data-sale-tab="overview" onclick="navSaleSub('overview')"><span class="sidebar-label">Tổng quan</span></div>
+        <div class="sb-sub-item" data-sale-tab="products" onclick="navSaleSub('products')"><span class="sidebar-label">Danh sách SP</span></div>
+        <div class="sb-sub-item" data-sale-tab="campaigns" onclick="navSaleSub('campaigns')"><span class="sidebar-label">Chiến dịch</span></div>
+        <div class="sb-sub-item" data-sale-tab="koc" onclick="navSaleSub('koc')"><span class="sidebar-label">KOC / Affiliate</span></div>
+        <div class="sb-sub-item" data-sale-tab="compliance" onclick="navSaleSub('compliance')"><span class="sidebar-label">⚖️ Kiểm duyệt nội dung</span></div>
+        <div class="sb-sub-item" data-sale-tab="ads" onclick="navSaleSub('ads')"><span class="sidebar-label">Ads</span></div>
+        <div class="sb-sub-item" data-sale-tab="orders" onclick="navSaleSub('orders')"><span class="sidebar-label">Đơn hàng & DT</span></div>
+        <div class="sb-sub-item" data-sale-tab="profit" onclick="navSaleSub('profit')"><span class="sidebar-label">Chi phí & Lãi lỗ</span></div>
+        <div class="sb-sub-item" data-sale-tab="inventory" onclick="navSaleSub('inventory')"><span class="sidebar-label">Kiểm kho</span></div>
+        <div class="sb-sub-item" data-sale-tab="reviews" onclick="navSaleSub('reviews')"><span class="sidebar-label">Đánh giá KH</span></div>
+        <div class="sb-sub-item" data-sale-tab="alerts" onclick="navSaleSub('alerts')"><span class="sidebar-label">Cảnh báo</span></div>
+      </div>
+    </div>
     <div class="sb-item" id="nav-hr" title="Tuyển dụng" onclick="navTo('hr',this)">
       <span class="sb-item-icon">👥</span> <span class="sidebar-label">Tuyển dụng</span></div>
       <div class="sb-section sidebar-section-title" id="nav-admin-section">⚙️ Quản trị hệ thống</div>
@@ -359,9 +399,107 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="toast" id="toast"></div>
 
 <script>
+/* ═══════════════════════════════════════════════════════════════
+   SUPABASE — cloud sync layer
+═══════════════════════════════════════════════════════════════ */
+const SUPA_URL  = 'https://gqtwnebivcyhvpljtkts.supabase.co';
+const SUPA_KEY  = 'sb_publishable_t3NRr4xFeo8fJlyM4vg8QQ_Je6PLXh_';
+const EDGE_AI_CHECK = SUPA_URL + '/functions/v1/clever-worker';
+const supa = window.supabase.createClient(SUPA_URL, SUPA_KEY, { auth: { persistSession: false } });
+
+const mktApi = {
+  async login(username, password) {
+    const { data, error } = await supa.rpc('verify_password', { p_username: username, p_password: password });
+    if (error) throw error;
+    return (data && data.length) ? data[0] : null;
+  },
+  async listUsers(callerId) {
+    const { data, error } = await supa.rpc('list_users', { p_caller_id: callerId });
+    if (error) throw error;
+    return data || [];
+  },
+  async createUser(callerId, username, password, displayName, role, permissions) {
+    const { data, error } = await supa.rpc('create_user', { p_caller_id: callerId, p_username: username, p_password: password, p_display_name: displayName, p_role: role, p_permissions: permissions });
+    if (error) throw error;
+    return data;
+  },
+  async updateUser(callerId, id, displayName, role, permissions, status) {
+    const { error } = await supa.rpc('update_user', { p_caller_id: callerId, p_id: id, p_display_name: displayName, p_role: role, p_permissions: permissions, p_status: status });
+    if (error) throw error;
+  },
+  async resetPassword(callerId, id, newPassword) {
+    const { error } = await supa.rpc('reset_password', { p_caller_id: callerId, p_id: id, p_new_password: newPassword });
+    if (error) throw error;
+  },
+  async deleteUser(callerId, id) {
+    const { error } = await supa.rpc('delete_user', { p_caller_id: callerId, p_id: id });
+    if (error) throw error;
+  },
+  async kvGetAll() {
+    const { data, error } = await supa.rpc('kv_get_all');
+    if (error) throw error;
+    return data || [];
+  },
+  async kvSet(key, payload, userId) {
+    const { error } = await supa.rpc('kv_set', { p_key: key, p_payload: payload, p_user_id: userId });
+    if (error) throw error;
+  },
+  async scriptCreate(callerId, title, content, productCode, campaignCode, hook, cta, tags) {
+    const { data, error } = await supa.rpc('script_create', { p_caller_id: callerId, p_title: title, p_content: content, p_product_code: productCode, p_campaign_code: campaignCode, p_hook: hook, p_cta: cta, p_tags: tags || [] });
+    if (error) throw error;
+    return data;
+  },
+  async scriptList(status) {
+    const { data, error } = await supa.rpc('script_list', { p_status: status || null });
+    if (error) throw error;
+    return data || [];
+  },
+  async scriptGet(id) {
+    const { data, error } = await supa.rpc('script_get', { p_id: id });
+    if (error) throw error;
+    return data;
+  },
+  async scriptApprove(callerId, id, note) {
+    const { error } = await supa.rpc('script_approve', { p_caller_id: callerId, p_id: id, p_note: note || '' });
+    if (error) throw error;
+  },
+  async scriptReject(callerId, id, reason) {
+    const { error } = await supa.rpc('script_reject', { p_caller_id: callerId, p_id: id, p_reason: reason || '' });
+    if (error) throw error;
+  },
+  async scriptAssign(callerId, scriptId, kocCode, note) {
+    const { data, error } = await supa.rpc('script_assign', { p_caller_id: callerId, p_script_id: scriptId, p_koc_code: kocCode, p_note: note || '' });
+    if (error) throw error;
+    return data;
+  },
+  async scriptAssignmentUpdate(callerId, id, status, videoUrl, perfStatus, orders, gmv, note) {
+    const { error } = await supa.rpc('script_assignment_update', { p_caller_id: callerId, p_id: id, p_status: status, p_video_url: videoUrl, p_performance_status: perfStatus, p_orders: orders, p_gmv: gmv, p_note: note });
+    if (error) throw error;
+  },
+  async scriptFindSimilar(id, limit) {
+    const { data, error } = await supa.rpc('script_find_similar', { p_id: id, p_limit: limit || 5 });
+    if (error) throw error;
+    return data || [];
+  },
+  async aiCheck(scriptId, title, content) {
+    const r = await fetch(EDGE_AI_CHECK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPA_KEY, 'apikey': SUPA_KEY },
+      body: JSON.stringify({ script_id: scriptId, title, content }),
+    });
+    const j = await r.json();
+    if (!r.ok || !j.ok) throw new Error(j.error || 'ai_check_failed');
+    return j;
+  },
+};
+
 /* ═══════════════════════════════════════
-   STORAGE — namespace mkt_ bắt buộc
+   STORAGE — namespace mkt_ + Supabase sync
 ═══════════════════════════════════════ */
+const SYNC_KEYS = ['mkt_b2b_crm_data','mkt_b2b_cost_data','mkt_b2b_assignee_options','mkt_sale_campaigns','mkt_sale_orders','mkt_sale_ads_data','mkt_sale_koc_data','mkt_sale_koc_master','mkt_sale_koc_product_campaigns','mkt_sale_koc_prospects','mkt_sale_koc_collaborations','mkt_sale_koc_collab','mkt_sale_koc_ptlist','mkt_sale_inventory','mkt_sale_product_master','mkt_recruitment_campaign_data','mkt_recruitment_msg_data','mkt_data_sources','mkt_google_sheet_configs','mkt_google_sheet_mappings','mkt_sync_logs','mkt_compliance_reviews','mkt_compliance_rules','mkt_product_approved_claims','mkt_product_banned_claims','mkt_compliance_draft'];
+
+function isSyncKey(k){ return SYNC_KEYS.includes(k); }
+
 function getStore(key, fallback) {
   if (fallback === undefined) fallback = [];
   const k = key.startsWith('mkt_') ? key : 'mkt_' + key;
@@ -377,6 +515,30 @@ function getStore(key, fallback) {
 function setStore(key, value) {
   const k = key.startsWith('mkt_') ? key : 'mkt_' + key;
   try { localStorage.setItem(k, JSON.stringify(value)); } catch(e) {}
+  // Push lên Supabase async (fire-and-forget) cho các key cần sync
+  if (isSyncKey(k)) {
+    const u = demoCurrentUser();
+    const userId = u && u.id ? u.id : null;
+    mktApi.kvSet(k, value, userId).catch(err => console.warn('[sync] kv_set failed for', k, err));
+  }
+}
+
+async function syncDown() {
+  try {
+    const rows = await mktApi.kvGetAll();
+    let updated = 0;
+    rows.forEach(r => {
+      if (SYNC_KEYS.includes(r.key)) {
+        localStorage.setItem(r.key, JSON.stringify(r.payload));
+        updated++;
+      }
+    });
+    console.log('[sync] pulled', updated, 'keys from Supabase');
+    return updated;
+  } catch(e) {
+    console.warn('[sync] syncDown failed', e);
+    return 0;
+  }
 }
 
 /* ═══════════════════════════════════════
@@ -423,30 +585,64 @@ function demoUser(username, password, displayName, role, presets){
   Object.keys(DEMO_MODULE_LABELS).forEach(k => permissions[k] = demoPerm(presets[k] || 'none'));
   return {username,password,displayName,role,permissions};
 }
-function demoDefaultUsers(){
-  return [
-    demoUser('admin','123456','Admin / Owner','admin',{dashboard:'full',b2b:'full',sale:'full',hr:'full',users:'full'}),
-    demoUser('ha','123456','Hạ','editor',{dashboard:'view',b2b:'import',sale:'import',hr:'import'}),
-    demoUser('hong','123456','Hồng','b2b',{dashboard:'view',b2b:'import'}),
-    demoUser('ngan','123456','Ngân','sale_online',{dashboard:'view',sale:'import'}),
-    demoUser('viewer','123456','Viewer','viewer',{dashboard:'view'})
-  ];
+
+/* Chuyển user từ Supabase (display_name, permissions là preset string) → format demoUser */
+function _supaToDemoUser(supaUser){
+  if (!supaUser) return null;
+  const presets = supaUser.permissions || {};
+  const permissions = {};
+  Object.keys(DEMO_MODULE_LABELS).forEach(k => {
+    const preset = (typeof presets[k] === 'string') ? presets[k] : 'none';
+    permissions[k] = demoPerm(preset);
+  });
+  return {
+    id: supaUser.id,
+    username: supaUser.username,
+    displayName: supaUser.display_name || supaUser.displayName || supaUser.username,
+    role: supaUser.role,
+    status: supaUser.status || 'active',
+    permissions,
+    presets,  // giữ raw preset strings để admin edit
+  };
 }
+
+function demoDefaultUsers(){ return []; }  // không dùng nữa — Supabase là nguồn
+
+/* Cache user list cục bộ — tránh fetch mỗi lần check quyền */
+let _cachedUsers = null;
 function demoGetUsers(){
+  if (_cachedUsers) return _cachedUsers;
   try {
     const raw = localStorage.getItem(DEMO_USERS_KEY);
-    if (!raw) return demoDefaultUsers();
+    if (!raw) return [];
     const users = JSON.parse(raw);
-    return Array.isArray(users) && users.length ? users : demoDefaultUsers();
-  } catch(_) { return demoDefaultUsers(); }
+    return Array.isArray(users) ? users : [];
+  } catch(_) { return []; }
 }
-function demoSetUsers(users){ localStorage.setItem(DEMO_USERS_KEY, JSON.stringify(users)); }
-function demoEnsureUsers(){ if (!localStorage.getItem(DEMO_USERS_KEY)) demoSetUsers(demoDefaultUsers()); }
+function demoSetUsers(users){
+  _cachedUsers = users;
+  try { localStorage.setItem(DEMO_USERS_KEY, JSON.stringify(users)); } catch(_) {}
+}
+async function demoRefreshUsers(){
+  const u = demoCurrentUser();
+  if (!u || !u.id) return [];
+  try {
+    const raw = await mktApi.listUsers(u.id);
+    const users = raw.map(_supaToDemoUser);
+    demoSetUsers(users);
+    return users;
+  } catch(e) {
+    console.warn('[users] refresh failed', e);
+    return demoGetUsers();
+  }
+}
+function demoEnsureUsers(){ /* no-op, Supabase quản lý */ }
+
 function demoCurrentUser(){
   try {
     const session = JSON.parse(localStorage.getItem(DEMO_SESSION_KEY) || 'null');
-    if (!session || !session.username) return null;
-    return demoGetUsers().find(u => u.username === session.username) || null;
+    if (!session || !session.user) return null;
+    return session.user;  // session.user là object demoUser format
   } catch(_) { return null; }
 }
 function demoModuleKey(mod){ if (mod === 'overview') return 'dashboard'; if (mod === 'dataSources') return 'users'; return mod; }
@@ -477,19 +673,35 @@ function demoShowApp(){
   render();
   setTs();
 }
-function demoLogin(ev){
+async function demoLogin(ev){
   ev.preventDefault();
-  demoEnsureUsers();
   const username = document.getElementById('demo-username').value.trim().toLowerCase();
   const password = document.getElementById('demo-password').value;
-  const user = demoGetUsers().find(u => u.username === username && u.password === password);
-  if (!user) { demoShowLogin('Sai username hoặc password. Vui lòng thử lại.'); return; }
-  localStorage.setItem(DEMO_SESSION_KEY, JSON.stringify({username:user.username, loginAt:Date.now()}));
-  demoShowApp();
-  toast('✅ Đăng nhập thành công!');
+  const btn = ev.target.querySelector('button[type="submit"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Đang đăng nhập...'; }
+  try {
+    const supaUser = await mktApi.login(username, password);
+    if (!supaUser) {
+      demoShowLogin('Sai username hoặc password. Vui lòng thử lại.');
+      return;
+    }
+    const user = _supaToDemoUser(supaUser);
+    localStorage.setItem(DEMO_SESSION_KEY, JSON.stringify({user, loginAt:Date.now()}));
+    toast('✅ Đăng nhập thành công! Đang đồng bộ dữ liệu...');
+    // Đồng bộ dữ liệu nghiệp vụ + danh sách user từ cloud xuống
+    await Promise.all([syncDown(), demoRefreshUsers()]);
+    demoShowApp();
+    toast('✅ Đã đồng bộ xong!');
+  } catch(e) {
+    console.error('[login]', e);
+    demoShowLogin('Lỗi kết nối Supabase: ' + (e.message || e));
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Đăng nhập'; }
+  }
 }
 function demoLogout(){
   localStorage.removeItem(DEMO_SESSION_KEY);
+  _cachedUsers = null;
   curMod = 'overview';
   demoShowLogin();
 }
@@ -552,50 +764,79 @@ function demoReadSession(){
   catch(_) { return null; }
 }
 function demoWriteSession(session){ localStorage.setItem(DEMO_SESSION_KEY, JSON.stringify(session)); }
-function demoSaveUser(oldUsername){
+async function demoSaveUser(oldUsername){
   if (!canManageDemoUsers() && !canResetDemoPasswords()) { toast('⚠️ Bạn không có quyền quản lý user.'); return; }
+  const caller = demoCurrentUser();
+  if (!caller || !caller.id) { toast('⚠️ Phiên hết hạn, đăng nhập lại.'); return; }
   const users = demoGetUsers();
   const u = users.find(x => x.username === oldUsername);
-  if (!u) return;
+  if (!u || !u.id) return;
   const row = document.querySelector(`[data-user-row="${CSS.escape(oldUsername)}"]`);
   if (!row) return;
 
-  if (canManageDemoUsers()) {
-    const usernameInput = row.querySelector('[data-user-username]');
-    const newUsername = demoNormalizeUsername(usernameInput?.value);
-    if (!newUsername) { toast('⚠️ Username không được để trống.'); usernameInput?.focus(); return; }
-    if (!demoUsernameIsValid(newUsername)) {
-      toast('⚠️ Username chỉ dùng chữ không dấu, số, dấu chấm, gạch ngang hoặc gạch dưới.');
-      usernameInput?.focus();
-      return;
-    }
-    const duplicated = users.some(x => x.username !== oldUsername && demoNormalizeUsername(x.username) === newUsername);
-    if (duplicated) { toast('⚠️ Username đã tồn tại.'); usernameInput?.focus(); return; }
-    u.username = newUsername;
-  }
-
-  if (canResetDemoPasswords()) {
-    const pass = row.querySelector('[data-user-password]')?.value.trim();
-    if (pass) u.password = pass;
-  }
+  let newDisplay = u.displayName;
+  let newPresets = { ...(u.presets || {}) };
 
   if (canManageDemoUsers() && u.role !== 'admin') {
-    u.displayName = row.querySelector('[data-user-display]')?.value.trim() || u.displayName;
+    newDisplay = row.querySelector('[data-user-display]')?.value.trim() || u.displayName;
     ['dashboard','b2b','sale','hr','users'].forEach(module => {
       const sel = row.querySelector(`[data-demo-module="${module}"]`);
-      if (sel) u.permissions[module] = demoPerm(sel.value);
+      if (sel) newPresets[module] = sel.value;
     });
   }
 
-  const session = demoReadSession();
-  if (session?.username === oldUsername) {
-    session.username = u.username;
-    demoWriteSession(session);
+  try {
+    if (canManageDemoUsers()) {
+      await mktApi.updateUser(caller.id, u.id, newDisplay, u.role, newPresets, null);
+    }
+    if (canResetDemoPasswords()) {
+      const pass = row.querySelector('[data-user-password]')?.value.trim();
+      if (pass) await mktApi.resetPassword(caller.id, u.id, pass);
+    }
+    await demoRefreshUsers();
+    toast('💾 Đã lưu user!');
+    render();
+  } catch(e) {
+    console.error('[saveUser]', e);
+    toast('❌ Lỗi: ' + (e.message || e));
   }
+}
 
-  demoSetUsers(users);
-  toast('💾 Đã lưu user demo!');
-  render();
+async function demoCreateUserPrompt(){
+  if (!canManageDemoUsers()) { toast('⚠️ Cần quyền quản lý user.'); return; }
+  const caller = demoCurrentUser();
+  const username = prompt('Username mới (chỉ chữ thường, số, . - _):');
+  if (!username) return;
+  if (!demoUsernameIsValid(demoNormalizeUsername(username))) { toast('⚠️ Username không hợp lệ.'); return; }
+  const display = prompt('Tên hiển thị:') || username;
+  const password = prompt('Mật khẩu tạm:') || '123456';
+  const role = prompt('Role (admin/editor/b2b/sale_online/recruitment/viewer):', 'viewer') || 'viewer';
+  try {
+    await mktApi.createUser(caller.id, demoNormalizeUsername(username), password, display, role, {dashboard:'view'});
+    await demoRefreshUsers();
+    toast('✅ Đã tạo user ' + username);
+    render();
+  } catch(e) {
+    console.error('[createUser]', e);
+    toast('❌ Lỗi: ' + (e.message || e));
+  }
+}
+
+async function demoDeleteUser(username){
+  if (!canManageDemoUsers()) { toast('⚠️ Cần quyền quản lý user.'); return; }
+  if (!confirm('Xoá user ' + username + ' khỏi hệ thống? Hành động này không thể hoàn tác.')) return;
+  const caller = demoCurrentUser();
+  const u = demoGetUsers().find(x => x.username === username);
+  if (!u || !u.id) return;
+  try {
+    await mktApi.deleteUser(caller.id, u.id);
+    await demoRefreshUsers();
+    toast('🗑️ Đã xoá ' + username);
+    render();
+  } catch(e) {
+    console.error('[deleteUser]', e);
+    toast('❌ Lỗi: ' + (e.message || e));
+  }
 }
 /* DATA_SOURCES_DEMO_VERSION 1 - Google Sheet config UI only.
    Phase sau có thể đọc Google Sheet qua Apps Script Web App hoặc Google Sheets API.
@@ -821,13 +1062,16 @@ function renderDataSourcesPage(){
       <td>${isAdmin?'<span class="demo-chip">Toàn quyền</span>':demoPresetSelect(u.username,'sale',demoPresetFromPermission(u.permissions.sale),!canManage)}</td>
       <td>${isAdmin?'<span class="demo-chip">Toàn quyền</span>':demoPresetSelect(u.username,'hr',demoPresetFromPermission(u.permissions.hr),!canManage)}</td>
       <td>${isAdmin?'<span class="demo-chip">Toàn quyền</span>':demoPresetSelect(u.username,'users',demoPresetFromPermission(u.permissions.users),!canManage)}</td>
-      <td><button class="btn btn-primary" onclick="demoSaveUser('${demoEsc(u.username)}')" ${(!canManage&&!canReset)?'disabled':''}>Lưu</button></td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-primary" onclick="demoSaveUser('${demoEsc(u.username)}')" ${(!canManage&&!canReset)?'disabled':''}>Lưu</button>
+        ${(!isAdmin && canManage) ? `<button class="btn" style="color:#dc2626;border-color:#fecaca;margin-left:6px" onclick="demoDeleteUser('${demoEsc(u.username)}')">Xoá</button>` : ''}
+      </td>
     </tr>`;
   }).join('');
   return `<div class="user-admin-card">
     <div class="user-admin-head">
-      <div><div class="user-admin-title">Quản lý user demo</div><div class="user-admin-sub">Bản tạm dùng localStorage key <strong>mkt_demo_users</strong>. Không dùng cho production.</div></div>
-      <button class="btn" onclick="demoSetUsers(demoDefaultUsers());toast('Đã reset user mẫu');render();">Reset user mẫu</button>
+      <div><div class="user-admin-title">Quản lý user</div><div class="user-admin-sub">Dữ liệu lưu trên <strong>Supabase</strong> — mọi máy nhìn cùng danh sách. Thêm/sửa/xoá đồng bộ realtime.</div></div>
+      <button class="btn btn-primary" onclick="demoCreateUserPrompt()" ${!canManage?'disabled':''}>＋ Thêm user</button>
     </div>
     <div class="tbl-wrap"><table class="user-mgmt-table">
       <thead><tr><th>User</th><th>Tên hiển thị</th><th>Đổi mật khẩu tạm</th><th>Dashboard</th><th>B2B</th><th>Sale Online</th><th>Tuyển dụng</th><th>User/Admin</th><th>Thao tác</th></tr></thead>
@@ -972,7 +1216,49 @@ function navTo(mod, el) {
   if (el) el.classList.add('active');
   curMod = mod;
   document.getElementById('topbar-title').textContent = MOD_TITLE[mod] || DEMO_MODULE_LABELS[mod] || DEMO_MODULE_LABELS[demoModuleKey(mod)] || mod;
+  // Auto-collapse Sale group when leaving sale
+  if (mod !== 'sale') {
+    const g = document.getElementById('grp-sale'); if (g) g.classList.remove('open');
+    const k = document.getElementById('grp-koc');  if (k) k.classList.remove('open');
+  }
   render();
+}
+/* ── Hierarchical Sale → KOC nav (sidebar-driven) ── */
+function navSaleGroup(el) {
+  const grp = document.getElementById('grp-sale');
+  if (curMod === 'sale') { grp.classList.toggle('open'); return; }
+  navTo('sale', el);
+  grp.classList.add('open');
+  _syncSaleSidebar();
+}
+function navKocGroup() {
+  navSaleSub('koc');
+}
+function navSaleSub(tab) {
+  if (curMod !== 'sale') navTo('sale', document.getElementById('nav-sale'));
+  saleTab = tab;
+  const saleGroup = document.getElementById('grp-sale');
+  if (saleGroup) saleGroup.classList.add('open');
+  if (tab === 'koc' && !kocSubTab) kocSubTab = 'overview';
+  _syncSaleSidebar();
+  saleRerender();
+}
+function navKocSub(sub) {
+  if (curMod !== 'sale') navTo('sale', document.getElementById('nav-sale'));
+  saleTab = 'koc';
+  switchKocTab(sub);
+  const saleGroup = document.getElementById('grp-sale');
+  if (saleGroup) saleGroup.classList.add('open');
+  _syncSaleSidebar();
+}
+function _syncSaleSidebar() {
+  document.querySelectorAll('#sale-children [data-sale-tab]').forEach(x =>
+    x.classList.toggle('active', x.dataset.saleTab === saleTab));
+  const kocChildren = document.getElementById('koc-children');
+  if (kocChildren) {
+    kocChildren.querySelectorAll('[data-koc-sub]').forEach(x =>
+      x.classList.toggle('active', x.dataset.kocSub === kocSubTab && saleTab === 'koc'));
+  }
 }
 function refresh() {
   render(); setTs(); toast('✅ Đã cập nhật!');
@@ -1332,9 +1618,9 @@ const KOC_COLLAB_VIEW_TT = new Set(['Đồng ý hợp tác','Đã gửi sản ph
 const KOC_SUBTABS = [
   {id:'overview', l:'📊 Tổng quan'},
   {id:'master',   l:'📋 Danh sách KOC'},
+  {id:'scripts',  l:'📝 Kịch bản'},
   {id:'prod',     l:'🔗 KOC theo SP/CD'},
   {id:'collab',   l:'🤝 KOC hợp tác'},
-  {id:'compliance', l:'⚖️ Kiểm duyệt nội dung'},
   {id:'report',   l:'📈 Báo cáo'},
 ];
 const KOC_NEN_TANG     = ['','TikTok','Facebook','Instagram','YouTube','Shopee Affiliate','Khác'];
@@ -1597,7 +1883,7 @@ function kocPtChange(id,field,val){
   }
   kocMstUpd(id,field,val);
 }
-function saleRerender()   { document.getElementById('content').innerHTML = renderSale(); }
+function saleRerender()   { document.getElementById('content').innerHTML = renderSale(); if(typeof _syncSaleSidebar==='function') _syncSaleSidebar(); }
 function saleSwitchTab(t) { saleTab = t; saleRerender(); }
 
 /* ── Generic CRUD (used by all 6 tables) ── */
@@ -1698,9 +1984,8 @@ function renderSale() {
     {id:'reviews',   l:'Đánh giá KH'},
     {id:'alerts',    l:'Cảnh báo'},
   ];
-  const tabBar = `<div class="mod-tabs">${TABS.map(t=>
-    `<div class="mod-tab ${saleTab===t.id?'active':''}" onclick="saleSwitchTab('${t.id}')">${t.l}</div>`
-  ).join('')}</div>`;
+  const curTab = TABS.find(t=>t.id===saleTab) || TABS[0];
+  const crumb = `<div class="sale-crumb"><span class="crumb-mod">🛒 Sale Online</span><span class="crumb-sep">›</span><span class="crumb-cur">${curTab.l}</span></div>`;
   const body = ({
     overview:_saleOverview, products:_saleProdMst, campaigns:_saleCampTab,
     koc:_saleKocTab, compliance:()=>renderCompliancePage('sale'), ads:_saleAdsTab, orders:_saleOrdTab,
@@ -1708,7 +1993,7 @@ function renderSale() {
     reviews:()=>_ph('⭐','Tab Đánh giá KH — bước tiếp theo.'),
     alerts:_saleAlertsTab,
   }[saleTab]??_saleOverview)();
-  return tabBar+body;
+  return crumb+body;
 }
 
 function _saleOverview() {
@@ -1766,22 +2051,202 @@ function _saleKocTab() {
   actions.push(`<div style="flex:1"></div>`);
   actions.push(_b('💾 Lưu',"_kocSaveAll();toast('💾 Đã lưu KOC!')",'#ea580c'));
   const nav = `
-    <div style="display:flex;gap:4px;border-bottom:2px solid #e2e8f0;padding-bottom:0;align-items:flex-end">
-      ${KOC_SUBTABS.map(t=>`<button type="button" data-koc-tab="${t.id}" style="padding:8px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;border-bottom:3px solid ${kocSubTab===t.id?'#3b82f6':'transparent'};color:${kocSubTab===t.id?'#3b82f6':'#64748b'};margin-bottom:-2px">${t.l}</button>`).join('')}
-      <div style="flex:1"></div>
+    <div class="koc-horizontal-nav" aria-label="KOC / Affiliate tabs">
+      ${KOC_SUBTABS.map(t=>`<button type="button" data-koc-tab="${t.id}" class="koc-horizontal-btn ${kocSubTab===t.id?'active':''}">${t.l}</button>`).join('')}
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 12px;align-items:center">
       ${actions.join('')}
     </div>`;
-  const renderers = {overview:renderKocOverview,master:renderKocMaster,prod:renderKocProductCampaign,collab:renderKocCollaboration,compliance:renderKocCompliance,report:renderKocReport};
+  const renderers = {overview:renderKocOverview,master:renderKocMaster,scripts:renderKocScripts,prod:renderKocProductCampaign,collab:renderKocCollaboration,compliance:renderKocCompliance,report:renderKocReport};
   const body = (renderers[kocSubTab] || renderKocOverview)();
   return nav + body;
 }
 function renderKocOverview(){ return _kocOverview(); }
 function renderKocMaster(){ return _kocMaster(); }
+function renderKocScripts(){ return _kocScripts(); }
 function renderKocProductCampaign(){ return _kocProdCamp(); }
 function renderKocCollaboration(){ return _kocCollabView(); }
 function renderKocReport(){ return _kocReport(); }
+
+/* ════════════════════════════════════════════════════════════
+   KỊCH BẢN — placeholder UI (chờ wire Supabase + OpenAI)
+════════════════════════════════════════════════════════════ */
+let scriptTab = 'all';
+let _scriptsCache = null;
+let _scriptsLoading = false;
+const SCRIPT_TABS = [
+  {id:'all',           l:'Tất cả'},
+  {id:'draft',         l:'📝 Nháp'},
+  {id:'ai_checking',   l:'🤖 Đang AI check'},
+  {id:'pending_review',l:'⏳ Chờ duyệt'},
+  {id:'approved',      l:'✅ Đã duyệt'},
+  {id:'assigned',      l:'🤝 Đã giao KOC'},
+  {id:'filming',       l:'🎬 Đang quay'},
+  {id:'uploaded',      l:'📤 Đã upload'},
+  {id:'aired',         l:'📺 Đã air'},
+  {id:'rejected',      l:'❌ Từ chối'},
+  {id:'archived',      l:'🗄 Archive'},
+];
+
+function _scriptSwitch(t){ scriptTab = t; saleRerender(); }
+
+async function _scriptsLoad(force){
+  if (_scriptsLoading) return;
+  if (_scriptsCache && !force) return;
+  _scriptsLoading = true;
+  try {
+    _scriptsCache = await mktApi.scriptList(null);
+  } catch(e) {
+    console.error('[scripts] load failed', e);
+    toast('❌ Lỗi tải kịch bản: ' + (e.message || e));
+    _scriptsCache = [];
+  } finally {
+    _scriptsLoading = false;
+    if (curMod==='sale' && saleTab==='koc' && kocSubTab==='scripts') saleRerender();
+  }
+}
+
+async function _scriptCreate(){
+  const caller = demoCurrentUser();
+  if (!caller || !caller.id) { toast('⚠️ Đăng nhập lại.'); return; }
+  const title = prompt('Tiêu đề kịch bản:');
+  if (!title) return;
+  const content = prompt('Nội dung kịch bản (paste toàn bộ):');
+  if (!content) return;
+  const productCode = prompt('Mã sản phẩm (optional):', '') || null;
+  try {
+    toast('⏳ Đang tạo kịch bản...');
+    const id = await mktApi.scriptCreate(caller.id, title, content, productCode, null, null, null, []);
+    toast('✅ Đã tạo. Đang chạy AI check...');
+    // Trigger AI check (chạy nền, không chờ)
+    mktApi.aiCheck(id, title, content)
+      .then(r => { toast(`🤖 AI score: ${r.score}/100 · ${r.issues.length} issue · $${r.cost_usd}`); _scriptsLoad(true); })
+      .catch(err => { console.error('[ai_check]', err); toast('⚠️ AI check lỗi: ' + (err.message || err)); _scriptsLoad(true); });
+    await _scriptsLoad(true);
+  } catch(e) {
+    toast('❌ Lỗi: ' + (e.message || e));
+  }
+}
+
+async function _scriptRecheck(id, title, content){
+  toast('🤖 Đang chạy AI check lại...');
+  try {
+    const r = await mktApi.aiCheck(id, title, content);
+    toast(`🤖 Score ${r.score}/100 · ${r.issues.length} issue`);
+    await _scriptsLoad(true);
+  } catch(e) {
+    toast('❌ ' + (e.message || e));
+  }
+}
+
+async function _scriptApprove(id){
+  const caller = demoCurrentUser();
+  const note = prompt('Ghi chú duyệt (optional):', '') || '';
+  try { await mktApi.scriptApprove(caller.id, id, note); toast('✅ Đã duyệt'); await _scriptsLoad(true); }
+  catch(e){ toast('❌ ' + (e.message||e)); }
+}
+async function _scriptReject(id){
+  const caller = demoCurrentUser();
+  const reason = prompt('Lý do từ chối:');
+  if (!reason) return;
+  try { await mktApi.scriptReject(caller.id, id, reason); toast('❌ Đã từ chối'); await _scriptsLoad(true); }
+  catch(e){ toast('❌ ' + (e.message||e)); }
+}
+async function _scriptAssign(id){
+  const caller = demoCurrentUser();
+  const kocs = (window.kocMstRows && kocMstRows.length) ? kocMstRows.map(k=>k.maKoc).filter(Boolean) : [];
+  const placeholder = kocs.length ? `Mã KOC (gợi ý: ${kocs.slice(0,3).join(', ')}...)` : 'Mã KOC';
+  const kocCode = prompt(placeholder);
+  if (!kocCode) return;
+  const note = prompt('Ghi chú (optional):','') || '';
+  try { await mktApi.scriptAssign(caller.id, id, kocCode, note); toast('🤝 Đã giao cho ' + kocCode); await _scriptsLoad(true); }
+  catch(e){ toast('❌ ' + (e.message||e)); }
+}
+async function _scriptViewSimilar(id){
+  try {
+    const similar = await mktApi.scriptFindSimilar(id, 5);
+    if (!similar.length) { alert('Không tìm thấy kịch bản tương tự.'); return; }
+    const msg = similar.map(s => `${(s.similarity*100).toFixed(1)}% — ${s.title} [${s.status}]`).join('\n');
+    alert('Các kịch bản tương tự:\n\n' + msg);
+  } catch(e){ toast('❌ ' + (e.message||e)); }
+}
+
+function _statusPill(st){
+  const map = {
+    draft:        ['#94a3b8','#f1f5f9','📝 Nháp'],
+    ai_checking:  ['#7c3aed','#f5f3ff','🤖 AI check'],
+    pending_review:['#c2410c','#fff7ed','⏳ Chờ duyệt'],
+    approved:     ['#047857','#dcfce7','✅ Đã duyệt'],
+    assigned:     ['#1d4ed8','#dbeafe','🤝 Đã giao'],
+    filming:      ['#a16207','#fef3c7','🎬 Đang quay'],
+    uploaded:     ['#0e7490','#cffafe','📤 Đã upload'],
+    aired:        ['#0891b2','#ecfeff','📺 Đã air'],
+    rejected:     ['#b91c1c','#fee2e2','❌ Từ chối'],
+    archived:     ['#64748b','#f1f5f9','🗄 Archive'],
+  };
+  const [c,bg,l] = map[st] || ['#475569','#f1f5f9',st];
+  return `<span style="display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:800;background:${bg};color:${c}">${l}</span>`;
+}
+
+function _aiBadge(score, issues){
+  if (score == null) return `<span style="color:#94a3b8;font-size:11.5px">— Chưa check</span>`;
+  const c = score >= 80 ? '#047857' : score >= 60 ? '#c2410c' : '#b91c1c';
+  const bg = score >= 80 ? '#dcfce7' : score >= 60 ? '#fff7ed' : '#fee2e2';
+  const nIssue = (issues && issues.length) ? issues.length : 0;
+  return `<span style="display:inline-block;padding:3px 9px;border-radius:8px;font-size:11.5px;font-weight:800;background:${bg};color:${c}">${score}/100 · ${nIssue} issue</span>`;
+}
+
+function _kocScripts(){
+  // Lazy load lần đầu
+  if (_scriptsCache === null && !_scriptsLoading) {
+    _scriptsLoad(false);
+    return `<div style="padding:40px;text-align:center;color:#64748b">⏳ Đang tải kịch bản từ Supabase...</div>`;
+  }
+  const tabBar = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+    ${SCRIPT_TABS.map(t=>`<button onclick="_scriptSwitch('${t.id}')" style="padding:6px 12px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;border:1.5px solid ${scriptTab===t.id?'#1e2e4a':'#e2e8f0'};background:${scriptTab===t.id?'#1e2e4a':'#fff'};color:${scriptTab===t.id?'#fff':'#475569'}">${t.l}</button>`).join('')}
+  </div>`;
+  const actions = `<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+    <button onclick="_scriptCreate()" style="padding:8px 16px;border-radius:8px;background:linear-gradient(90deg,#ff7a45,#ff5a36);color:#fff;border:0;font-weight:800;cursor:pointer">＋ Nhập kịch bản mới</button>
+    <button onclick="_scriptsLoad(true)" style="padding:8px 16px;border-radius:8px;background:#fff;border:1.5px solid #e2e8f0;color:#475569;font-weight:700;cursor:pointer">🔄 Reload</button>
+  </div>`;
+  const all = _scriptsCache || [];
+  const list = scriptTab === 'all' ? all : all.filter(s => s.status === scriptTab);
+  if (!list.length) {
+    return tabBar + actions + `<div style="padding:50px;text-align:center;background:#fff;border:1px dashed #e2e8f0;border-radius:14px;color:#64748b">Không có kịch bản nào ở trạng thái <strong>${scriptTab}</strong>.</div>`;
+  }
+  const rows = list.map(s => {
+    const dt = new Date(s.updated_at).toLocaleString('vi-VN');
+    const canApprove = s.status === 'pending_review';
+    const canAssign = ['approved','assigned'].includes(s.status);
+    return `<tr>
+      <td><strong>${demoEsc(s.title)}</strong>${s.product_code?`<div style="font-size:11px;color:#64748b">SP: ${demoEsc(s.product_code)}</div>`:''}</td>
+      <td>${_statusPill(s.status)}</td>
+      <td>${_aiBadge(s.ai_score, s.ai_issues)}</td>
+      <td>${s.assignment_count||0} KOC · ${s.aired_count||0} air</td>
+      <td style="font-size:11.5px;color:#64748b;white-space:nowrap">${dt}</td>
+      <td style="white-space:nowrap">
+        ${canApprove?`<button onclick="_scriptApprove('${s.id}')" style="padding:4px 10px;border-radius:6px;background:#047857;color:#fff;border:0;font-size:11.5px;font-weight:700;cursor:pointer;margin-right:4px">✅ Duyệt</button>`:''}
+        ${canApprove?`<button onclick="_scriptReject('${s.id}')" style="padding:4px 10px;border-radius:6px;background:#b91c1c;color:#fff;border:0;font-size:11.5px;font-weight:700;cursor:pointer;margin-right:4px">❌</button>`:''}
+        ${canAssign?`<button onclick="_scriptAssign('${s.id}')" style="padding:4px 10px;border-radius:6px;background:#1d4ed8;color:#fff;border:0;font-size:11.5px;font-weight:700;cursor:pointer;margin-right:4px">🤝 Giao KOC</button>`:''}
+        <button onclick="_scriptViewSimilar('${s.id}')" style="padding:4px 8px;border-radius:6px;background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;font-size:11.5px;font-weight:700;cursor:pointer">🔍 Tương tự</button>
+      </td>
+    </tr>`;
+  }).join('');
+  const table = `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden">
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="background:#fafbfc">
+        <th style="text-align:left;padding:12px;font-size:11px;color:#64748b;font-weight:800;letter-spacing:.05em;text-transform:uppercase">Tiêu đề</th>
+        <th style="text-align:left;padding:12px;font-size:11px;color:#64748b;font-weight:800;letter-spacing:.05em;text-transform:uppercase">Trạng thái</th>
+        <th style="text-align:left;padding:12px;font-size:11px;color:#64748b;font-weight:800;letter-spacing:.05em;text-transform:uppercase">AI Score</th>
+        <th style="text-align:left;padding:12px;font-size:11px;color:#64748b;font-weight:800;letter-spacing:.05em;text-transform:uppercase">KOC</th>
+        <th style="text-align:left;padding:12px;font-size:11px;color:#64748b;font-weight:800;letter-spacing:.05em;text-transform:uppercase">Cập nhật</th>
+        <th style="text-align:left;padding:12px;font-size:11px;color:#64748b;font-weight:800;letter-spacing:.05em;text-transform:uppercase">Hành động</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+  return tabBar + actions + table;
+}
 
 /* ── Shared cell helpers ── */
 function _kocPtSel(id,field,val) {
@@ -3391,11 +3856,14 @@ function saveMktInsight() {
 /* ═══════════════════════════════════════
    INIT
 ═══════════════════════════════════════ */
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
   initSidebarToggle();
-  demoEnsureUsers();
   bindKocTabEvents();
   if (!demoCurrentUser()) { demoShowLogin(); return; }
+  // Đã có session — sync xuống trước khi hiển thị app
+  try {
+    await Promise.all([syncDown(), demoRefreshUsers()]);
+  } catch(e) { console.warn('[init] sync failed', e); }
   demoShowApp();
 });
 </script>

@@ -3,7 +3,9 @@
 -- Paste vào Supabase → SQL Editor → New query → Run
 -- ════════════════════════════════════════════════════════════════
 
-create extension if not exists pgcrypto;
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
+set search_path = public, extensions;
 
 -- ── USERS ────────────────────────────────────────────────────────
 create table if not exists app_users (
@@ -43,7 +45,7 @@ create table if not exists audit_log (
 
 create or replace function verify_password(p_username text, p_password text)
 returns table(id uuid, username text, display_name text, role text, permissions jsonb, status text)
-language plpgsql security definer set search_path = public as $$
+language plpgsql security definer set search_path = public, extensions as $$
 begin
   return query
   select u.id, u.username, u.display_name, u.role, u.permissions, u.status
@@ -56,13 +58,13 @@ $$;
 
 -- helper: caller must be admin
 create or replace function _is_admin(p_caller_id uuid) returns boolean
-language sql security definer set search_path = public as $$
+language sql security definer set search_path = public, extensions as $$
   select exists(select 1 from app_users where id = p_caller_id and role = 'admin' and status = 'active');
 $$;
 
 create or replace function list_users(p_caller_id uuid)
 returns table(id uuid, username text, display_name text, role text, permissions jsonb, status text, created_at timestamptz)
-language plpgsql security definer set search_path = public as $$
+language plpgsql security definer set search_path = public, extensions as $$
 begin
   if not _is_admin(p_caller_id) then raise exception 'forbidden' using errcode = '42501'; end if;
   return query
@@ -72,7 +74,7 @@ end;
 $$;
 
 create or replace function create_user(p_caller_id uuid, p_username text, p_password text, p_display_name text, p_role text, p_permissions jsonb)
-returns uuid language plpgsql security definer set search_path = public as $$
+returns uuid language plpgsql security definer set search_path = public, extensions as $$
 declare v_id uuid;
 begin
   if not _is_admin(p_caller_id) then raise exception 'forbidden' using errcode = '42501'; end if;
@@ -86,7 +88,7 @@ end;
 $$;
 
 create or replace function update_user(p_caller_id uuid, p_id uuid, p_display_name text, p_role text, p_permissions jsonb, p_status text)
-returns boolean language plpgsql security definer set search_path = public as $$
+returns boolean language plpgsql security definer set search_path = public, extensions as $$
 begin
   if not _is_admin(p_caller_id) then raise exception 'forbidden' using errcode = '42501'; end if;
   update app_users
@@ -101,7 +103,7 @@ end;
 $$;
 
 create or replace function reset_password(p_caller_id uuid, p_id uuid, p_new_password text)
-returns boolean language plpgsql security definer set search_path = public as $$
+returns boolean language plpgsql security definer set search_path = public, extensions as $$
 begin
   -- admin có thể reset ai cũng được; user thường chỉ reset chính mình
   if not _is_admin(p_caller_id) and p_caller_id <> p_id then
@@ -114,7 +116,7 @@ end;
 $$;
 
 create or replace function delete_user(p_caller_id uuid, p_id uuid)
-returns boolean language plpgsql security definer set search_path = public as $$
+returns boolean language plpgsql security definer set search_path = public, extensions as $$
 begin
   if not _is_admin(p_caller_id) then raise exception 'forbidden' using errcode = '42501'; end if;
   if p_caller_id = p_id then raise exception 'cannot delete self'; end if;
@@ -129,17 +131,17 @@ $$;
 
 create or replace function kv_get_all()
 returns table(key text, payload jsonb, updated_at timestamptz)
-language sql security definer set search_path = public as $$
+language sql security definer set search_path = public, extensions as $$
   select key, payload, updated_at from kv_stores;
 $$;
 
 create or replace function kv_get(p_key text)
-returns jsonb language sql security definer set search_path = public as $$
+returns jsonb language sql security definer set search_path = public, extensions as $$
   select payload from kv_stores where key = p_key;
 $$;
 
 create or replace function kv_set(p_key text, p_payload jsonb, p_user_id uuid)
-returns timestamptz language plpgsql security definer set search_path = public as $$
+returns timestamptz language plpgsql security definer set search_path = public, extensions as $$
 declare v_ts timestamptz;
 begin
   insert into kv_stores(key, payload, updated_at, updated_by)
