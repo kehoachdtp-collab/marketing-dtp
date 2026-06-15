@@ -1869,6 +1869,8 @@ const KOC_SUBTABS = [
 /* Tab con theo sản phẩm trong "KOC hợp tác" */
 let kocProdFilter = 'all';
 let kocProdOnlyCollab = false;
+let kocProdPage = 0;
+const KOC_PROD_PAGE_SIZE = 40;
 let _kocProdTabsCache = [];
 function _kocProdShortName(s){ const t=String(s||'').trim(); if(!t) return '(Chưa gắn SP)'; return (t.split(/\s[-–—]\s/)[0]||t).trim(); }
 function _kocProdKey(r){ return (String(r.tenSp||'').trim()) || '(Chưa gắn SP)'; }
@@ -1877,8 +1879,9 @@ function _kocProdDistinct(){
   kocProdRows.forEach(r=>{ const k=_kocProdKey(r); m.set(k,(m.get(k)||0)+1); });
   return [...m.entries()].sort((a,b)=>b[1]-a[1]);
 }
-function _kocProdTab(i){ const t=_kocProdTabsCache[i]; if(t){ kocProdFilter=t.name; saleRerender(); } }
-function kocProdToggleCollab(){ kocProdOnlyCollab=!kocProdOnlyCollab; saleRerender(); }
+function _kocProdTab(i){ const t=_kocProdTabsCache[i]; if(t){ kocProdFilter=t.name; kocProdPage=0; saleRerender(); } }
+function kocProdToggleCollab(){ kocProdOnlyCollab=!kocProdOnlyCollab; kocProdPage=0; saleRerender(); }
+function kocProdGoPage(p){ kocProdPage=p; saleRerender(); const el=document.getElementById('content'); if(el)el.scrollTop=0; }
 const KOC_NEN_TANG     = ['','TikTok','Facebook','Instagram','YouTube','Shopee Affiliate','Khác'];
 const KOC_NHOM_ND      = ['','Beauty & Skincare','Mẹ & Bé','Lifestyle','Review sản phẩm','Khác'];
 const KOC_HINH_THUC_SP = ['','TikTok Shop','Shopee','CPN','EMS','Vận chuyển ngoài','Nhận trực tiếp','Khác'];
@@ -2813,26 +2816,22 @@ function _kocPtSel(id,field,val) {
   return `<select onchange="kocPtChange(${id},'${field}',this.value)" style="background:${cur?cl+'20':'#f8fafc'};color:${cur?cl:'#94a3b8'};border:1.5px solid ${cur?cl+'50':'#e2e8f2'};border-radius:16px;padding:3px 8px;font-size:12px;font-weight:600;min-width:90px">
     <option value="">—</option>${opts}<option value="__add__">＋ Thêm</option></select>`;
 }
+/* Dùng <input list> trỏ tới datalist dùng chung (render 1 lần) thay vì
+   nhồi 453 option vào mỗi dòng → tránh nổ DOM khi có hàng trăm dòng. */
 function _kocMaKocSel(id,field,val) {
-  const cur=val||'';
-  const opts=kocMstRows.map(m=>`<option value="${esc(m.maKoc)}"${cur===m.maKoc?' selected':''}>${esc(m.maKoc)} — ${esc(m.ten||'')}</option>`).join('');
-  return `<select onchange="kocProdUpd(${id},'${field}',this.value)" style="min-width:130px;font-size:12px;border-radius:6px;padding:3px 6px">
-    <option value="">— Chọn KOC —</option>${opts}</select>`;
+  return `<input list="dl-koc-ma" value="${esc(val||'')}" onchange="kocProdUpd(${id},'${field}',this.value)" placeholder="Mã KOC" style="min-width:120px;font-size:12px;border:1px solid #e2e8f2;border-radius:6px;padding:3px 6px">`;
 }
 function _kocCdSel(id,field,val) {
-  const cur=val||'';
-  const opts=saleCampaigns.map(c=>`<option value="${esc(c.maCd)}"${cur===c.maCd?' selected':''}>${esc(c.maCd)} — ${esc(c.tenCd||'')}</option>`).join('');
-  return `<select onchange="kocProdUpd(${id},'${field}',this.value)" style="min-width:130px;font-size:12px;border-radius:6px;padding:3px 6px">
-    <option value="">— Chọn CD —</option>${opts}</select>`;
+  return `<input list="dl-koc-cd" value="${esc(val||'')}" onchange="kocProdUpd(${id},'${field}',this.value)" placeholder="Mã CD" style="min-width:120px;font-size:12px;border:1px solid #e2e8f2;border-radius:6px;padding:3px 6px">`;
+}
+function _kocProdDatalists() {
+  const koc=kocMstRows.map(m=>`<option value="${esc(m.maKoc)}">${esc(m.ten||'')}</option>`).join('');
+  const cd=saleCampaigns.map(c=>`<option value="${esc(c.maCd)}">${esc(c.tenCd||'')}</option>`).join('');
+  const sp=saleMstRows.filter(r=>r.maSP||r.tenSP).map(p=>`<option value="${esc(p.maSP||p.tenSP)}">${esc(p.tenSP||p.maSP)}</option>`).join('');
+  return `<datalist id="dl-koc-ma">${koc}</datalist><datalist id="dl-koc-cd">${cd}</datalist><datalist id="dl-koc-sp">${sp}</datalist>`;
 }
 function _kocSpSel2(id,field,val) {
-  const msts=saleMstRows.filter(r=>r.maSP||r.tenSP);
-  if(!msts.length) return `<input value="${esc(val||'')}" onchange="kocProdUpd(${id},'${field}',this.value)" placeholder="Tên SP..." style="min-width:130px;font-size:12px;border:1px solid #e2e8f2;border-radius:6px;padding:3px 7px">`;
-  const cur=val||'';
-  return `<select onchange="kocProdUpd(${id},'${field}',this.value)" style="min-width:130px;font-size:12px;border-radius:6px;padding:3px 6px">
-    <option value="">— Chọn SP —</option>
-    ${msts.map(p=>`<option value="${esc(p.maSP||p.tenSP)}"${cur===(p.maSP||p.tenSP)?' selected':''}>${esc(p.tenSP||p.maSP)}</option>`).join('')}
-  </select>`;
+  return `<input list="dl-koc-sp" value="${esc(val||'')}" onchange="kocProdUpd(${id},'${field}',this.value)" placeholder="Mã/Tên SP" style="min-width:120px;font-size:12px;border:1px solid #e2e8f2;border-radius:6px;padding:3px 7px">`;
 }
 function renderLinkCell(url,id=null,field=null,fn=null) {
   const full=String(url||'').trim();
@@ -3242,8 +3241,15 @@ function _kocProdCamp() {
     <th style="min-width:180px">Ghi chú</th>
     <th style="width:34px"></th>
   </tr>`;
+  /* ── Phân trang: chỉ render ${KOC_PROD_PAGE_SIZE} dòng/trang để tránh đơ ── */
+  const totalPages=Math.max(1,Math.ceil(rows.length/KOC_PROD_PAGE_SIZE));
+  if(kocProdPage>=totalPages) kocProdPage=totalPages-1;
+  if(kocProdPage<0) kocProdPage=0;
+  const pStart=kocProdPage*KOC_PROD_PAGE_SIZE;
+  const pageRows=rows.slice(pStart,pStart+KOC_PROD_PAGE_SIZE);
   const today=new Date();today.setHours(0,0,0,0);
-  const tbody=rows.map((r,i)=>{
+  const tbody=pageRows.map((r,idx)=>{
+    const i=pStart+idx;
     const dlOver=r.deadlineDemo&&new Date(r.deadlineDemo)<today&&r.demo!=='Đã duyệt';
     const inactive=r.trangThai==='Không hợp tác';
     return `<tr style="${dlOver?'background:#fff5f5':''}${inactive?';opacity:0.65':''}">
@@ -3294,7 +3300,22 @@ function _kocProdCamp() {
       <td><button class="del-btn" onclick="kocProdDel(${r.id})">✕</button></td>
     </tr>`;
   }).join('');
-  return prodTabBar+addBar+`<div class="tbl-wrap"><table class="tbl"><thead>${thead}</thead><tbody>${tbody}</tbody></table></div>`;
+  /* ── Thanh phân trang ── */
+  let pager='';
+  if(totalPages>1){
+    const btn=(p,lbl,dis,on)=>`<button type="button" ${dis?'disabled':''} onclick="kocProdGoPage(${p})" style="padding:5px 11px;border-radius:7px;font-size:12.5px;font-weight:700;cursor:${dis?'default':'pointer'};border:1.5px solid ${on?'#7c3aed':'#e2e8f0'};background:${on?'#7c3aed':'#fff'};color:${on?'#fff':dis?'#cbd5e1':'#475569'}">${lbl}</button>`;
+    let nums='';
+    const win=2;
+    for(let p=0;p<totalPages;p++){
+      if(p===0||p===totalPages-1||(p>=kocProdPage-win&&p<=kocProdPage+win)) nums+=btn(p,p+1,false,p===kocProdPage);
+      else if(p===kocProdPage-win-1||p===kocProdPage+win+1) nums+=`<span style="color:#94a3b8;padding:0 2px">…</span>`;
+    }
+    pager=`<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:12px;justify-content:center">
+      ${btn(kocProdPage-1,'‹ Trước',kocProdPage===0,false)}${nums}${btn(kocProdPage+1,'Sau ›',kocProdPage===totalPages-1,false)}
+      <span style="font-size:12px;color:#64748b;margin-left:8px">Trang ${kocProdPage+1}/${totalPages} · ${rows.length} dòng</span>
+    </div>`;
+  }
+  return _kocProdDatalists()+prodTabBar+addBar+pager+`<div class="tbl-wrap"><table class="tbl"><thead>${thead}</thead><tbody>${tbody}</tbody></table></div>`+pager;
 }
 
 /* ──── 4. KOC HỢP TÁC — view từ kocProdRows ──── */
