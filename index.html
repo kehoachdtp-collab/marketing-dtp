@@ -1882,6 +1882,69 @@ function _kocProdDistinct(){
 function _kocProdTab(i){ const t=_kocProdTabsCache[i]; if(t){ kocProdFilter=t.name; kocProdPage=0; saleRerender(); } }
 function kocProdToggleCollab(){ kocProdOnlyCollab=!kocProdOnlyCollab; kocProdPage=0; saleRerender(); }
 function kocProdGoPage(p){ kocProdPage=p; saleRerender(); const el=document.getElementById('content'); if(el)el.scrollTop=0; }
+
+/* ── Popup thêm lượt mời: tra cứu KOC theo SĐT hoặc Mã ID ── */
+let _kocInviteMatch = null;
+function _kocInviteLookup(){
+  const inp=document.getElementById('inv-search'); const prev=document.getElementById('inv-preview');
+  if(!inp||!prev) return;
+  const q=(inp.value||'').trim().toLowerCase();
+  if(!q){ _kocInviteMatch=null; prev.innerHTML='<span style="color:#94a3b8">Nhập SĐT hoặc Mã KOC để tự nhảy ra thông tin…</span>'; return; }
+  const qd=q.replace(/[^\d]/g,'');
+  const m=kocMstRows.find(r=>{
+    const ma=String(r.maKoc||'').toLowerCase();
+    const lh=String(r.lienHe||'').replace(/[^\d]/g,'');
+    return (ma && ma===q) || (qd.length>=8 && lh && lh===qd);
+  }) || kocMstRows.find(r=>{
+    const ma=String(r.maKoc||'').toLowerCase();
+    const lh=String(r.lienHe||'').replace(/[^\d]/g,'');
+    const nm=String(r.ten||'').toLowerCase();
+    return (ma && ma.includes(q)) || (qd.length>=8 && lh.includes(qd)) || (q.length>=3 && nm.includes(q));
+  });
+  if(m){
+    _kocInviteMatch=m;
+    prev.innerHTML=`<div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:11px 13px">
+      <div style="font-weight:800;color:#15803d;font-size:14px">✅ ${esc(m.ten||m.maKoc||'KOC')}</div>
+      <div style="font-size:12.5px;color:#334155;margin-top:4px;line-height:1.6">
+        Mã: <strong>${esc(m.maKoc||'—')}</strong> · SĐT: <strong>${esc(m.lienHe||'—')}</strong><br>
+        Follower: ${esc(_kocFollowerLabel(m.follower))} · Nền tảng: ${esc(m.nenTangChinh||'—')} · PT: ${esc(m.phuTrach||'—')}<br>
+        ${m.socialLink?`<a href="${esc(m.socialLink)}" target="_blank" style="color:#2563eb">${esc(m.socialLink)}</a>`:''}
+      </div></div>`;
+  } else {
+    _kocInviteMatch=null;
+    prev.innerHTML=`<div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:10px;padding:11px 13px;color:#92400e;font-size:12.5px">⚠️ Chưa tìm thấy KOC khớp trong danh sách. Vẫn có thể tạo lượt mời mới — thông tin sẽ lưu theo giá trị bạn nhập.</div>`;
+  }
+}
+async function kocInvitePrompt(defaultStatus){
+  _kocInviteMatch=null;
+  const curProd = (kocProdFilter!=='all' && kocProdFilter!=='(Chưa gắn SP)') ? kocProdFilter : '';
+  const ttOpts = KOC_TT_COLLAB.map(o=>`<option value="${esc(o)}"${o===(defaultStatus||'')?' selected':''}>${esc(o)||'—'}</option>`).join('');
+  const body = _kocProdDatalists() + `
+    <div class="mdk-field"><label>SĐT hoặc Mã KOC *</label>
+      <input id="inv-search" list="dl-koc-ma" oninput="_kocInviteLookup()" autocomplete="off" placeholder="VD: 0987654321 hoặc KOC001"></div>
+    <div id="inv-preview" style="margin-bottom:12px"><span style="color:#94a3b8">Nhập SĐT hoặc Mã KOC để tự nhảy ra thông tin…</span></div>
+    <div class="mdk-field"><label>Sản phẩm</label><input id="inv-sp" list="dl-koc-sp" value="${esc(curProd)}" placeholder="VD: Nadibaby care"></div>
+    <div class="mdk-field"><label>Chiến dịch (tùy chọn)</label><input id="inv-cd" list="dl-koc-cd" placeholder="Mã CD"></div>
+    <div class="mdk-field"><label>Trạng thái hợp tác</label><select id="inv-tt">${ttOpts}</select></div>`;
+  const ok = await _mdkShow('🤝 Thêm lượt mời KOC', body,
+    [{label:'Hủy', action:'_mdkClose(false)'}, {label:'➕ Thêm lượt mời', action:'_mdkClose(true)', primary:true}]);
+  if(!ok) return;
+  const raw=_mdkVal('inv-search');
+  if(!raw){ toast('⚠️ Cần nhập SĐT hoặc Mã KOC.'); return; }
+  const sp=_mdkVal('inv-sp'), cd=_mdkVal('inv-cd');
+  const tt=(document.getElementById('inv-tt')||{}).value || defaultStatus || '';
+  const m=_kocInviteMatch;
+  const row={id:Date.now()+Math.random(), trangThai:tt};
+  if(m){ row.maKoc=m.maKoc; row.tenKoc=m.ten||''; row.socialLink=m.socialLink||''; row.lienHe=m.lienHe||''; }
+  else { const d=raw.replace(/[^\d]/g,''); if(d.length>=8 && !/^koc/i.test(raw)) row.lienHe=raw; else row.maKoc=raw; }
+  if(sp) row.tenSp=sp;
+  if(cd) row.maCd=cd;
+  kocProdRows.unshift(row);   // thêm lên đầu để thấy ngay ở trang 1
+  if(sp && kocProdFilter!=='all' && _kocProdShortName(sp)!==_kocProdShortName(kocProdFilter)){ kocProdFilter=sp; }
+  kocProdPage=0;
+  _kocSaveAll(); saleRerender();
+  toast('✅ Đã thêm lượt mời'+(m?` cho ${m.ten||m.maKoc}`:''));
+}
 const KOC_NEN_TANG     = ['','TikTok','Facebook','Instagram','YouTube','Shopee Affiliate','Khác'];
 const KOC_NHOM_ND      = ['','Beauty & Skincare','Mẹ & Bé','Lifestyle','Review sản phẩm','Khác'];
 const KOC_HINH_THUC_SP = ['','TikTok Shop','Shopee','CPN','EMS','Vận chuyển ngoài','Nhận trực tiếp','Khác'];
@@ -2317,8 +2380,8 @@ function _saleKocTab() {
   if(kocSubTab==='master'){
     actions.push(_b('＋ KOC master','kocMstAdd()','#3b82f6','#eff6ff'));
   } else if(kocSubTab==='prod'){
-    actions.push(_b('＋ Lượt mời',"kocProdAdd('')",'#7c3aed','#f5f3ff'));
-    actions.push(_b('＋ KOC hợp tác',"kocProdAdd('Đồng ý hợp tác')",'#16a34a','#f0fdf4'));
+    actions.push(_b('＋ Lượt mời',"kocInvitePrompt('')",'#7c3aed','#f5f3ff'));
+    actions.push(_b('＋ KOC hợp tác',"kocInvitePrompt('Đồng ý hợp tác')",'#16a34a','#f0fdf4'));
     actions.push(_b(kocProdOnlyCollab?'☑ Chỉ đã hợp tác':'☐ Chỉ đã hợp tác','kocProdToggleCollab()',kocProdOnlyCollab?'#16a34a':'#64748b',kocProdOnlyCollab?'#f0fdf4':'#fff'));
   }
   actions.push(`<div style="flex:1"></div>`);
@@ -3193,7 +3256,7 @@ function _kocProdCamp() {
   const fLabel = kocProdFilter==='all' ? 'tất cả SP' : _kocProdShortName(kocProdFilter);
   const addBar=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
     <span style="font-size:13px;color:#64748b">${rows.length} lượt mời${kocProdOnlyCollab?' đã hợp tác':''} · <strong>${esc(fLabel)}</strong></span>
-    <button class="btn btn-primary" onclick="kocProdAdd('')">＋ Thêm lượt mời</button>
+    <button class="btn btn-primary" onclick="kocInvitePrompt('')">＋ Thêm lượt mời</button>
   </div>`;
   const isProductScoped = kocProdFilter !== 'all';
   const productSummaryTh = isProductScoped ? '' : '<th style="min-width:220px">S&#7843;n ph&#7849;m / CD</th>';
