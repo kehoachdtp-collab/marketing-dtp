@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>MKT Dashboard — Planning Department</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f1f5f9;color:#1e293b;display:flex;height:100vh;overflow:hidden}
@@ -319,7 +317,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .auth-boot .login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:36px 18px}
 #login-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none;opacity:.34}
 .login-bg{position:absolute;inset:0;z-index:0;background:#020815}
-.login-bg::before{content:'';position:absolute;inset:-3%;background-image:linear-gradient(90deg,rgba(56,189,248,.06) 1px,transparent 1px),linear-gradient(0deg,rgba(56,189,248,.06) 1px,transparent 1px),url('assets/login-sale-online.png');background-size:64px 64px,64px 64px,min(90vh,900px) auto;background-position:center,center,center 44%;background-repeat:repeat,repeat,no-repeat;filter:saturate(1.18) contrast(1.14) brightness(1.18);opacity:.95}
+.login-bg::before{content:'';position:absolute;inset:-3%;background-image:linear-gradient(90deg,rgba(56,189,248,.06) 1px,transparent 1px),linear-gradient(0deg,rgba(56,189,248,.06) 1px,transparent 1px),url('assets/login-sale-online-lite.jpg');background-size:64px 64px,64px 64px,min(90vh,900px) auto;background-position:center,center,center 44%;background-repeat:repeat,repeat,no-repeat;filter:saturate(1.18) contrast(1.14) brightness(1.18);opacity:.95}
 .login-bg::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 66% 18%,rgba(2,8,21,0) 0,rgba(2,8,21,.08) 19%,rgba(2,8,21,.42) 40%,rgba(2,8,21,.84) 78%),radial-gradient(circle at 50% 48%,rgba(56,189,248,.10) 0,rgba(15,118,178,.10) 22%,rgba(2,8,21,.54) 58%,rgba(2,8,21,.92) 100%),linear-gradient(90deg,rgba(2,8,21,.86) 0%,rgba(6,20,48,.42) 48%,rgba(2,8,21,.86) 100%)}
 .login-net{position:absolute;inset:0;z-index:1;overflow:hidden;pointer-events:none}
 .login-net::before{content:'';position:absolute;left:50%;top:44%;width:min(84vh,820px);height:min(84vh,820px);border:2px solid rgba(125,211,252,.34);border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 80px rgba(56,189,248,.18),inset 0 0 60px rgba(56,189,248,.09)}
@@ -412,7 +410,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 @media(max-width:1100px){.ds-grid{grid-template-columns:1fr}.ds-form-grid{grid-template-columns:1fr}}
 @media(max-width:900px){.auth-boot .login-screen{padding:22px 14px}.login-header{margin-bottom:18px}.login-panel{padding:30px 22px}.login-card::before,.login-card::after{display:none}.login-sales-lines{display:none}.login-badges{display:none}.login-field input{height:52px}.login-btn{height:56px}}
 </style>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 </head>
 <body class="auth-boot app-shell">
 <!-- Universal Modal -->
@@ -534,6 +531,49 @@ const SUPA_KEY  = 'sb_publishable_t3NRr4xFeo8fJlyM4vg8QQ_Je6PLXh_';
 const EDGE_AI_CHECK = SUPA_URL + '/functions/v1/clever-worker';
 const supa = window.supabase.createClient(SUPA_URL, SUPA_KEY, { auth: { persistSession: false } });
 
+const LAZY_LIBS = {
+  xlsx:'https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js',
+  pdfjs:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js',
+  tesseract:'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js',
+};
+const _lazyLibPromises = {};
+function loadScriptOnce(id, src){
+  if (_lazyLibPromises[id]) return _lazyLibPromises[id];
+  const existing = document.getElementById(id);
+  if (existing && existing.dataset.loaded === '1') return Promise.resolve(existing);
+  _lazyLibPromises[id] = new Promise((resolve,reject)=>{
+    const s = existing || document.createElement('script');
+    s.id = id; s.async = true; s.src = src;
+    s.onload = () => { s.dataset.loaded = '1'; resolve(s); };
+    s.onerror = () => { delete _lazyLibPromises[id]; reject(new Error('Không tải được thư viện: '+src)); };
+    if (!existing) document.head.appendChild(s);
+  });
+  return _lazyLibPromises[id];
+}
+async function ensureXlsxLoaded(){
+  if (window.XLSX) return window.XLSX;
+  toast('Đang tải thư viện Excel...');
+  await loadScriptOnce('lazy-xlsx', LAZY_LIBS.xlsx);
+  if (!window.XLSX) throw new Error('xlsx_not_loaded');
+  return window.XLSX;
+}
+async function ensurePdfJsLoaded(){
+  if (!window.pdfjsLib) {
+    if (typeof _productSetStatus === 'function') _productSetStatus('Đang tải thư viện đọc PDF...');
+    await loadScriptOnce('lazy-pdfjs', LAZY_LIBS.pdfjs);
+  }
+  if (!window.pdfjsLib) throw new Error('pdfjs_not_loaded');
+  if (window.pdfjsLib.GlobalWorkerOptions) window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+  return window.pdfjsLib;
+}
+async function ensureTesseractLoaded(){
+  if (!window.Tesseract) {
+    toast('Đang tải OCR. Lần đầu có thể mất lâu hơn...');
+    await loadScriptOnce('lazy-tesseract', LAZY_LIBS.tesseract);
+  }
+  if (!window.Tesseract) throw new Error('tesseract_not_loaded');
+  return window.Tesseract;
+}
 const mktApi = {
   async login(username, password) {
     const normalized = demoNormalizeUsername(username);
@@ -2991,7 +3031,7 @@ function kocContractFixCccdAddress(s){let out=kocContractCleanOcrLine(s).replace
 function kocContractValidName(s){const raw=String(s||'');let cleaned=kocContractFixVietnameseName(raw);const n=complianceNormalize(cleaned);const compact=n.replace(/[^a-z]/g,'');if(compact.includes('pinhthinga')||compact.includes('dinhthinga'))return '\u0110INH TH\u1eca NGA';if(!cleaned||cleaned.length<6||cleaned.length>45)return '';if(/can cuoc|cong hoa|socialist|identity|viet nam|quoc tich|nationality|gioi tinh|sex|sinh|date|noi thuong tru|place|expiry|issue|residence|birth|ministry|security/.test(n))return '';if(/[0-9<>{}]/.test(raw))return '';const words=cleaned.split(/\s+/).filter(Boolean);if(words.length<2)return '';if(words.length===2&&/^(i|ii|iii|iv|v)$/i.test(words[1])&&words[0].length>8)return '';return cleaned}
 function kocContractParseCccdText(text){const raw=String(text||'').replace(/\r/g,'\n');const lines=raw.split('\n').map(kocContractCleanOcrLine).filter(Boolean);const flat=lines.join(' ');const cccd=(flat.match(/\b\d{12}\b/)||flat.match(/\b\d{9}\b/)||[''])[0];const dob=kocContractFindDateNear(lines,/ngay sinh|date of birth|birth date/)||'';const issueDate=kocContractFindDateNear(lines,/ngay cap|date of issue|issue date/)||'';let name='';for(let i=0;i<lines.length;i++){const n=complianceNormalize(lines[i]);if(/ho va ten|full name|name/.test(n)){name=kocContractValidName(lines[i].replace(/.*?:/,''))||kocContractValidName(lines[i+1]||'')||kocContractValidName(lines[i+2]||'');break}}const address=kocContractFixCccdAddress(kocContractExtractAfterLabel(lines,/noi thuong tru|place of residence|dia chi|residence/,/noi dang ky khai sinh|place of birth|ngay sinh|date of birth|ngay cap|date of issue|expiry|het han|sex|gioi tinh|nationality|quoc tich/,3));return{name,cccd,dob,issueDate,address,issuePlace:'B\u1ed9 C\u00f4ng An',raw}}
 
-async function kocContractReadCccd(file){if(!file)return;if(typeof Tesseract==='undefined'){toast('Tesseract OCR chua san sang.');return}const out=document.getElementById('kc_ocr_output');if(out)out.textContent='Dang doc anh CCCD...';try{let res;try{res=await Tesseract.recognize(file,'vie+eng')}catch(_){res=await Tesseract.recognize(file,'eng')}const text=res?.data?.text||'';const p=kocContractParseCccdText(text);if(p.name)kocContractSet('kc_full_name',p.name);if(p.cccd)kocContractSet('kc_cccd',p.cccd);if(p.dob)kocContractSet('kc_dob',p.dob);if(p.issueDate)kocContractSet('kc_issue_date',p.issueDate);if(p.issuePlace)kocContractSet('kc_issue_place',p.issuePlace);if(p.address)kocContractSet('kc_address',p.address);const summary=['Ket qua tu dong OCR:',`- Ho ten: ${p.name||'chua tu nhan dien - vui long nhap tay'}`,`- CCCD: ${p.cccd||'chua thay'}`,`- Ngay sinh: ${p.dob||'chua thay'}`,`- Ngay cap: ${p.issueDate||'chua thay'}`,`- Dia chi: ${p.address||'chua thay ro'}`].join('\n');if(out)out.textContent=summary+'\n\nRaw OCR de doi chieu:\n'+(text||'Khong doc duoc noi dung anh.');toast('Da doc CCCD. Vui long kiem tra lai cac truong truoc khi luu.')}catch(e){if(out)out.textContent='Loi OCR: '+(e.message||e);toast('Khong doc duoc CCCD. Hay nhap tay thong tin.')}}
+async function kocContractReadCccd(file){if(!file)return;try{await ensureTesseractLoaded();}catch(e){toast('Khong tai duoc OCR. Vui long thu lai.');return}const out=document.getElementById('kc_ocr_output');if(out)out.textContent='Dang doc anh CCCD...';try{let res;try{res=await Tesseract.recognize(file,'vie+eng')}catch(_){res=await Tesseract.recognize(file,'eng')}const text=res?.data?.text||'';const p=kocContractParseCccdText(text);if(p.name)kocContractSet('kc_full_name',p.name);if(p.cccd)kocContractSet('kc_cccd',p.cccd);if(p.dob)kocContractSet('kc_dob',p.dob);if(p.issueDate)kocContractSet('kc_issue_date',p.issueDate);if(p.issuePlace)kocContractSet('kc_issue_place',p.issuePlace);if(p.address)kocContractSet('kc_address',p.address);const summary=['Ket qua tu dong OCR:',`- Ho ten: ${p.name||'chua tu nhan dien - vui long nhap tay'}`,`- CCCD: ${p.cccd||'chua thay'}`,`- Ngay sinh: ${p.dob||'chua thay'}`,`- Ngay cap: ${p.issueDate||'chua thay'}`,`- Dia chi: ${p.address||'chua thay ro'}`].join('\n');if(out)out.textContent=summary+'\n\nRaw OCR de doi chieu:\n'+(text||'Khong doc duoc noi dung anh.');toast('Da doc CCCD. Vui long kiem tra lai cac truong truoc khi luu.')}catch(e){if(out)out.textContent='Loi OCR: '+(e.message||e);toast('Khong doc duoc CCCD. Hay nhap tay thong tin.')}}
 
 function kocContractSimpleWord(d){const t=kocContractTpl(d.templateId);const isAcc=t.kind==='acceptance';const company=t.productType==='food'?'C&#212;NG TY TNHH D&#431;&#7906;C PH&#7848;M NADIPHARCO':'C&#212;NG TY C&#7892; PH&#7846;N D&#431;&#7906;C PH&#7848;M DTP';const product=d.productName||'';const fee=kocContractMoney(d.fee)||'................................';const title=isAcc?'BI&#202;N B&#7842;N NGHI&#7878;M THU & X&#193;C NH&#7852;N HI&#7878;U QU&#7842; VIDEO KOC':'H&#7906;P &#272;&#7890;NG D&#7882;CH V&#7908;';const action=isAcc?'nghi&#7879;m thu':'h&#7907;p t&#225;c d&#7883;ch v&#7909;';return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>@page{size:A4;margin:2cm}body{font-family:'Times New Roman',serif;font-size:13pt;line-height:1.35}.center{text-align:center}.bold{font-weight:bold}.title{font-size:16pt;font-weight:bold;text-align:center;margin:18px 0}.sec{font-weight:bold;margin-top:12px}.sig{display:flex;justify-content:space-between;margin-top:42px}.sig>div{width:44%;text-align:center}.table{width:100%;border-collapse:collapse}.table td{border:1px solid #000;padding:6px}</style></head><body><div class="center bold">${company}</div><div class="center bold">C&#7896;NG H&#210;A X&#195; H&#7896;I CH&#7910; NGH&#296;A VI&#7878;T NAM</div><div class="center">&#272;&#7897;c l&#7853;p - T&#7921; do - H&#7841;nh ph&#250;c</div><div class="title">${title}</div><div class="center bold">S&#7889;: ${kocContractText(d.contractNo||'.../KOC/2026')}</div><p>H&#244;m nay, ng&#224;y ${kocContractText(d.signDate)}, hai b&#234;n th&#7889;ng nh&#7845;t n&#7897;i dung ${action} KOC nh&#432; sau:</p><p class="sec">B&#202;N A: ${company}</p><p class="sec">B&#202;N B: ${kocContractText(d.kocName)}</p><p>Sinh ng&#224;y: ${kocContractText(d.dob)}; S&#7889; CCCD: ${kocContractText(d.cccd)}; Ng&#224;y c&#7845;p: ${kocContractText(d.issueDate)}; N&#417;i c&#7845;p: ${kocContractText(d.issuePlace||'B\u1ed9 C\u00f4ng An')}</p><p>&#272;&#7883;a ch&#7881;: ${kocContractText(d.address)}</p><p>&#272;i&#7879;n tho&#7841;i: ${kocContractText(d.phone)}; MST c&#225; nh&#226;n: ${kocContractText(d.taxCode||d.cccd)}; Email: ${kocContractText(d.email)}</p><p>T&#224;i kho&#7843;n: ${kocContractText(d.bankNo)} t&#7841;i ${kocContractText(d.bankName)}</p><p class="sec">&#272;i&#7873;u 1. N&#7897;i dung c&#244;ng vi&#7879;c</p><table class="table"><tr><td>S&#7843;n ph&#7849;m/chi&#7871;n d&#7883;ch</td><td>${kocContractText(product)} ${d.campaignName?'- '+kocContractText(d.campaignName):''}</td></tr><tr><td>Link video/profile</td><td>${kocContractText(d.videoLink)}</td></tr><tr><td>Chi ph&#237;/th&#249; lao</td><td>${fee}</td></tr><tr><td>Ghi ch&#250;/KPI</td><td>${kocContractText(d.notes)}</td></tr></table><p class="sec">&#272;i&#7873;u 2. Cam k&#7871;t</p><p>B&#234;n B cam k&#7871;t th&#7921;c hi&#7879;n &#273;&#250;ng brief, &#273;&#259;ng video c&#244;ng khai theo th&#7887;a thu&#7853;n, kh&#244;ng vi ph&#7841;m quy &#273;&#7883;nh qu&#7843;ng c&#225;o v&#224; cung c&#7845;p th&#244;ng tin nghi&#7879;m thu/thanh to&#225;n h&#7907;p l&#7879;.</p><p class="sec">&#272;i&#7873;u 3. Hi&#7879;u l&#7921;c</p><p>V&#259;n b&#7843;n n&#224;y &#273;&#432;&#7907;c l&#7853;p th&#224;nh 02 b&#7843;n c&#243; gi&#225; tr&#7883; ph&#225;p l&#253; nh&#432; nhau, m&#7895;i b&#234;n gi&#7919; 01 b&#7843;n.</p><div class="sig"><div><b>&#272;&#7840;I DI&#7878;N B&#202;N A</b><br><br><br><br></div><div><b>B&#202;N B</b><br><br><br><br>${kocContractText(d.kocName)}</div></div></body></html>`}
 
@@ -3221,8 +3261,7 @@ async function readProductInsightFile(file){
   }
 }
 async function _productReadPdf(file){
-  if(!window.pdfjsLib) throw new Error('pdfjs_not_loaded');
-  if(window.pdfjsLib.GlobalWorkerOptions) window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+  await ensurePdfJsLoaded();
   const buf=await file.arrayBuffer();
   const pdf=await window.pdfjsLib.getDocument({data:buf}).promise;
   const chunks=[];
@@ -3234,7 +3273,7 @@ async function _productReadPdf(file){
   return chunks.join('\n');
 }
 async function _productReadImage(file){
-  if(!window.Tesseract) throw new Error('tesseract_not_loaded');
+  await ensureTesseractLoaded();
   _productSetStatus('Đang OCR ảnh. Lần đầu có thể mất 20-60 giây...');
   const res=await window.Tesseract.recognize(file,'vie+eng',{ logger:m=>{ if(m.status) _productSetStatus('OCR: '+m.status+(m.progress?` ${Math.round(m.progress*100)}%`:'')); }});
   return res?.data?.text || '';
@@ -4164,8 +4203,8 @@ function kocApproveCompliance(id){ if(!canApproveCompliance()){toast('⚠️ Ch�
 function renderKocCompliance(){ return renderCompliancePage('koc'); }
 
 /* ──── DOWNLOAD TEMPLATE ──── */
-function kocDownloadTemplate() {
-  if(typeof XLSX==='undefined'){toast('⚠️ SheetJS chưa load!');return;}
+async function kocDownloadTemplate() {
+  try{await ensureXlsxLoaded();}catch(e){toast('Khong tai duoc thu vien Excel. Thu lai sau.');return;}
   const wb=XLSX.utils.book_new();
   /* Sheet 1: KOC Master */
   const H1=['Mã KOC','Tên KOC','Social link','Follower','Liên hệ','Nền tảng chính','Nhóm nội dung','Phụ trách','Ghi chú'];
@@ -4194,9 +4233,9 @@ function kocDownloadTemplate() {
 }
 
 /* ──── IMPORT KOC EXCEL ──── */
-function kocImportFile(file) {
+async function kocImportFile(file) {
   if(!file)return;
-  if(typeof XLSX==='undefined'){toast('⚠️ SheetJS chưa load!');return;}
+  try{await ensureXlsxLoaded();}catch(e){toast('Khong tai duoc thu vien Excel. Thu lai sau.');return;}
   const reader=new FileReader();
   reader.onload=e=>{
     try{
@@ -4884,9 +4923,9 @@ function normH(s) {
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
     .replace(/\u0111/g,'d').replace(/[^a-z0-9]/g,'');
 }
-function b2bImport(file) {
+async function b2bImport(file) {
   if (!file) return;
-  if (typeof XLSX === 'undefined') { toast('⚠️ SheetJS chưa load xong, thử lại!'); return; }
+  try { await ensureXlsxLoaded(); } catch(e) { toast('Khong tai duoc thu vien Excel. Thu lai sau.'); return; }
   const reader = new FileReader();
   reader.onload = e => {
     try {
@@ -4955,12 +4994,18 @@ window.addEventListener('load', async () => {
   function initFireworks() {
     const screen = document.getElementById('login-screen');
     if (!screen) return;
-    // Login background is handled by CSS via assets/login-sale-online.png.
+    // Login background is handled by CSS via assets/login-sale-online-lite.jpg.
     const bg = document.getElementById('login-bg');
     if (bg) bg.style.backgroundImage = 'none';
 
     const canvas = document.getElementById('login-canvas');
     if (!canvas) return;
+    const heavyMotion = localStorage.getItem('mkt_login_fireworks') === 'true';
+    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    if (!heavyMotion || reducedMotion || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4)) {
+      canvas.style.display = 'none';
+      return;
+    }
     const ctx = canvas.getContext('2d');
     let W, H, particles = [], rockets = [], frame = 0, animId;
 
@@ -5025,7 +5070,7 @@ window.addEventListener('load', async () => {
       }
       shouldExplode() { return this.vy >= 0 || this.y <= this.targetY; }
       explode() {
-        const count = Math.floor(rnd(80, 140));
+        const count = Math.floor(rnd(28, 52));
         for (let i = 0; i < count; i++) {
           particles.push(new Particle(this.x, this.y, this.color));
         }
@@ -5049,15 +5094,15 @@ window.addEventListener('load', async () => {
       ctx.fillRect(0, 0, W, H);
 
       frame++;
-      if (frame % 60 === 0) launch();
-      if (frame % 150 === 0) launch();
+      if (frame % 130 === 0) launch();
+      if (frame % 320 === 0) launch();
 
       rockets = rockets.filter(r => {
         r.update(); r.draw();
         if (r.shouldExplode() && !r.exploded) { r.exploded = true; r.explode(); }
         return !r.exploded;
       });
-      if (particles.length > 1200) particles.splice(0, particles.length - 1200);
+      if (particles.length > 260) particles.splice(0, particles.length - 260);
       particles = particles.filter(p => { p.update(); p.draw(); return !p.dead(); });
 
       animId = requestAnimationFrame(loop);
