@@ -126,6 +126,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .koc-horizontal-btn:hover{background:#f1f5f9;color:#1e2e4a}
 .koc-horizontal-btn.active{background:#eaf1ff;border-color:#bfd2ff;color:#1d4ed8;box-shadow:inset 0 0 0 1px rgba(37,99,235,.08)}
 .sale-crumb.koc-crumb-inline{align-items:center;gap:8px 10px;margin-bottom:12px}.sale-crumb.koc-crumb-inline .crumb-cur{margin-right:4px}.koc-inline-nav{flex:1;min-width:520px;margin:0 0 0 8px!important;padding:0!important;border:0!important;box-shadow:none!important;background:transparent!important;border-radius:0!important;gap:6px}.koc-inline-nav .koc-horizontal-btn{padding:7px 10px;font-size:12.5px}@media(max-width:1180px){.koc-inline-nav{flex-basis:100%;min-width:0;margin-left:0!important;padding-top:8px!important}}
+.topbar-title.sale-koc-topbar{display:flex;align-items:center;gap:10px;flex:1;min-width:0;font-size:13px}
+.topbar-title.sale-koc-topbar + .topbar-spacer{display:none}
+.sale-koc-topbar .topbar-crumb{display:flex;align-items:center;gap:8px;white-space:nowrap;color:#64748b;font-weight:700}
+.sale-koc-topbar .topbar-crumb strong{color:#1e2e4a;font-size:14px}
+.sale-koc-topbar .topbar-sep{color:#cbd5e1;font-weight:900}
+.sale-koc-topbar .koc-inline-nav{display:flex;align-items:center;gap:6px;flex:1;min-width:0;overflow-x:auto;background:transparent!important;border:0!important;box-shadow:none!important;margin:0!important;padding:0!important;border-radius:0!important;flex-wrap:nowrap}
+.sale-koc-topbar .koc-horizontal-btn{padding:7px 10px;font-size:12.5px;flex:0 0 auto}
+@media(max-width:1180px){.topbar-title.sale-koc-topbar{gap:8px}.sale-koc-topbar .topbar-crumb .crumb-mod{display:none}.sale-koc-topbar .koc-horizontal-btn{padding:6px 8px;font-size:12px}}
 .koc-read-cell{min-width:170px;max-width:260px;padding:8px 10px!important;background:#fff;vertical-align:top!important}
 .koc-read-title{font-size:13px;font-weight:800;color:#0f172a;line-height:1.25;margin-bottom:3px;white-space:normal}
 .koc-read-sub{font-size:11.5px;color:#64748b;line-height:1.35;white-space:normal;margin-top:2px}
@@ -947,7 +955,11 @@ function showAccessDenied(mod){
   demoUpdateChrome();
   const el = document.getElementById('content');
   if (el) el.innerHTML = demoAccessDeniedHtml();
-  document.getElementById('topbar-title').textContent = DEMO_MODULE_LABELS[mod] || DEMO_MODULE_LABELS[demoModuleKey(mod)] || 'Không có quyền';
+  const topbarTitle = document.getElementById('topbar-title');
+  if (topbarTitle) {
+    topbarTitle.className = 'topbar-title';
+    topbarTitle.textContent = DEMO_MODULE_LABELS[mod] || DEMO_MODULE_LABELS[demoModuleKey(mod)] || 'Kh\u00f4ng c\u00f3 quy\u1ec1n';
+  }
 }
 function demoPresetFromPermission(p){
   if (!p || !p.view) return 'none';
@@ -1435,7 +1447,9 @@ function navTo(mod, el) {
   document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
   if (el) el.classList.add('active');
   curMod = mod;
-  document.getElementById('topbar-title').textContent = MOD_TITLE[mod] || DEMO_MODULE_LABELS[mod] || DEMO_MODULE_LABELS[demoModuleKey(mod)] || mod;
+  const topbarTitle = document.getElementById('topbar-title');
+  topbarTitle.className = 'topbar-title';
+  topbarTitle.textContent = MOD_TITLE[mod] || DEMO_MODULE_LABELS[mod] || DEMO_MODULE_LABELS[demoModuleKey(mod)] || mod;
   // Auto-collapse Sale group when leaving sale
   if (mod !== 'sale') {
     const g = document.getElementById('grp-sale'); if (g) g.classList.remove('open');
@@ -2382,7 +2396,17 @@ function renderSale() {
   ];
   const curTab = TABS.find(t=>t.id===saleTab) || TABS[0];
   const kocInlineNav = saleTab==='koc' ? `<div class="koc-horizontal-nav koc-inline-nav" aria-label="KOC / Affiliate tabs">${KOC_SUBTABS.map(t=>`<button type="button" data-koc-tab="${t.id}" class="koc-horizontal-btn ${kocSubTab===t.id?'active':''}">${t.l}</button>`).join('')}</div>` : '';
-  const crumb = `<div class="sale-crumb ${saleTab==='koc'?'koc-crumb-inline':''}"><span class="crumb-mod">&#128722; Sale Online</span><span class="crumb-sep">&rsaquo;</span><span class="crumb-cur">${curTab.l}</span>${kocInlineNav}</div>`;
+  const topbarTitle = document.getElementById('topbar-title');
+  if (topbarTitle) {
+    if (saleTab === 'koc') {
+      topbarTitle.className = 'topbar-title sale-koc-topbar';
+      topbarTitle.innerHTML = `<span class="topbar-crumb"><span class="crumb-mod">&#128722; Sale Online</span><span class="topbar-sep">&rsaquo;</span><strong>KOC / Affiliate</strong></span>${kocInlineNav}`;
+    } else {
+      topbarTitle.className = 'topbar-title';
+      topbarTitle.textContent = MOD_TITLE.sale || 'Sale Online';
+    }
+  }
+  const crumb = saleTab==='koc' ? '' : `<div class="sale-crumb"><span class="crumb-mod">&#128722; Sale Online</span><span class="crumb-sep">&rsaquo;</span><span class="crumb-cur">${curTab.l}</span></div>`;
   const body = ({
     overview:_saleOverview, products:_saleProdMst, campaigns:_saleCampTab,
     koc:_saleKocTab, compliance:()=>renderCompliancePage('sale'), ads:_saleAdsTab, orders:_saleOrdTab,
