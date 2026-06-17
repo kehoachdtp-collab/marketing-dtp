@@ -60,9 +60,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 /* ── Main ── */
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
-.topbar{height:54px;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;padding:0 24px;gap:12px;flex-shrink:0}
-.topbar-title{font-size:14px;font-weight:700;color:#1e2e4a}
-.topbar-spacer{flex:1}
+.topbar{min-height:56px;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;align-items:stretch;padding:0 24px;gap:16px;flex-shrink:0}
+.topbar-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;color:#1e2e4a;white-space:nowrap}
+.topbar-title .topbar-sep{color:#cbd5e1;font-weight:900}
+.topbar-tabs{display:flex;align-items:stretch;gap:22px;min-width:0;overflow-x:auto;scrollbar-width:thin;flex:1}
+.topbar-tab{display:flex;align-items:center;border:0;background:transparent;border-bottom:3px solid transparent;color:#64748b;font-size:13px;font-weight:750;padding:0 0 1px;cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s}
+.topbar-tab:hover{color:#1e2e4a}
+.topbar-tab.active{color:#0f172a;border-bottom-color:#0f172a}
+.topbar-spacer{display:none}
 .topbar-ts{font-size:11.5px;color:#94a3b8}
 .btn{padding:7px 15px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;font-size:12.5px;font-weight:600;cursor:pointer;color:#334155;transition:all .15s}
 .btn:hover{border-color:#3b82f6;color:#3b82f6}
@@ -204,6 +209,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .link-cell.editing .link-url-input{display:block}
 .link-edit-btn{border:none;background:#eff6ff;color:#2563eb;border-radius:6px;padding:2px 6px;font-size:11px;cursor:pointer;opacity:.75}
 .link-edit-btn:hover{opacity:1;background:#dbeafe}
+.sale-product-kpi-grid{display:grid;grid-template-columns:repeat(6,minmax(150px,1fr));gap:10px;margin:0 0 14px}
+.sale-product-kpi{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;box-shadow:0 1px 3px rgba(15,23,42,.05)}
+.sale-product-kpi strong{display:block;font-size:19px;line-height:1.15;color:#0f172a;margin-bottom:4px}.sale-product-kpi span{display:block;font-size:10.5px;color:#64748b;text-transform:uppercase;letter-spacing:.35px;font-weight:850}.sale-product-kpi em{display:block;font-size:11px;color:#94a3b8;font-style:normal;margin-top:4px;line-height:1.35}.sale-product-kpi.good strong{color:#15803d}.sale-product-kpi.warn strong{color:#c2410c}.sale-calc-cell{font-weight:800;color:#0f172a;white-space:nowrap;padding:5px 6px}.sale-calc-cell.muted{color:#94a3b8}@media(max-width:1320px){.sale-product-kpi-grid{grid-template-columns:repeat(3,minmax(150px,1fr))}}@media(max-width:800px){.sale-product-kpi-grid{grid-template-columns:1fr 1fr}}
 
 .koc-contract-grid{display:grid;grid-template-columns:minmax(360px,1fr) minmax(420px,1.1fr);gap:14px;margin-bottom:14px}
 .koc-contract-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:16px;box-shadow:0 1px 4px rgba(15,23,42,.06)}
@@ -505,6 +513,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="main main-content">
   <div class="topbar">
     <span class="topbar-title" id="topbar-title">📊 Tổng quan MKT</span>
+    <div class="topbar-tabs" id="topbar-tabs"></div>
     <span class="topbar-spacer"></span>
     <span class="topbar-ts" id="topbar-ts"></span>
     <span class="topbar-user" id="topbar-user"></span>
@@ -1136,6 +1145,7 @@ function demoShowApp(){
   document.body.classList.remove('auth-boot');
   demoUpdateChrome();
   if (!canViewMod(curMod)) curMod = 'overview';
+  if (curMod === 'sale' && saleTab === 'products' && !isDemoAdmin()) saleTab = 'overview';
   render();
   setTs();
 }
@@ -1233,6 +1243,9 @@ function demoUpdateChrome(){
   });
   const adminSection = document.getElementById('nav-admin-section');
   if (adminSection) adminSection.style.display = canViewMod('users') ? '' : 'none';
+  const saleProductNav = document.querySelector('[data-sale-tab="products"]');
+  if (saleProductNav) saleProductNav.style.display = isDemoAdmin() ? '' : 'none';
+  updateTopbarNav();
   applySidebarState();
 }
 function demoAccessDeniedHtml(){
@@ -1243,11 +1256,7 @@ function showAccessDenied(mod){
   demoUpdateChrome();
   const el = document.getElementById('content');
   if (el) el.innerHTML = demoAccessDeniedHtml();
-  const topbarTitle = document.getElementById('topbar-title');
-  if (topbarTitle) {
-    topbarTitle.className = 'topbar-title';
-    topbarTitle.textContent = DEMO_MODULE_LABELS[mod] || DEMO_MODULE_LABELS[demoModuleKey(mod)] || 'Kh\u00f4ng c\u00f3 quy\u1ec1n';
-  }
+  updateTopbarNav();
 }
 function demoPresetFromPermission(p, module){
   if (!p || !p.view) return 'none';
@@ -1746,6 +1755,60 @@ const MOD_TITLE = {
   sale: '🛒 Sale Online',
   hr  : '👥 Tuyển dụng',
 };
+const SALE_TOP_TABS = [
+  {id:'overview',  l:'Tổng quan'},
+  {id:'products',  l:'Danh sách SP', adminOnly:true},
+  {id:'campaigns', l:'Chiến dịch'},
+  {id:'koc',       l:'KOC / Affiliate'},
+  {id:'compliance',l:'Kiểm duyệt nội dung'},
+  {id:'ads',       l:'Ads'},
+  {id:'orders',    l:'Đơn hàng & DT'},
+  {id:'profit',    l:'Chi phí & Lãi lỗ'},
+  {id:'inventory', l:'Kiểm kho'},
+  {id:'reviews',   l:'Đánh giá KH'},
+  {id:'alerts',    l:'Cảnh báo'},
+];
+const HR_TOP_TABS = [
+  {id:'overview', l:'Tổng quan'}, {id:'campaign', l:'Theo bài chạy'},
+  {id:'messages', l:'TN theo thời gian'}, {id:'funnel', l:'Phễu tuyển dụng'},
+  {id:'operator', l:'Theo người trực'}, {id:'position', l:'Theo vị trí'},
+  {id:'retention', l:'Giữ chân 3T-6T'}, {id:'cost', l:'Chi phí'},
+];
+function isDemoAdmin(){ return demoCurrentUser()?.role === 'admin'; }
+function canViewSaleTab(tab){ return tab !== 'products' || isDemoAdmin(); }
+function _topbarTabHtml(tabs, active, fnName, filterFn){
+  return (tabs||[]).filter(t=>!filterFn || filterFn(t)).map(t=>
+    `<button type="button" class="topbar-tab ${active===t.id?'active':''}" onclick="${fnName}('${t.id}')" ${t.adminOnly?'title="Chỉ admin được xem"':''}>${esc(t.l)}</button>`
+  ).join('');
+}
+function updateTopbarNav(){
+  const title = document.getElementById('topbar-title');
+  const tabs = document.getElementById('topbar-tabs');
+  if (!title || !tabs) return;
+  title.className = 'topbar-title';
+  tabs.innerHTML = '';
+  if (curMod === 'sale') {
+    if (saleTab === 'koc') {
+      title.innerHTML = '<span>🛒 Sale Online</span><span class="topbar-sep">›</span><strong>KOC / Affiliate</strong>';
+      tabs.innerHTML = _topbarTabHtml(KOC_SUBTABS, kocSubTab, 'switchKocTab');
+    } else {
+      title.textContent = MOD_TITLE.sale;
+      tabs.innerHTML = _topbarTabHtml(SALE_TOP_TABS, saleTab, 'navSaleSub', t=>canViewSaleTab(t.id));
+    }
+    return;
+  }
+  if (curMod === 'hr') {
+    title.textContent = MOD_TITLE.hr;
+    tabs.innerHTML = _topbarTabHtml(HR_TOP_TABS, hrTab, 'hrSwitchTab');
+    return;
+  }
+  if (curMod === 'b2b') {
+    title.textContent = MOD_TITLE.b2b;
+    tabs.innerHTML = '<button type="button" class="topbar-tab active">Danh sách lead</button>';
+    return;
+  }
+  title.textContent = MOD_TITLE[curMod] || DEMO_MODULE_LABELS[curMod] || DEMO_MODULE_LABELS[demoModuleKey(curMod)] || curMod;
+}
 function navTo(mod, el) {
   document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
   if (el) el.classList.add('active');
@@ -1857,6 +1920,7 @@ function calcHR() {
 function render() {
   const el = document.getElementById('content');
   if (!demoCurrentUser()) { demoShowLogin(); return; }
+  updateTopbarNav();
   if (!canViewMod(curMod)) { showAccessDenied(curMod); return; }
   if      (curMod === 'overview') el.innerHTML = renderOverview();
   else if (curMod === 'b2b')      el.innerHTML = renderB2B();
@@ -1966,11 +2030,8 @@ function renderOverview() {
 /* ── B2B ── */
 function renderB2B() {
   b2bLoad();
-  return `<div class="mod-tabs">
-    <div class="mod-tab active">Danh sách lead</div>
-  </div>${_b2bLeads()}`;
+  return _b2bLeads();
 }
-
 function _b2bLeads() {
   b2bMarkDups();
   const all    = b2bRows;
@@ -2143,13 +2204,20 @@ function getSaleProfitSummary() {
 const _KENH = ['','Shopee','TikTok Shop','Lazada','Facebook','Website','Offline','Khác'];
 const _CAMP_ST = ['','Lên kế hoạch','Đang chạy','Tạm dừng','Kết thúc'];
 
+function saleMoneyText(n){ n=+n||0; return n ? fmt(n)+'đ' : '<span class="sale-calc-cell muted">—</span>'; }
+function saleProductGross(r){ return (+r.giaBan||0) - (+r.giaVon||0); }
+function saleProductMargin(r){ const gb=+r.giaBan||0; return gb ? Math.round(saleProductGross(r)/gb*100) + '%' : '<span class="sale-calc-cell muted">—</span>'; }
+function saleProductPromoBudget(r){ return Math.max(0, Math.round(saleProductGross(r)*0.7)); }
 const SALE_MST_COLS = [
   {k:'maSP',  l:'Mã SP',          t:'text', w:100},
-  {k:'tenSP', l:'Tên sản phẩm',   t:'text', w:220},
+  {k:'tenSP', l:'Tên sản phẩm',   t:'text', w:240},
   {k:'dvt',   l:'ĐVT',            t:'text', w:75},
-  {k:'giaBan',l:'Giá bán',        t:'num',  w:110},
-  {k:'giaVon',l:'Giá vốn',        t:'num',  w:110},
-  {k:'ghiChu',l:'Ghi chú',        t:'text', w:200},
+  {k:'giaBan',l:'Giá bán',        t:'num',  w:120},
+  {k:'giaVon',l:'Giá vốn',        t:'num',  w:120},
+  {k:'__gross', l:'Lãi gộp',      t:'calc', w:115, fn:r=>saleMoneyText(saleProductGross(r))},
+  {k:'__margin',l:'Biên gộp',     t:'calc', w:95,  fn:r=>saleProductMargin(r)},
+  {k:'__promo', l:'KM gợi ý',     t:'calc', w:120, fn:r=>saleMoneyText(saleProductPromoBudget(r))},
+  {k:'ghiChu',l:'Ghi chú',        t:'text', w:220},
 ];
 const SALE_CAMP_COLS = [
   {k:'maCd',        l:'Mã CD',          t:'text', w:90},
@@ -2690,7 +2758,7 @@ function kocPtChange(id,field,val){
   }
   kocMstUpd(id,field,val);
 }
-function saleRerender()   { document.getElementById('content').innerHTML = renderSale(); if(typeof _syncSaleSidebar==='function') _syncSaleSidebar(); }
+function saleRerender()   { document.getElementById('content').innerHTML = renderSale(); if(typeof _syncSaleSidebar==='function') _syncSaleSidebar(); applyDemoPermissionsToContent(); updateTopbarNav(); }
 function saleSwitchTab(t) { saleTab = t; saleRerender(); }
 
 /* ── Generic CRUD (used by all 6 tables) ── */
@@ -2758,6 +2826,7 @@ function _saleTbl(rows, cols, updFn, addFn, delFn, emptyMsg) {
   const tbody = rows.map((r,i)=>{
     const cells = cols.map(col=>{
       const v = esc(r[col.k]??''), id=r.id, w=col.w||120;
+      if(col.t==='calc') return `<td style="min-width:${w}px"><div class="sale-calc-cell">${col.fn ? col.fn(r) : ''}</div></td>`;
       if(col.t==='date') return `<td style="min-width:${w}px"><input type="text" value="${formatDateVN(r[col.k])}" placeholder="DD/MM/YYYY" onchange="${updFn}(${id},'${col.k}',parseDateSafe(this.value))"></td>`;
       if(col.t==='text') return `<td style="min-width:${w}px"><input type="text" value="${v}" onchange="${updFn}(${id},'${col.k}',this.value)"></td>`;
       if(col.t==='num')  return `<td style="min-width:${w}px"><input type="number" value="${+r[col.k]||0}" min="0" onchange="${updFn}(${id},'${col.k}',this.value)"></td>`;
@@ -2778,32 +2847,7 @@ function _saleTbl(rows, cols, updFn, addFn, delFn, emptyMsg) {
 /* ── Tab renderers ── */
 function renderSale() {
   saleLoad();
-  const TABS = [
-    {id:'overview',  l:'Tổng quan'},
-    {id:'products',  l:'Danh sách SP'},
-    {id:'campaigns', l:'Chiến dịch'},
-    {id:'koc',       l:'KOC / Affiliate'},
-    {id:'compliance', l:'⚖️ Kiểm duyệt nội dung'},
-    {id:'ads',       l:'Ads'},
-    {id:'orders',    l:'Đơn hàng & DT'},
-    {id:'profit',    l:'Chi phí & Lãi lỗ'},
-    {id:'inventory', l:'Kiểm kho'},
-    {id:'reviews',   l:'Đánh giá KH'},
-    {id:'alerts',    l:'Cảnh báo'},
-  ];
-  const curTab = TABS.find(t=>t.id===saleTab) || TABS[0];
-  const kocInlineNav = saleTab==='koc' ? `<div class="koc-horizontal-nav koc-inline-nav" aria-label="KOC / Affiliate tabs">${KOC_SUBTABS.map(t=>`<button type="button" data-koc-tab="${t.id}" class="koc-horizontal-btn ${kocSubTab===t.id?'active':''}">${t.l}</button>`).join('')}</div>` : '';
-  const topbarTitle = document.getElementById('topbar-title');
-  if (topbarTitle) {
-    if (saleTab === 'koc') {
-      topbarTitle.className = 'topbar-title sale-koc-topbar';
-      topbarTitle.innerHTML = `<span class="topbar-crumb"><span class="crumb-mod">&#128722; Sale Online</span><span class="topbar-sep">&rsaquo;</span><strong>KOC / Affiliate</strong></span>${kocInlineNav}`;
-    } else {
-      topbarTitle.className = 'topbar-title';
-      topbarTitle.textContent = MOD_TITLE.sale || 'Sale Online';
-    }
-  }
-  const crumb = saleTab==='koc' ? '' : `<div class="sale-crumb"><span class="crumb-mod">&#128722; Sale Online</span><span class="crumb-sep">&rsaquo;</span><span class="crumb-cur">${curTab.l}</span></div>`;
+  updateTopbarNav();
   const body = ({
     overview:_saleOverview, products:_saleProdMst, campaigns:_saleCampTab,
     koc:_saleKocTab, compliance:()=>renderCompliancePage('sale'), ads:_saleAdsTab, orders:_saleOrdTab,
@@ -2811,7 +2855,7 @@ function renderSale() {
     reviews:()=>_ph('⭐','Tab Đánh giá KH — bước tiếp theo.'),
     alerts:_saleAlertsTab,
   }[saleTab]??_saleOverview)();
-  return crumb+body;
+  return body;
 }
 
 function _saleOverview() {
@@ -2844,7 +2888,29 @@ function _saleOverview() {
   </div>${noData?_ph('📊','Chưa có dữ liệu.<br>Thêm <strong>Chiến dịch → Đơn hàng</strong> để xem tổng quan.'):''}`;
 }
 
-function _saleProdMst()  { return _saleTbl(saleMstRows, SALE_MST_COLS,'saleMstUpd','saleMstAdd','saleMstDel','Chưa có sản phẩm nào.<br>Thêm sản phẩm vào danh mục master.'); }
+function _saleProductKpi(label, value, note, cls=''){
+  return `<div class="sale-product-kpi ${cls}"><strong>${value}</strong><span>${label}</span>${note?`<em>${note}</em>`:''}</div>`;
+}
+function _saleProductStatsHtml(rows){
+  const n = rows.length;
+  const avg = f => n ? Math.round(rows.reduce((s,r)=>s+(+r[f]||0),0)/n) : 0;
+  const avgBan = avg('giaBan'), avgVon = avg('giaVon');
+  const avgLai = Math.max(0, avgBan - avgVon);
+  const margin = avgBan ? Math.round(avgLai / avgBan * 100) : 0;
+  const promo = Math.round(avgLai * 0.7);
+  return `<div class="sale-product-kpi-grid">
+    ${_saleProductKpi('Số sản phẩm', fmt(n), 'Admin only')}
+    ${_saleProductKpi('Giá bán TB', saleMoneyText(avgBan), 'Theo danh sách SP')}
+    ${_saleProductKpi('Giá vốn TB', saleMoneyText(avgVon), 'Dùng để tính khuyến mại')}
+    ${_saleProductKpi('Lãi gộp TB', saleMoneyText(avgLai), 'Giá bán - giá vốn', avgLai?'good':'')}
+    ${_saleProductKpi('Biên gộp TB', margin ? margin+'%' : '—', 'Tỷ lệ còn lại trước chi phí', margin<25 && margin ? 'warn':'')}
+    ${_saleProductKpi('KM gợi ý TB', saleMoneyText(promo), 'Tối đa ~70% lãi gộp')}
+  </div>`;
+}
+function _saleProdMst()  {
+  if(!isDemoAdmin()) return demoAccessDeniedHtml();
+  return _saleProductStatsHtml(saleMstRows) + _saleTbl(saleMstRows, SALE_MST_COLS,'saleMstUpd','saleMstAdd','saleMstDel','Chưa có sản phẩm nào.<br>Thêm sản phẩm vào danh mục master.');
+}
 function _saleCampTab()  { return _saleTbl(saleCampaigns,SALE_CAMP_COLS,'saleCampUpd','saleCampAdd','saleCampDel','Chưa có chiến dịch nào.<br>Tạo chiến dịch trước — Mã CD là khóa liên kết KOC, Ads, Đơn hàng.'); }
 /* ════════════════════════════════════════════════════════════
    KOC / AFFILIATE — 2-layer (5 sub-tab)
@@ -4327,7 +4393,7 @@ let hrTab  = 'overview';
 
 function hrLoad()     { hrRows = getStore(K.rcCamp, []); }
 function hrAutoSave() { setStore(K.rcCamp, hrRows); }
-function hrRerender() { document.getElementById('content').innerHTML = renderHR(); }
+function hrRerender() { document.getElementById('content').innerHTML = renderHR(); applyDemoPermissionsToContent(); updateTopbarNav(); }
 function hrSwitchTab(t) { hrTab = t; hrRerender(); }
 
 function hrUpdate(id, k, v) {
@@ -4362,21 +4428,12 @@ function hrCalc(rows) {
 
 function renderHR() {
   hrLoad();
-  const TABS = [
-    {id:'overview', l:'Tổng quan'},  {id:'campaign',  l:'Theo bài chạy'},
-    {id:'messages', l:'TN theo thời gian'}, {id:'funnel', l:'Phễu tuyển dụng'},
-    {id:'operator', l:'Theo người trực'},   {id:'position',l:'Theo vị trí'},
-    {id:'retention',l:'Giữ chân 3T-6T'},    {id:'cost',    l:'Chi phí'},
-  ];
-  const tabBar = `<div class="mod-tabs">${TABS.map(t=>
-    `<div class="mod-tab ${hrTab===t.id?'active':''}" onclick="hrSwitchTab('${t.id}')">${t.l}</div>`
-  ).join('')}</div>`;
   const body = {
     overview:_hrOverview, campaign:_hrCampaign, messages:_hrMessages,
     funnel:_hrFunnel, operator:_hrByOp, position:_hrByPos,
     retention:_hrRetention, cost:_hrCost,
   }[hrTab]?.() ?? _hrOverview();
-  return tabBar + body;
+  return body;
 }
 
 /* ── Helpers ── */
@@ -4725,7 +4782,7 @@ function b2bLoad() {
 }
 function b2bSaveData()  { setStore(K.b2bCrm, b2bRows); setStore(K.b2bAsgn, b2bPtList); toast('💾 Đã lưu!'); }
 function b2bAutoSave()  { setStore(K.b2bCrm, b2bRows); }
-function b2bRerender()  { document.getElementById('content').innerHTML = renderB2B(); }
+function b2bRerender()  { document.getElementById('content').innerHTML = renderB2B(); applyDemoPermissionsToContent(); updateTopbarNav(); }
 
 function b2bUpdate(id, k, v) {
   const r = b2bRows.find(r => r.id == id);
