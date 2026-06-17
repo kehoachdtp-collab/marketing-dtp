@@ -532,6 +532,8 @@ const mktApi = {
       if (error) throw error;
       return (data && data.length) ? data[0] : null;
     };
+    const cloudLogin = await demoCloudLogin(normalized, password, tryLogin);
+    if (cloudLogin.found) return cloudLogin.user;
     let user = await tryLogin(normalized);
     const aliases = await demoLoadUsernameAliasesForLogin();
     if (user) {
@@ -655,7 +657,7 @@ const mktApi = {
 /* ═══════════════════════════════════════
    STORAGE — namespace mkt_ + Supabase sync
 ═══════════════════════════════════════ */
-const SYNC_KEYS = ['mkt_b2b_crm_data','mkt_b2b_cost_data','mkt_b2b_assignee_options','mkt_sale_campaigns','mkt_sale_orders','mkt_sale_ads_data','mkt_sale_koc_data','mkt_sale_koc_master','mkt_sale_koc_product_campaigns','mkt_sale_koc_prospects','mkt_sale_koc_collaborations','mkt_sale_koc_collab','mkt_sale_koc_ptlist','mkt_sale_koc_contracts','mkt_sale_inventory','mkt_sale_product_master','mkt_recruitment_campaign_data','mkt_recruitment_msg_data','mkt_data_sources','mkt_google_sheet_configs','mkt_google_sheet_mappings','mkt_sync_logs','mkt_compliance_reviews','mkt_compliance_rules','mkt_product_approved_claims','mkt_product_banned_claims','mkt_compliance_draft','mkt_demo_username_aliases'];
+const SYNC_KEYS = ['mkt_b2b_crm_data','mkt_b2b_cost_data','mkt_b2b_assignee_options','mkt_sale_campaigns','mkt_sale_orders','mkt_sale_ads_data','mkt_sale_koc_data','mkt_sale_koc_master','mkt_sale_koc_product_campaigns','mkt_sale_koc_prospects','mkt_sale_koc_collaborations','mkt_sale_koc_collab','mkt_sale_koc_ptlist','mkt_sale_koc_contracts','mkt_sale_inventory','mkt_sale_product_master','mkt_recruitment_campaign_data','mkt_recruitment_msg_data','mkt_data_sources','mkt_google_sheet_configs','mkt_google_sheet_mappings','mkt_sync_logs','mkt_compliance_reviews','mkt_compliance_rules','mkt_product_approved_claims','mkt_product_banned_claims','mkt_compliance_draft','mkt_demo_username_aliases','mkt_demo_users_cloud'];
 
 function isSyncKey(k){ return SYNC_KEYS.includes(k); }
 
@@ -743,6 +745,7 @@ let curMod = 'overview';
 const DEMO_USERS_KEY = 'mkt_demo_users';
 const DEMO_SESSION_KEY = 'mkt_demo_session';
 const DEMO_USERNAME_ALIASES_KEY = 'mkt_demo_username_aliases';
+const DEMO_CLOUD_USERS_KEY = 'mkt_demo_users_cloud';
 const DEMO_MODULE_LABELS = {dashboard:'Tổng quan MKT',b2b:'B2B',sale:'Sale Online',hr:'Tuyển dụng',dataSources:'Nguồn dữ liệu',users:'Quản lý user'};
 const DEMO_PERMISSION_PRESETS = {
   none:{label:'Không truy cập', value:{view:false,edit:false,import:false,export:false,manageUsers:false,resetPassword:false}},
@@ -847,12 +850,192 @@ function _supaToDemoUser(supaUser){
     id: supaUser.id,
     username: supaUser.username,
     realUsername: supaUser.real_username || supaUser.realUsername || null,
+    legacyUsername: supaUser.real_username || supaUser.realUsername || supaUser.legacyUsername || supaUser.username,
     displayName: supaUser.display_name || supaUser.displayName || supaUser.username,
     role: supaUser.role,
     status: supaUser.status || 'active',
     permissions,
-    presets,  // giữ raw preset strings để admin edit
+    presets,  // giu raw preset strings de admin edit
   };
+}
+
+function demoId(){
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  return 'u_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2);
+}
+function demoFallbackHash(s){
+  let h1 = 0x811c9dc5, h2 = 0x27d4eb2d;
+  for (let i=0;i<s.length;i++) { const c=s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 16777619); h2 = Math.imul(h2 ^ c, 1597334677); }
+  return 'fallback:' + ((h1>>>0).toString(16).padStart(8,'0')) + ((h2>>>0).toString(16).padStart(8,'0'));
+}
+async function demoSha256Hex(s){
+  if (globalThis.crypto?.subtle && globalThis.TextEncoder) {
+    const buf = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+  return demoFallbackHash(s);
+}
+function demoPasswordSalt(){
+  const bytes = new Uint8Array(16);
+  if (globalThis.crypto?.getRandomValues) globalThis.crypto.getRandomValues(bytes);
+  else for (let i=0;i<bytes.length;i++) bytes[i] = Math.floor(Math.random()*256);
+  return Array.from(bytes).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+async function demoHashPassword(password, salt){ return demoSha256Hex((salt || '') + ':' + String(password || '')); }
+async function demoSetCloudPassword(record, password){
+  if (!password) return record;
+  const salt = demoPasswordSalt();
+  record.passwordSalt = salt;
+  record.passwordHash = await demoHashPassword(password, salt);
+  record.passwordUpdatedAt = new Date().toISOString();
+  return record;
+}
+async function demoVerifyCloudPassword(record, password){
+  if (!record?.passwordHash || !record?.passwordSalt) return false;
+  return await demoHashPassword(password, record.passwordSalt) === record.passwordHash;
+}
+function demoPresetsFromPermissions(permissions){
+  const presets = {};
+  Object.keys(DEMO_MODULE_LABELS).forEach(k => presets[k] = demoPresetFromPermission(permissions?.[k]));
+  return presets;
+}
+function demoNormalizeCloudUser(u){
+  const presets = u?.presets || demoPresetsFromPermissions(u?.permissions || {});
+  const username = demoNormalizeUsername(u?.username || '');
+  return {
+    id: u?.id || demoId(),
+    username,
+    legacyUsername: demoNormalizeUsername(u?.legacyUsername || u?.realUsername || u?.real_username || username),
+    displayName: u?.displayName || u?.display_name || username,
+    role: u?.role || 'viewer',
+    status: u?.status || 'active',
+    presets,
+    passwordSalt: u?.passwordSalt || '',
+    passwordHash: u?.passwordHash || '',
+    passwordUpdatedAt: u?.passwordUpdatedAt || null,
+    createdAt: u?.createdAt || u?.created_at || new Date().toISOString(),
+    updatedAt: u?.updatedAt || u?.updated_at || new Date().toISOString(),
+  };
+}
+function demoCleanCloudUsers(payload){
+  const src = payload && typeof payload === 'object' ? payload : {};
+  const users = Array.isArray(src.users) ? src.users.map(demoNormalizeCloudUser).filter(u => u.username) : [];
+  return { version: 1, users, updatedAt: src.updatedAt || null };
+}
+function demoGetCloudUsersLocal(){
+  try { return demoCleanCloudUsers(JSON.parse(localStorage.getItem(DEMO_CLOUD_USERS_KEY) || '{}')); }
+  catch(_) { return demoCleanCloudUsers(null); }
+}
+function demoSetCloudUsersLocal(payload){
+  const clean = demoCleanCloudUsers(payload);
+  try { localStorage.setItem(DEMO_CLOUD_USERS_KEY, JSON.stringify(clean)); } catch(_) {}
+  return clean;
+}
+function demoCloudTime(payload){
+  const t = Date.parse(payload?.updatedAt || '');
+  return Number.isFinite(t) ? t : 0;
+}
+async function demoLoadCloudUsers(){
+  const local = demoGetCloudUsersLocal();
+  try {
+    const cloud = await mktApi.kvGet(DEMO_CLOUD_USERS_KEY);
+    if (cloud) {
+      const clean = demoCleanCloudUsers(cloud);
+      const chosen = demoCloudTime(local) > demoCloudTime(clean) ? local : clean;
+      demoSetCloudUsersLocal(chosen);
+      return chosen;
+    }
+  } catch(e) { console.warn('[users] cloud user load failed', e); }
+  return local;
+}
+async function demoSaveCloudUsers(payload, callerId){
+  const clean = demoCleanCloudUsers(payload);
+  clean.updatedAt = new Date().toISOString();
+  clean.users = clean.users.map(u => ({...u, updatedAt: u.updatedAt || clean.updatedAt}));
+  demoSetCloudUsersLocal(clean);
+  await mktApi.kvSet(DEMO_CLOUD_USERS_KEY, clean, callerId || null);
+  return clean;
+}
+function demoCloudToDemoUser(record){
+  const u = demoNormalizeCloudUser(record);
+  const permissions = {};
+  Object.keys(DEMO_MODULE_LABELS).forEach(k => permissions[k] = demoPerm(u.presets[k] || 'none'));
+  return { id:u.id, username:u.username, realUsername:u.legacyUsername, legacyUsername:u.legacyUsername, displayName:u.displayName, role:u.role, status:u.status, permissions, presets:u.presets };
+}
+function demoCloudToSupaUser(record, legacyUser){
+  const u = demoNormalizeCloudUser(record);
+  return { id:u.id || legacyUser?.id, username:u.username, real_username:u.legacyUsername, display_name:u.displayName, role:u.role, permissions:u.presets, status:u.status || 'active' };
+}
+function demoCloudFromDemoUser(user, existing){
+  const u = user || {};
+  const cur = existing || {};
+  return demoNormalizeCloudUser({
+    ...cur,
+    id: u.id || cur.id,
+    username: u.username || cur.username,
+    legacyUsername: cur.legacyUsername || u.legacyUsername || u.realUsername || u.username,
+    displayName: u.displayName || cur.displayName,
+    role: u.role || cur.role,
+    status: u.status || cur.status || 'active',
+    presets: u.presets || cur.presets || demoPresetsFromPermissions(u.permissions || {}),
+  });
+}
+async function demoBootstrapCloudUsers(users, callerId){
+  const existing = await demoLoadCloudUsers();
+  if (existing.users.length) return existing;
+  const cloud = { version:1, users:(users||[]).map(u => demoCloudFromDemoUser(u)), updatedAt:new Date().toISOString() };
+  try { return await demoSaveCloudUsers(cloud, callerId); }
+  catch(e) { console.warn('[users] cloud bootstrap failed', e); demoSetCloudUsersLocal(cloud); return cloud; }
+}
+async function demoCloudLogin(username, password, tryLegacyLogin){
+  const cloud = await demoLoadCloudUsers();
+  const record = cloud.users.find(u => u.username === username);
+  if (!record) return {found:false, user:null};
+  if (record.status && record.status !== 'active') return {found:true, user:null};
+  if (record.passwordHash) {
+    const ok = await demoVerifyCloudPassword(record, password);
+    return {found:true, user: ok ? demoCloudToSupaUser(record) : null};
+  }
+  const legacy = record.legacyUsername || record.realUsername;
+  if (legacy) {
+    const legacyUser = await tryLegacyLogin(legacy);
+    if (legacyUser) return {found:true, user: demoCloudToSupaUser(record, legacyUser)};
+  }
+  return {found:true, user:null};
+}
+async function demoSaveUserToCloud(baseUser, changes, callerId){
+  const cloud = await demoLoadCloudUsers();
+  let idx = cloud.users.findIndex(x => x.id === baseUser.id || x.username === baseUser.username || x.username === changes.username);
+  const existing = idx >= 0 ? cloud.users[idx] : null;
+  let record = demoCloudFromDemoUser({
+    ...baseUser,
+    username: changes.username,
+    displayName: changes.displayName,
+    role: changes.role || baseUser.role,
+    status: changes.status || baseUser.status || 'active',
+    presets: changes.presets || baseUser.presets,
+  }, existing);
+  record.legacyUsername = existing?.legacyUsername || baseUser.legacyUsername || baseUser.realUsername || baseUser.username;
+  if (changes.password) record = await demoSetCloudPassword(record, changes.password);
+  record.updatedAt = new Date().toISOString();
+  if (idx >= 0) cloud.users[idx] = record; else cloud.users.push(record);
+  await demoSaveCloudUsers(cloud, callerId);
+  return record;
+}
+async function demoCreateCloudUser(username, password, displayName, role, presets, callerId){
+  const cloud = await demoLoadCloudUsers();
+  const normalized = demoNormalizeUsername(username);
+  if (cloud.users.some(u => u.username === normalized)) throw new Error('username_exists');
+  let record = demoNormalizeCloudUser({id:demoId(), username:normalized, legacyUsername:normalized, displayName, role, presets, status:'active'});
+  await demoSetCloudPassword(record, password || '123456');
+  cloud.users.push(record);
+  await demoSaveCloudUsers(cloud, callerId);
+  return record;
+}
+async function demoDeleteCloudUser(user, callerId){
+  const cloud = await demoLoadCloudUsers();
+  cloud.users = cloud.users.filter(u => u.id !== user.id && u.username !== user.username);
+  await demoSaveCloudUsers(cloud, callerId);
 }
 
 function demoDefaultUsers(){ return []; }  // không dùng nữa — Supabase là nguồn
@@ -876,14 +1059,27 @@ async function demoRefreshUsers(){
   const u = demoCurrentUser();
   if (!u || !u.id) return [];
   try {
+    const cloud = await demoLoadCloudUsers();
+    if (cloud.users.length) {
+      const users = cloud.users.map(demoCloudToDemoUser);
+      demoSetUsers(users);
+      return users;
+    }
     const raw = await mktApi.listUsers(u.id);
     const cloudAliases = await mktApi.kvGet(DEMO_USERNAME_ALIASES_KEY).catch(()=>null);
     if (cloudAliases) demoSetUsernameAliases(cloudAliases);
     const users = demoApplyUsernameAliases(raw.map(_supaToDemoUser));
+    await demoBootstrapCloudUsers(users, u.id);
     demoSetUsers(users);
     return users;
   } catch(e) {
     console.warn('[users] refresh failed', e);
+    const cloud = demoGetCloudUsersLocal();
+    if (cloud.users.length) {
+      const users = cloud.users.map(demoCloudToDemoUser);
+      demoSetUsers(users);
+      return users;
+    }
     return demoGetUsers();
   }
 }
@@ -1032,6 +1228,7 @@ async function demoSaveUser(oldUsername){
   let newUsername = u.username;
   let newDisplay = u.displayName;
   let newPresets = { ...(u.presets || {}) };
+  const pass = canResetDemoPasswords() ? (row.querySelector('[data-user-password]')?.value.trim() || '') : '';
 
   if (canManageDemoUsers() && u.role !== 'admin') {
     const usernameInput = row.querySelector('[data-user-username]');
@@ -1048,68 +1245,74 @@ async function demoSaveUser(oldUsername){
 
   const usernameChanged = newUsername !== u.username;
   try {
-    let updateResult = null;
-    let aliasResult = null;
+    await demoSaveUserToCloud(u, { username:newUsername, displayName:newDisplay, role:u.role, status:u.status, presets:newPresets, password:pass }, caller.id);
+
     if (canManageDemoUsers()) {
-      updateResult = await mktApi.updateUser(caller.id, u.id, newUsername, newDisplay, u.role, newPresets, null, usernameChanged);
-      if (usernameChanged) {
-        const realUsername = u.realUsername || u.username;
-        if (updateResult?.aliasFallback) aliasResult = await demoSaveUsernameAlias(u.id, realUsername, newUsername, caller.id);
-        else aliasResult = await demoSaveUsernameAlias(u.id, realUsername, realUsername, caller.id);
-      }
+      mktApi.updateUser(caller.id, u.id, newUsername, newDisplay, u.role, newPresets, null, usernameChanged)
+        .then(async result => {
+          if (usernameChanged) {
+            const realUsername = u.legacyUsername || u.realUsername || u.username;
+            if (result?.aliasFallback) await demoSaveUsernameAlias(u.id, realUsername, newUsername, caller.id);
+            else await demoSaveUsernameAlias(u.id, realUsername, realUsername, caller.id);
+          }
+        })
+        .catch(e => console.warn('[users] legacy update skipped', e));
     }
-    if (canResetDemoPasswords()) {
-      const pass = row.querySelector('[data-user-password]')?.value.trim();
-      if (pass) await mktApi.resetPassword(caller.id, u.id, pass);
+    if (pass && canResetDemoPasswords()) {
+      mktApi.resetPassword(caller.id, u.id, pass).catch(e => console.warn('[users] legacy password reset skipped', e));
     }
+
     await demoRefreshUsers();
     if (caller.id === u.id) {
       const fresh = demoGetUsers().find(x => x.id === u.id);
       if (fresh) demoWriteSession({ user: fresh, loginAt: Date.now() });
     }
-    if (updateResult?.aliasFallback && aliasResult && !aliasResult.cloudSaved) toast('Da luu tren may nay, nhung chua dong bo username len cloud. Bam Luu lai.');
-    else toast(updateResult?.aliasFallback ? 'Da luu user. Username moi da dong bo de dang nhap.' : 'Da luu user.');
+    toast('Da luu user va dong bo cloud. May khac F5 se thay ngay.');
     render();
   } catch(e) {
     console.error('[saveUser]', e);
-    toast('Loi: ' + (e.message || e));
+    toast('Loi dong bo user: ' + (e.message || e));
   }
 }
 
 async function demoCreateUserPrompt(){
-  if (!canManageDemoUsers()) { toast('⚠️ Cần quyền quản lý user.'); return; }
+  if (!canManageDemoUsers()) { toast('Can quyen quan ly user.'); return; }
   const caller = demoCurrentUser();
-  const username = prompt('Username mới (chỉ chữ thường, số, . - _):');
+  const username = prompt('Username moi (chi chu thuong, so, . - _):');
   if (!username) return;
-  if (!demoUsernameIsValid(demoNormalizeUsername(username))) { toast('⚠️ Username không hợp lệ.'); return; }
-  const display = prompt('Tên hiển thị:') || username;
-  const password = prompt('Mật khẩu tạm:') || '123456';
+  const normalized = demoNormalizeUsername(username);
+  if (!demoUsernameIsValid(normalized)) { toast('Username khong hop le.'); return; }
+  const display = prompt('Ten hien thi:') || normalized;
+  const password = prompt('Mat khau tam:') || '123456';
   const role = prompt('Role (admin/editor/b2b/sale_online/recruitment/viewer):', 'viewer') || 'viewer';
+  const presets = {dashboard:'view'};
   try {
-    await mktApi.createUser(caller.id, demoNormalizeUsername(username), password, display, role, {dashboard:'view'});
+    await demoCreateCloudUser(normalized, password, display, role, presets, caller.id);
+    mktApi.createUser(caller.id, normalized, password, display, role, presets).catch(e => console.warn('[users] legacy create skipped', e));
     await demoRefreshUsers();
-    toast('✅ Đã tạo user ' + username);
+    toast('Da tao user va dong bo cloud: ' + normalized);
     render();
   } catch(e) {
     console.error('[createUser]', e);
-    toast('❌ Lỗi: ' + (e.message || e));
+    toast('Loi tao user: ' + (e.message || e));
   }
 }
 
 async function demoDeleteUser(username){
-  if (!canManageDemoUsers()) { toast('⚠️ Cần quyền quản lý user.'); return; }
-  if (!confirm('Xoá user ' + username + ' khỏi hệ thống? Hành động này không thể hoàn tác.')) return;
+  if (!canManageDemoUsers()) { toast('Can quyen quan ly user.'); return; }
+  if (!confirm('Xoa user ' + username + ' khoi he thong?')) return;
   const caller = demoCurrentUser();
   const u = demoGetUsers().find(x => x.username === username);
   if (!u || !u.id) return;
   try {
-    await mktApi.deleteUser(caller.id, u.id);
+    await demoDeleteCloudUser(u, caller.id);
+    mktApi.deleteUser(caller.id, u.id).catch(e => console.warn('[users] legacy delete skipped', e));
     await demoRefreshUsers();
-    toast('🗑️ Đã xoá ' + username);
+    toast('Da xoa user va dong bo cloud: ' + username);
     render();
   } catch(e) {
     console.error('[deleteUser]', e);
-    toast('❌ Lỗi: ' + (e.message || e));
+    toast('Loi xoa user: ' + (e.message || e));
   }
 }
 /* DATA_SOURCES_DEMO_VERSION 1 - Google Sheet config UI only.
