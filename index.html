@@ -125,6 +125,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .koc-horizontal-btn{border:1px solid transparent;background:transparent;color:#64748b;border-radius:8px;padding:9px 13px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;transition:background .15s ease,color .15s ease,border-color .15s ease}
 .koc-horizontal-btn:hover{background:#f1f5f9;color:#1e2e4a}
 .koc-horizontal-btn.active{background:#eaf1ff;border-color:#bfd2ff;color:#1d4ed8;box-shadow:inset 0 0 0 1px rgba(37,99,235,.08)}
+.sale-crumb.koc-crumb-inline{align-items:center;gap:8px 10px;margin-bottom:12px}.sale-crumb.koc-crumb-inline .crumb-cur{margin-right:4px}.koc-inline-nav{flex:1;min-width:520px;margin:0 0 0 8px!important;padding:0!important;border:0!important;box-shadow:none!important;background:transparent!important;border-radius:0!important;gap:6px}.koc-inline-nav .koc-horizontal-btn{padding:7px 10px;font-size:12.5px}@media(max-width:1180px){.koc-inline-nav{flex-basis:100%;min-width:0;margin-left:0!important;padding-top:8px!important}}
 .koc-read-cell{min-width:170px;max-width:260px;padding:8px 10px!important;background:#fff;vertical-align:top!important}
 .koc-read-title{font-size:13px;font-weight:800;color:#0f172a;line-height:1.25;margin-bottom:3px;white-space:normal}
 .koc-read-sub{font-size:11.5px;color:#64748b;line-height:1.35;white-space:normal;margin-top:2px}
@@ -2380,7 +2381,8 @@ function renderSale() {
     {id:'alerts',    l:'Cảnh báo'},
   ];
   const curTab = TABS.find(t=>t.id===saleTab) || TABS[0];
-  const crumb = `<div class="sale-crumb"><span class="crumb-mod">🛒 Sale Online</span><span class="crumb-sep">›</span><span class="crumb-cur">${curTab.l}</span></div>`;
+  const kocInlineNav = saleTab==='koc' ? `<div class="koc-horizontal-nav koc-inline-nav" aria-label="KOC / Affiliate tabs">${KOC_SUBTABS.map(t=>`<button type="button" data-koc-tab="${t.id}" class="koc-horizontal-btn ${kocSubTab===t.id?'active':''}">${t.l}</button>`).join('')}</div>` : '';
+  const crumb = `<div class="sale-crumb ${saleTab==='koc'?'koc-crumb-inline':''}"><span class="crumb-mod">&#128722; Sale Online</span><span class="crumb-sep">&rsaquo;</span><span class="crumb-cur">${curTab.l}</span>${kocInlineNav}</div>`;
   const body = ({
     overview:_saleOverview, products:_saleProdMst, campaigns:_saleCampTab,
     koc:_saleKocTab, compliance:()=>renderCompliancePage('sale'), ads:_saleAdsTab, orders:_saleOrdTab,
@@ -2445,10 +2447,7 @@ function _saleKocTab() {
   actions.push(`<div style="flex:1"></div>`);
   actions.push(_b('💾 Lưu',"_kocSaveAll();toast('💾 Đã lưu KOC!')",'#ea580c'));
   const nav = `
-    <div class="koc-horizontal-nav" aria-label="KOC / Affiliate tabs">
-      ${KOC_SUBTABS.map(t=>`<button type="button" data-koc-tab="${t.id}" class="koc-horizontal-btn ${kocSubTab===t.id?'active':''}">${t.l}</button>`).join('')}
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 12px;align-items:center">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px;align-items:center">
       ${actions.join('')}
     </div>`;
   const renderers = {overview:renderKocOverview,master:renderKocMaster,scripts:renderKocScripts,prod:renderKocProductCampaign,contracts:renderKocContracts,compliance:renderKocCompliance,report:renderKocReport};
