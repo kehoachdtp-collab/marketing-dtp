@@ -363,6 +363,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .demo-users-table td{padding:8px;border-bottom:1px solid #eef2f7;vertical-align:top}
 .demo-chip{display:inline-flex;align-items:center;border-radius:999px;background:#eff6ff;color:#2563eb;padding:2px 8px;font-size:11px;font-weight:750;white-space:nowrap}
 .topbar-user{font-size:12px;color:#475569;font-weight:700;white-space:nowrap}
+.notification-wrap{position:relative;display:flex;align-items:center}
+.notification-btn{position:relative;width:38px;height:34px;border:1px solid #dbe4f0;background:#fff;border-radius:10px;cursor:pointer;font-size:17px;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(15,23,42,.04);transition:background .15s,border-color .15s,transform .15s}
+.notification-btn:hover{background:#f8fbff;border-color:#bfdbfe;transform:translateY(-1px)}
+.notification-badge{position:absolute;right:-5px;top:-6px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#ef4444;color:#fff;font-size:10px;font-weight:900;line-height:18px;text-align:center;border:2px solid #fff;display:none}
+.notification-badge.show{display:block}
+.notification-panel{position:absolute;right:0;top:42px;width:min(380px,calc(100vw - 24px));max-height:440px;overflow:auto;background:#fff;border:1px solid #dbe4f0;border-radius:14px;box-shadow:0 18px 44px rgba(15,23,42,.18);z-index:9998;display:none}
+.notification-panel.show{display:block}
+.notification-head{position:sticky;top:0;background:#fff;border-bottom:1px solid #edf2f7;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.notification-title{font-weight:900;color:#172033;font-size:14px}
+.notification-mark{border:0;background:#eff6ff;color:#2563eb;border-radius:999px;padding:6px 10px;font-weight:800;font-size:11px;cursor:pointer}
+.notification-list{padding:8px}
+.notification-empty{padding:24px 14px;text-align:center;color:#94a3b8;font-weight:700}
+.notification-item{padding:10px 11px;border-radius:12px;border:1px solid transparent;background:#fff;margin-bottom:7px}
+.notification-item.unread{background:#eff6ff;border-color:#bfdbfe}
+.notification-item-title{font-size:13px;font-weight:900;color:#172033;margin-bottom:3px}
+.notification-item-msg{font-size:12px;color:#475569;line-height:1.4}
+.notification-item-meta{font-size:11px;color:#94a3b8;margin-top:6px;display:flex;justify-content:space-between;gap:8px}
 /* ── Universal Modal ── */
 .mdk-overlay{display:none;position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.55);backdrop-filter:blur(3px);align-items:center;justify-content:center}
 .mdk-overlay.show{display:flex}
@@ -513,6 +530,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="topbar-tabs" id="topbar-tabs"></div>
     <span class="topbar-spacer"></span>
     <span class="topbar-ts" id="topbar-ts"></span>
+    <div class="notification-wrap" id="notification-wrap"><button class="notification-btn" type="button" onclick="toggleNotifications()" title="Thong bao">&#128276;<span class="notification-badge" id="notification-badge"></span></button><div class="notification-panel" id="notification-panel"></div></div>
     <span class="topbar-user" id="topbar-user"></span>
     <button class="btn" onclick="demoLogout()">Đăng xuất</button>
     <button class="btn" onclick="refresh()">🔄 Cập nhật</button>
@@ -707,7 +725,9 @@ const mktApi = {
 /* ═══════════════════════════════════════
    STORAGE — namespace mkt_ + Supabase sync
 ═══════════════════════════════════════ */
-const SYNC_KEYS = ['mkt_b2b_crm_data','mkt_b2b_cost_data','mkt_b2b_assignee_options','mkt_sale_campaigns','mkt_sale_orders','mkt_sale_ads_data','mkt_sale_koc_data','mkt_sale_koc_master','mkt_sale_koc_product_campaigns','mkt_sale_koc_prospects','mkt_sale_koc_collaborations','mkt_sale_koc_collab','mkt_sale_koc_ptlist','mkt_sale_koc_contracts','mkt_sale_inventory','mkt_sale_product_master','mkt_recruitment_campaign_data','mkt_recruitment_msg_data','mkt_data_sources','mkt_google_sheet_configs','mkt_google_sheet_mappings','mkt_sync_logs','mkt_compliance_reviews','mkt_compliance_rules','mkt_product_approved_claims','mkt_product_banned_claims','mkt_compliance_draft','mkt_demo_username_aliases','mkt_demo_users_cloud'];
+const MKT_NOTIFICATIONS_KEY = 'mkt_demo_notifications';
+const MKT_NOTIFICATION_READ_PREFIX = 'mkt_demo_notifications_read_at_';
+const SYNC_KEYS = [MKT_NOTIFICATIONS_KEY,'mkt_b2b_crm_data','mkt_b2b_cost_data','mkt_b2b_assignee_options','mkt_sale_campaigns','mkt_sale_orders','mkt_sale_ads_data','mkt_sale_koc_data','mkt_sale_koc_master','mkt_sale_koc_product_campaigns','mkt_sale_koc_prospects','mkt_sale_koc_collaborations','mkt_sale_koc_collab','mkt_sale_koc_ptlist','mkt_sale_koc_contracts','mkt_sale_inventory','mkt_sale_product_master','mkt_recruitment_campaign_data','mkt_recruitment_msg_data','mkt_data_sources','mkt_google_sheet_configs','mkt_google_sheet_mappings','mkt_sync_logs','mkt_compliance_reviews','mkt_compliance_rules','mkt_product_approved_claims','mkt_product_banned_claims','mkt_compliance_draft','mkt_demo_username_aliases','mkt_demo_users_cloud'];
 
 function isSyncKey(k){ return SYNC_KEYS.includes(k); }
 
@@ -740,6 +760,7 @@ function setStore(key, value) {
   if (isSyncKey(k)) {
     if (_kvSyncTimers[k]) clearTimeout(_kvSyncTimers[k].t);
     _kvSyncTimers[k] = { value, t: setTimeout(() => _flushKvSync(k), 1200) };
+    _scheduleDashboardChangeNotification(k);
   }
 }
 // Đẩy hết dữ liệu chờ sync trước khi rời trang
@@ -756,6 +777,7 @@ async function syncDown() {
       }
     });
     console.log('[sync] pulled', updated, 'keys from Supabase');
+    updateNotificationsUi();
     return updated;
   } catch(e) {
     console.warn('[sync] syncDown failed', e);
@@ -1188,6 +1210,7 @@ function demoShowApp(){
   if (curMod === 'sale' && saleTab === 'products' && !isDemoAdmin()) saleTab = 'overview';
   render();
   setTs();
+  initNotifications();
 }
 async function demoChangePwPrompt(){
   const usernameInput = document.getElementById('demo-username');
@@ -1374,6 +1397,7 @@ async function demoSaveUser(oldUsername){
       const fresh = demoGetUsers().find(x => x.id === u.id);
       if (fresh) demoWriteSession({ user: fresh, loginAt: Date.now() });
     }
+    pushDashboardNotification({module:'users',title:(notificationActor().name + ' vua cap nhat Quan ly user'),message:'Da luu thay doi tai khoan/quyen cho user ' + newUsername + '. May khac bam Cap nhat hoac cho tu dong dong bo de thay.'});
     toast('Da luu user va dong bo cloud. May khac F5 se thay ngay.');
     render();
   } catch(e) {
@@ -1397,6 +1421,7 @@ async function demoCreateUserPrompt(){
     await demoCreateCloudUser(normalized, password, display, role, presets, caller.id);
     mktApi.createUser(caller.id, normalized, password, display, role, presets).catch(e => console.warn('[users] legacy create skipped', e));
     await demoRefreshUsers();
+    pushDashboardNotification({module:'users',title:(notificationActor().name + ' vua tao user moi'),message:'Da tao user ' + normalized + ' trong Quan ly user.'});
     toast('Da tao user va dong bo cloud: ' + normalized);
     render();
   } catch(e) {
@@ -1415,6 +1440,7 @@ async function demoDeleteUser(username){
     await demoDeleteCloudUser(u, caller.id);
     mktApi.deleteUser(caller.id, u.id).catch(e => console.warn('[users] legacy delete skipped', e));
     await demoRefreshUsers();
+    pushDashboardNotification({module:'users',title:(notificationActor().name + ' vua xoa user'),message:'Da xoa user ' + username + ' khoi Quan ly user.'});
     toast('Da xoa user va dong bo cloud: ' + username);
     render();
   } catch(e) {
@@ -1786,6 +1812,181 @@ function setTs() {
     'Cập nhật ' + new Date().toLocaleTimeString('vi-VN');
 }
 
+
+const NOTIFY_KEY_LABELS = {
+  mkt_b2b_crm_data:['b2b','Business to Business'],
+  mkt_b2b_cost_data:['b2b','Business to Business'],
+  mkt_b2b_assignee_options:['b2b','Business to Business'],
+  mkt_sale_campaigns:['sale','Sale Online'],
+  mkt_sale_orders:['sale','Don hang & doanh thu'],
+  mkt_sale_ads_data:['sale','Ads Sale Online'],
+  mkt_sale_koc_data:['koc','KOC / Affiliate'],
+  mkt_sale_koc_master:['koc','Danh sach KOC'],
+  mkt_sale_koc_product_campaigns:['koc','KOC theo SP/CD'],
+  mkt_sale_koc_prospects:['koc','KOC / Affiliate'],
+  mkt_sale_koc_collaborations:['koc','KOC hop tac'],
+  mkt_sale_koc_collab:['koc','KOC hop tac'],
+  mkt_sale_koc_ptlist:['koc','Phu trach KOC'],
+  mkt_sale_koc_contracts:['koc','Hop dong KOC'],
+  mkt_sale_inventory:['sale','Kiem kho'],
+  mkt_sale_product_master:['sale','Danh sach san pham'],
+  mkt_recruitment_campaign_data:['hr','Tuyen dung'],
+  mkt_recruitment_msg_data:['hr','Tin nhan tuyen dung'],
+  mkt_data_sources:['system','Nguon du lieu'],
+  mkt_google_sheet_configs:['system','Nguon du lieu'],
+  mkt_google_sheet_mappings:['system','Mapping du lieu'],
+  mkt_sync_logs:['system','Lich su dong bo'],
+  mkt_compliance_reviews:['sale','Kiem duyet noi dung'],
+  mkt_compliance_rules:['sale','Rules kiem duyet'],
+  mkt_product_approved_claims:['sale','Claim san pham'],
+  mkt_product_banned_claims:['sale','Claim san pham'],
+  mkt_demo_username_aliases:['users','Quan ly user'],
+  mkt_demo_users_cloud:['users','Quan ly user'],
+};
+const NOTIFY_SILENT_KEYS = new Set([MKT_NOTIFICATIONS_KEY,'mkt_compliance_draft']);
+const _notificationTimers = {};
+const _notificationLastAt = {};
+let _notificationPollTimer = null;
+let _lastNotificationTopId = '';
+let _notificationClickBound = false;
+function notificationReadKey(){
+  const u = demoCurrentUser && demoCurrentUser();
+  return MKT_NOTIFICATION_READ_PREFIX + (u && (u.id || u.username) || 'guest');
+}
+function readNotifications(){
+  const rows = getStore(MKT_NOTIFICATIONS_KEY, []);
+  return Array.isArray(rows) ? rows.filter(Boolean).slice(0,150) : [];
+}
+function notificationReadAt(){
+  const t = localStorage.getItem(notificationReadKey()) || '';
+  return Date.parse(t) || 0;
+}
+function notificationUnreadCount(){
+  const readAt = notificationReadAt();
+  return readNotifications().filter(function(n){ return (Date.parse(n.at || '') || 0) > readAt; }).length;
+}
+function notificationActor(){
+  const u = demoCurrentUser && demoCurrentUser();
+  return { id:(u && u.id) || '', name:(u && (u.displayName || u.username)) || 'Nguoi dung', username:(u && u.username) || '' };
+}
+function notificationAreaForKey(k){
+  const mapped = NOTIFY_KEY_LABELS[k] || ['dashboard','Dashboard'];
+  return { module:mapped[0], label:mapped[1] };
+}
+function notificationActiveArea(fallback){
+  if (curMod === 'sale') return {module: saleTab === 'koc' ? 'koc' : 'sale', label: saleTab === 'koc' ? 'KOC / Affiliate' : 'Sale Online'};
+  if (curMod === 'b2b') return {module:'b2b', label:'Business to Business'};
+  if (curMod === 'hr') return {module:'hr', label:'Tuyen dung'};
+  if (curMod === 'users') return {module:'users', label:'Quan ly user'};
+  if (curMod === 'dataSources') return {module:'system', label:'Nguon du lieu'};
+  return fallback;
+}
+function notificationFormatTime(v){
+  const d = new Date(v || Date.now());
+  return isNaN(d) ? '' : d.toLocaleString('vi-VN');
+}
+function pushDashboardNotification(input){
+  const actor = notificationActor();
+  if (!actor.id && !actor.username) return;
+  const item = {
+    id: Date.now() + '_' + Math.random().toString(36).slice(2,8),
+    at: new Date().toISOString(),
+    actorId: actor.id,
+    actorName: actor.name,
+    actorUsername: actor.username,
+    module: input.module || 'dashboard',
+    title: input.title || 'Co cap nhat moi',
+    message: input.message || '',
+  };
+  const rows = [item].concat(readNotifications()).slice(0,150);
+  setStore(MKT_NOTIFICATIONS_KEY, rows);
+  updateNotificationsUi();
+}
+function _scheduleDashboardChangeNotification(k){
+  if (NOTIFY_SILENT_KEYS.has(k)) return;
+  if (!demoCurrentUser || !demoCurrentUser()) return;
+  const area = notificationActiveArea(notificationAreaForKey(k));
+  const bucket = area.module + ':' + area.label;
+  clearTimeout(_notificationTimers[bucket]);
+  _notificationTimers[bucket] = setTimeout(function(){
+    const now = Date.now();
+    if (now - (_notificationLastAt[bucket] || 0) < 4500) return;
+    _notificationLastAt[bucket] = now;
+    const actor = notificationActor();
+    pushDashboardNotification({
+      module: area.module,
+      title: actor.name + ' vua cap nhat ' + area.label,
+      message: actor.name + ' da sua/luu du lieu trong muc ' + area.label + '. Bam Cap nhat de keo du lieu moi neu man hinh chua doi.',
+    });
+  }, 900);
+}
+function renderNotificationsPanel(){
+  const panel = document.getElementById('notification-panel');
+  if (!panel) return;
+  const rows = readNotifications();
+  const readAt = notificationReadAt();
+  const items = rows.length ? rows.slice(0,30).map(function(n){
+    const unread = (Date.parse(n.at || '') || 0) > readAt;
+    return '<div class="notification-item '+(unread?'unread':'')+'"><div class="notification-item-title">'+esc(n.title || 'Co cap nhat moi')+'</div><div class="notification-item-msg">'+esc(n.message || '')+'</div><div class="notification-item-meta"><span>'+esc(n.actorName || n.actorUsername || '')+'</span><span>'+esc(notificationFormatTime(n.at))+'</span></div></div>';
+  }).join('') : '<div class="notification-empty">Chua co thong bao.</div>';
+  panel.innerHTML = '<div class="notification-head"><div class="notification-title">Thong bao cap nhat</div><button class="notification-mark" onclick="markNotificationsRead(event)">Danh dau da doc</button></div><div class="notification-list">'+items+'</div>';
+}
+function updateNotificationsUi(){
+  const badge = document.getElementById('notification-badge');
+  const count = notificationUnreadCount();
+  if (badge) {
+    badge.textContent = count > 99 ? '99+' : String(count);
+    badge.classList.toggle('show', count > 0);
+  }
+  renderNotificationsPanel();
+}
+function toggleNotifications(){
+  const panel = document.getElementById('notification-panel');
+  if (!panel) return;
+  panel.classList.toggle('show');
+  if (panel.classList.contains('show')) {
+    refreshNotificationsFromCloud(false);
+    renderNotificationsPanel();
+  }
+}
+function markNotificationsRead(event){
+  if (event && event.stopPropagation) event.stopPropagation();
+  localStorage.setItem(notificationReadKey(), new Date().toISOString());
+  updateNotificationsUi();
+}
+async function refreshNotificationsFromCloud(showToast){
+  if (!demoCurrentUser || !demoCurrentUser()) return;
+  try {
+    const rows = await mktApi.kvGet(MKT_NOTIFICATIONS_KEY);
+    if (Array.isArray(rows)) {
+      const oldRows = readNotifications();
+      const oldTop = oldRows[0] && oldRows[0].id || '';
+      localStorage.setItem(MKT_NOTIFICATIONS_KEY, JSON.stringify(rows));
+      const newTop = rows[0] && rows[0].id || '';
+      updateNotificationsUi();
+      if (showToast && newTop && newTop !== oldTop && newTop !== _lastNotificationTopId) {
+        _lastNotificationTopId = newTop;
+        toast('Co thong bao cap nhat moi.');
+      }
+    }
+  } catch(e) { console.warn('[notifications] refresh failed', e); }
+}
+function initNotifications(){
+  updateNotificationsUi();
+  if (_notificationPollTimer) clearInterval(_notificationPollTimer);
+  refreshNotificationsFromCloud(false);
+  _notificationPollTimer = setInterval(function(){ refreshNotificationsFromCloud(true); }, 20000);
+  if (!_notificationClickBound) {
+    _notificationClickBound = true;
+    document.addEventListener('click', function(e){
+      const wrap = document.getElementById('notification-wrap');
+      const panel = document.getElementById('notification-panel');
+      if (wrap && panel && !wrap.contains(e.target)) panel.classList.remove('show');
+    });
+  }
+}
+
+
 /* ═══════════════════════════════════════
    NAVIGATION
 ═══════════════════════════════════════ */
@@ -1900,8 +2101,9 @@ function _syncSaleSidebar() {
       x.classList.toggle('active', x.dataset.kocSub === kocSubTab && saleTab === 'koc'));
   }
 }
-function refresh() {
-  render(); setTs(); toast('✅ Đã cập nhật!');
+async function refresh() {
+  try { await Promise.all([syncDown(), demoRefreshUsers(), refreshNotificationsFromCloud(false)]); } catch(e) { console.warn('[refresh]', e); }
+  render(); setTs(); updateNotificationsUi(); toast('Da cap nhat!');
 }
 
 /* ═══════════════════════════════════════
