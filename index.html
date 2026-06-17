@@ -344,6 +344,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .login-btn:active{transform:translateY(0);filter:brightness(.96)}
 .login-error{display:none;background:rgba(239,68,68,.12);color:#fecaca;border:1px solid rgba(248,113,113,.45);border-radius:12px;padding:11px 13px;font-size:13px;line-height:1.4}
 .login-error.show{display:block}
+.login-error.ok{background:rgba(34,197,94,.13);color:#bbf7d0;border-color:rgba(74,222,128,.45)}
 .login-change-pw{text-align:center;margin-top:17px}
 .login-change-pw a{color:#9bdcff;font-size:14px;text-decoration:none;cursor:pointer;opacity:.92}
 .login-change-pw a:hover{opacity:1;text-decoration:underline}
@@ -1120,10 +1121,14 @@ function canImportMod(mod){ return demoCan(mod,'import'); }
 function canManageDemoUsers(){ return demoCan('users','manageUsers'); }
 function canResetDemoPasswords(){ return demoCan('users','resetPassword'); }
 function demoEsc(v){ return String(v ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-function demoShowLogin(message){
+function demoShowLogin(message, ok){
   document.body.classList.add('auth-boot');
   const err = document.getElementById('login-error');
-  if (err) { err.textContent = message || ''; err.classList.toggle('show', !!message); }
+  if (err) {
+    err.textContent = message || '';
+    err.classList.toggle('show', !!message);
+    err.classList.toggle('ok', !!ok);
+  }
   const input = document.getElementById('demo-username');
   if (input) setTimeout(()=>input.focus(), 50);
 }
@@ -1133,6 +1138,39 @@ function demoShowApp(){
   if (!canViewMod(curMod)) curMod = 'overview';
   render();
   setTs();
+}
+async function demoChangePwPrompt(){
+  const usernameInput = document.getElementById('demo-username');
+  const currentUser = demoNormalizeUsername(usernameInput?.value || prompt('Username can doi mat khau:') || '');
+  if (!currentUser) { demoShowLogin('Vui long nhap username truoc khi doi mat khau.'); usernameInput?.focus(); return; }
+  const oldPassword = prompt('Nhap mat khau hien tai cua ' + currentUser + ':');
+  if (oldPassword == null) return;
+  const newPassword = prompt('Nhap mat khau moi:');
+  if (newPassword == null) return;
+  if (String(newPassword).length < 6) { demoShowLogin('Mat khau moi toi thieu 6 ky tu.'); return; }
+  const confirmPassword = prompt('Nhap lai mat khau moi:');
+  if (confirmPassword == null) return;
+  if (newPassword !== confirmPassword) { demoShowLogin('Mat khau moi nhap lai chua khop.'); return; }
+  try {
+    const supaUser = await mktApi.login(currentUser, oldPassword);
+    if (!supaUser) { demoShowLogin('Username hoac mat khau hien tai khong dung.'); return; }
+    const user = _supaToDemoUser(supaUser);
+    await demoSaveUserToCloud(user, {
+      username:user.username,
+      displayName:user.displayName,
+      role:user.role,
+      status:user.status,
+      presets:user.presets,
+      password:newPassword,
+    }, user.id);
+    mktApi.resetPassword(user.id, user.id, newPassword).catch(e => console.warn('[changePassword] legacy reset skipped', e));
+    const passInput = document.getElementById('demo-password');
+    if (passInput) passInput.value = '';
+    demoShowLogin('Da doi mat khau. Vui long dang nhap bang mat khau moi.', true);
+  } catch(e) {
+    console.error('[changePassword]', e);
+    demoShowLogin('Khong doi duoc mat khau: ' + (e.message || e));
+  }
 }
 async function demoLogin(ev){
   ev.preventDefault();
