@@ -141,6 +141,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .koc-mini-chip{display:inline-flex;align-items:center;gap:4px;border-radius:999px;background:#f1f5f9;color:#475569;padding:2px 7px;font-size:10.5px;font-weight:800;white-space:nowrap}
 .koc-mini-chip.blue{background:#eff6ff;color:#2563eb}.koc-mini-chip.green{background:#dcfce7;color:#15803d}.koc-mini-chip.orange{background:#fff7ed;color:#c2410c}.koc-mini-chip.red{background:#fee2e2;color:#b91c1c}.koc-mini-chip.purple{background:#f5f3ff;color:#7c3aed}
 .koc-source-pill{display:inline-block;border-radius:999px;background:#f8fafc;border:1px solid #e2e8f0;color:#334155;padding:3px 8px;font-size:11px;font-weight:800;white-space:nowrap}
+.koc-edit-cell{min-width:230px}
+.koc-cell-label{display:block;font-size:10px;font-weight:850;color:#64748b;text-transform:uppercase;letter-spacing:.03em;margin:3px 0 2px}
+.koc-cell-input,.koc-cell-select{width:100%;min-width:0;border:1px solid #dbe3ef;border-radius:7px;background:#fff;padding:5px 8px;font-size:12px;color:#0f172a;outline:none}
+.koc-cell-input:focus,.koc-cell-select:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.koc-edit-two{display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:end}
+.koc-edit-stack{display:flex;flex-direction:column;gap:5px}
 .koc-summary-link{display:inline-block;max-width:210px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#2563eb;text-decoration:underline;font-size:11.5px;vertical-align:middle}
 .koc-code-input{width:98px!important;min-width:98px;border:1px solid #dbeafe!important;background:#f8fbff!important;border-radius:7px!important;padding:5px 8px!important;color:#2563eb!important;font-size:12px!important;font-weight:850!important;text-transform:uppercase;letter-spacing:.1px}.koc-code-input:focus{background:#eff6ff!important;border-color:#2563eb!important;box-shadow:0 0 0 3px rgba(37,99,235,.12)}.tbl td.koc-code-cell{padding:5px 6px;white-space:nowrap}
 .follower-box{display:flex;flex-direction:column;gap:4px;min-width:150px}.follower-main{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.follower-count{font-size:13px;font-weight:900;color:#0f172a}.follower-meta{font-size:11px;color:#64748b;line-height:1.35}.follower-warn{display:inline-flex;align-items:center;border-radius:999px;background:#fff7ed;color:#c2410c;padding:2px 7px;font-size:10.5px;font-weight:800}.follower-ok{display:inline-flex;align-items:center;border-radius:999px;background:#dcfce7;color:#15803d;padding:2px 7px;font-size:10.5px;font-weight:800}.follower-actions{display:flex;gap:5px;align-items:center;flex-wrap:wrap}.follower-actions button{border:1px solid #dbe3ef;background:#fff;border-radius:7px;padding:3px 7px;font-size:11px;font-weight:700;color:#334155;cursor:pointer}.follower-actions button:hover{background:#f8fafc}
@@ -2154,6 +2160,23 @@ function _kocSyncMasterFromProductRows(){
   });
   return changed;
 }
+
+function bindKocSaveShortcut(){
+  if(window.__mktKocSaveShortcutBound) return;
+  window.__mktKocSaveShortcutBound=true;
+  document.addEventListener('keydown', function(event){
+    const key=String(event.key||'').toLowerCase();
+    if(!(event.ctrlKey||event.metaKey) || key!=='s') return;
+    if(curMod==='sale' && saleTab==='koc'){
+      event.preventDefault();
+      const active=document.activeElement;
+      if(active && ['INPUT','TEXTAREA','SELECT'].includes(active.tagName)) active.blur();
+      _kocSaveAll();
+      toast('Da luu KOC.');
+    }
+  });
+}
+
 function bindKocTabEvents(){
   if(window.__mktKocTabEventsBound) return;
   window.__mktKocTabEventsBound=true;
@@ -2266,15 +2289,29 @@ function kocMstDel(id)     { if(!confirm('Xóa KOC master này?'))return; kocMst
 const _PROD_NUMS = new Set(['chiPhiBooking','hoaHongPct','videoCamKet','videoCanDuyet','videoDaDuyet','videoDaAir','view','tim','cmt','luu','share','gmv','soMonBanRa']);
 function kocProdUpd(id,k,v){
   const r=kocProdRows.find(r=>r.id==id); if(!r)return;
-  if(k==='trangThai' && v==='Đã duyệt demo' && ['HIGH','CRITICAL'].includes(String(r.complianceRisk||'').toUpperCase()) && !r.complianceApproved){
-    toast('⚠️ Nội dung HIGH/CRITICAL chưa được admin/RA duyệt, không thể chuyển sang Đã duyệt demo.');
+  if(k==='trangThai' && v==='\u0110\u00e3 duy\u1ec7t demo' && ['HIGH','CRITICAL'].includes(String(r.complianceRisk||'').toUpperCase()) && !r.complianceApproved){
+    toast('Noi dung HIGH/CRITICAL chua duoc admin/RA duyet.');
     saleRerender();
     return;
   }
-  r[k]=_PROD_NUMS.has(k)?(+v||0):v;
+  if(k==='follower') r[k]=_kocParseFollower(v);
+  else r[k]=_PROD_NUMS.has(k)?(+v||0):v;
   if(k==='maKoc')  { const m=kocMstRows.find(m=>m.maKoc===v); if(m) r.tenKoc=m.ten; }
   if(k==='maSp')   { const sp=saleMstRows.find(s=>s.maSP===v); if(sp) r.tenSp=sp.tenSP; }
   if(k==='maCd')   { const cd=saleCampaigns.find(c=>c.maCd===v); if(cd){ r.tenCd=cd.tenCd||''; if(!r.maSp&&cd.sanPham) r.tenSp=cd.sanPham; } }
+  const masterMap={tenKoc:'ten',socialLink:'socialLink',linkProfile:'socialLink',lienHe:'lienHe',follower:'follower',phuTrach:'phuTrach',nenTangChinh:'nenTangChinh',nhomND:'nhomND'};
+  const mk=masterMap[k];
+  if(mk){
+    const m=r.maKoc?kocMstRows.find(x=>x.maKoc===r.maKoc):null;
+    if(m){
+      m[mk]=r[k];
+      if(k==='follower'){
+        m.followerUpdatedAt=_kocTodayIso();
+        m.followerSource=m.followerSource&&m.followerSource!=='Google Sheet'?m.followerSource:'Nhap tay';
+        m.followerNeedsCheck=false;
+      }
+    }
+  }
   _kocSaveAll();
 }
 function kocProdAdd(tt)    { const seed={id:Date.now()+Math.random(),trangThai:tt||''}; if(kocProdFilter!=='all'&&kocProdFilter!=='(Chưa gắn SP)'){seed.tenSp=kocProdFilter;} kocProdRows.push(seed); _kocSaveAll(); saleRerender(); }
@@ -3145,77 +3182,79 @@ function _kocSourceCell(r){
     ${statusRaw?`<div class="koc-read-sub">Sheet: ${esc(statusRaw)}</div>`:''}
   </td>`;
 }
+
+function kocCellKey(event){
+  const key=String(event.key||'').toLowerCase();
+  if((event.ctrlKey||event.metaKey) && key==='s'){
+    event.preventDefault();
+    if(event.currentTarget && event.currentTarget.blur) event.currentTarget.blur();
+    _kocSaveAll();
+    toast('Da luu KOC.');
+    return false;
+  }
+  if(key==='enter' && event.currentTarget && event.currentTarget.blur){ event.currentTarget.blur(); return false; }
+  if(key==='escape'){ saleRerender(); return false; }
+  return true;
+}
+function _kocCellInput(id,field,val,ph,type){
+  type=type||'text';
+  return '<input class="koc-cell-input" type="'+type+'" value="'+esc(String(val??''))+'" placeholder="'+esc(ph||'')+'" onchange="kocProdUpd('+id+',\''+field+'\',this.value)" onkeydown="return kocCellKey(event)">';
+}
+function _kocCellNum(id,field,val){ return _kocCellInput(id,field,(+val||''),'0','number'); }
+function _kocCellDate(id,field,val){ return '<input class="koc-cell-input" type="text" value="'+esc(formatDateVN(val))+'" placeholder="DD/MM/YYYY" onchange="kocProdUpd('+id+',\''+field+'\',parseDateSafe(this.value))" onkeydown="return kocCellKey(event)">'; }
+function _kocCellSelect(id,field,val,opts){
+  return '<select class="koc-cell-select" onchange="kocProdUpd('+id+',\''+field+'\',this.value)" onkeydown="return kocCellKey(event)">'+opts.map(function(o){return '<option value="'+esc(o)+'"'+(val===o?' selected':'')+'>'+esc(o||'-')+'</option>';}).join('')+'</select>';
+}
 function _kocPersonSummaryCell(r){
   const m=_kocMasterInfo(r);
-  const name=m.ten || r.tenKoc || '—';
+  const name=m.ten || r.tenKoc || '';
   const code=r.maKoc || m.maKoc || '';
   const contact=m.lienHe || r.lienHe || '';
   const followerRow=Object.assign({}, r, m);
-  const link=m.socialLink || r.socialLink || '';
-  return `<td class="koc-read-cell">
-    <div class="koc-read-title">${esc(name)}</div>
-    <div class="koc-mini-row">
-      ${code?`<span class="koc-mini-chip blue">${esc(code)}</span>`:''}
-      ${_kocParseFollower(followerRow.follower)?`<span class="koc-mini-chip purple">${esc(_kocFollowerLabel(followerRow.follower))} follower</span>`:''}
-    </div>
-    ${contact?`<div class="koc-read-sub">Liên hệ: ${esc(contact)}</div>`:''}
-    ${followerRow.followerSource||followerRow.followerUpdatedAt?`<div class="koc-read-sub">Follower: ${esc(followerRow.followerSource||'Chưa rõ')} · ${esc(followerRow.followerUpdatedAt?formatDateVN(followerRow.followerUpdatedAt):'chưa có ngày')}</div>`:''}
-    ${_kocTinyLink(link,'Social link')}
-  </td>`;
+  const link=m.socialLink || r.socialLink || r.linkProfile || '';
+  return '<td class="koc-read-cell koc-edit-cell"><div class="koc-edit-stack">'
+    + '<label class="koc-cell-label">T&#234;n KOC</label>' + _kocCellInput(r.id,'tenKoc',name,'Ten KOC')
+    + '<div class="koc-edit-two"><div><label class="koc-cell-label">M&#227; KOC</label>' + _kocMaKocSel(r.id,'maKoc',code) + '</div><div><label class="koc-cell-label">Follower</label>' + _kocCellInput(r.id,'follower',followerRow.follower||'','Follower') + '</div></div>'
+    + '<label class="koc-cell-label">Li&#234;n h&#7879;</label>' + _kocCellInput(r.id,'lienHe',contact,'SDT/Zalo')
+    + '<label class="koc-cell-label">Social link</label>' + renderLinkCell(link,r.id,'socialLink','kocProdUpd')
+    + '</div></td>';
 }
 function _kocOwnerSummaryCell(r){
   const m=_kocMasterInfo(r);
-  const owner=m.phuTrach || r.phuTrach || '—';
-  const platform=m.nenTangChinh || (m.socialLink?'TikTok':'');
-  const group=m.nhomND || '';
-  return `<td class="koc-read-cell">
-    <div class="koc-read-title">${esc(owner)}</div>
-    ${platform?`<div class="koc-read-sub">Nền tảng: ${esc(platform)}</div>`:''}
-    ${group?`<div class="koc-read-sub">Nhóm ND: ${esc(group)}</div>`:''}
-  </td>`;
+  const owner=m.phuTrach || r.phuTrach || '';
+  const platform=m.nenTangChinh || r.nenTangChinh || (m.socialLink||r.socialLink?'TikTok':'');
+  const group=m.nhomND || r.nhomND || '';
+  return '<td class="koc-read-cell koc-edit-cell"><div class="koc-edit-stack">'
+    + '<label class="koc-cell-label">Ph&#7909; tr&#225;ch</label>' + _kocCellInput(r.id,'phuTrach',owner,'Phu trach')
+    + '<label class="koc-cell-label">N&#7873;n t&#7843;ng</label>' + _kocCellInput(r.id,'nenTangChinh',platform,'TikTok/Shopee...')
+    + '<label class="koc-cell-label">Nh&#243;m ND</label>' + _kocCellInput(r.id,'nhomND',group,'Nhom noi dung')
+    + '</div></td>';
 }
 function _kocCampaignSummaryCell(r){
-  return `<td class="koc-read-cell">
-    <div class="koc-read-title">${esc(r.tenSp||r.maSp||'—')}</div>
-    <div class="koc-mini-row">
-      ${r.maSp?`<span class="koc-mini-chip purple">SP ${esc(r.maSp)}</span>`:''}
-      ${r.maCd?`<span class="koc-mini-chip blue">CD ${esc(r.maCd)}</span>`:''}
-    </div>
-    ${r.tenCd?`<div class="koc-read-sub">${esc(r.tenCd)}</div>`:''}
-    ${+r.chiPhiBooking?`<div class="koc-read-sub">Booking: <strong>${_kocShortMoney(r.chiPhiBooking)}</strong></div>`:''}
-  </td>`;
+  return '<td class="koc-read-cell koc-edit-cell"><div class="koc-edit-stack">'
+    + '<label class="koc-cell-label">S&#7843;n ph&#7849;m</label>' + _kocCellInput(r.id,'tenSp',r.tenSp||'','Ten san pham')
+    + '<div class="koc-edit-two"><div><label class="koc-cell-label">M&#227; SP</label>' + _kocSpSel2(r.id,'maSp',r.maSp) + '</div><div><label class="koc-cell-label">M&#227; CD</label>' + _kocCdSel(r.id,'maCd',r.maCd) + '</div></div>'
+    + '<label class="koc-cell-label">Chi&#7871;n d&#7883;ch</label>' + _kocCellInput(r.id,'tenCd',r.tenCd||'','Ten chien dich')
+    + '<label class="koc-cell-label">Booking</label>' + _kocCellNum(r.id,'chiPhiBooking',r.chiPhiBooking)
+    + '</div></td>';
 }
 function _kocSampleDemoSummaryCell(r,dlOver=false){
-  const deal=_kocNotePart(r.ghiChu,'Ngày chốt');
-  const ship=_kocNotePart(r.ghiChu,'Nhận hàng');
-  const tracking=_kocNotePart(r.ghiChu,'Mã vận đơn');
-  return `<td class="koc-read-cell">
-    <div class="koc-mini-row">
-      ${r.sanPhamGui?`<span class="koc-mini-chip green">${esc(r.sanPhamGui)}</span>`:'<span class="koc-mini-chip">Chưa ghi mẫu</span>'}
-      ${r.demo?`<span class="koc-mini-chip ${r.demo==='Đã duyệt'?'green':'orange'}">Demo: ${esc(r.demo)}</span>`:''}
-      ${dlOver?`<span class="koc-mini-chip red">Quá hạn</span>`:''}
-    </div>
-    ${r.hinhThucNhanSP?`<div class="koc-read-sub">Nhận mẫu: ${esc(r.hinhThucNhanSP)}</div>`:''}
-    ${deal?`<div class="koc-read-sub">Chốt: ${esc(deal)}</div>`:''}
-    ${r.deadlineDemo?`<div class="koc-read-sub">Deadline: ${esc(formatDateVN(r.deadlineDemo))}</div>`:''}
-    ${tracking?`<div class="koc-read-sub">Vận đơn: ${esc(tracking)}</div>`:''}
-    ${ship?`<div class="koc-read-sub" title="${esc(ship)}">Nhận hàng: ${esc(ship.slice(0,80))}${ship.length>80?'…':''}</div>`:''}
-  </td>`;
+  return '<td class="koc-read-cell koc-edit-cell"><div class="koc-edit-stack">'
+    + '<label class="koc-cell-label">SP g&#7917;i</label>' + _kocCellInput(r.id,'sanPhamGui',r.sanPhamGui||'','Mau gui')
+    + '<label class="koc-cell-label">Nh&#7853;n m&#7851;u</label>' + _kocCellSelect(r.id,'hinhThucNhanSP',r.hinhThucNhanSP||'',KOC_HINH_THUC_SP)
+    + '<label class="koc-cell-label">Deadline demo</label>' + _kocCellDate(r.id,'deadlineDemo',r.deadlineDemo)
+    + (dlOver?'<div class="koc-mini-chip red">Qua han</div>':'')
+    + '<label class="koc-cell-label">Demo</label>' + _kocCellSelect(r.id,'demo',r.demo||'',KOC_DEMO_OPTS)
+    + '</div></td>';
 }
 function _kocVideoPerfSummaryCell(r){
   const gmvCp=+r.chiPhiBooking>0?+(+r.gmv/+r.chiPhiBooking).toFixed(2):null;
-  const interact=(+r.tim||0)+(+r.cmt||0)+(+r.luu||0)+(+r.share||0);
-  return `<td class="koc-read-cell">
-    <div class="koc-mini-row">
-      ${+r.videoDaAir?`<span class="koc-mini-chip green">Air ${+r.videoDaAir}</span>`:''}
-      ${+r.videoCamKet?`<span class="koc-mini-chip blue">Cam kết ${+r.videoCamKet}</span>`:''}
-      ${+r.gmv?`<span class="koc-mini-chip green">GMV ${_kocShortMoney(r.gmv)}</span>`:''}
-      ${+r.soMonBanRa?`<span class="koc-mini-chip orange">${+r.soMonBanRa} món</span>`:''}
-    </div>
-    ${_kocTinyLink(r.linkVideo,'Link video')}
-    <div class="koc-read-sub">View: ${+r.view||0} · Tương tác: ${interact}</div>
-    <div class="koc-read-sub">GMV/CP: ${gmvCp!=null?gmvCp+'x':'—'} ${_kocEffBadge(gmvCp)}</div>
-  </td>`;
+  return '<td class="koc-read-cell koc-edit-cell"><div class="koc-edit-stack">'
+    + '<label class="koc-cell-label">Link video</label>' + renderLinkCell(r.linkVideo,r.id,'linkVideo','kocProdUpd')
+    + '<div class="koc-edit-two"><div><label class="koc-cell-label">VD air</label>' + _kocCellNum(r.id,'videoDaAir',r.videoDaAir) + '</div><div><label class="koc-cell-label">VD cam k&#7871;t</label>' + _kocCellNum(r.id,'videoCamKet',r.videoCamKet) + '</div></div>'
+    + '<div class="koc-edit-two"><div><label class="koc-cell-label">View</label>' + _kocCellNum(r.id,'view',r.view) + '</div><div><label class="koc-cell-label">GMV</label>' + _kocCellNum(r.id,'gmv',r.gmv) + '</div></div>'
+    + '<div class="koc-edit-two"><div><label class="koc-cell-label">S&#7889; m&#243;n</label>' + _kocCellNum(r.id,'soMonBanRa',r.soMonBanRa) + '</div><div><label class="koc-cell-label">GMV/CP</label><div class="koc-read-sub">' + (gmvCp!=null?gmvCp+'x':'-') + '</div></div></div>'
+    + '</div></td>';
 }
 
 /* ──── 1. TỔNG QUAN ──── */
@@ -3345,7 +3384,6 @@ function _kocProdCamp() {
   if(!rows.length) return prodTabBar+addBar+`<div class="empty-b"><div class="ei">🔗</div><div class="em">Không có dòng nào${kocProdFilter!=='all'?` cho <strong>${esc(fLabel)}</strong>`:''}${kocProdOnlyCollab?' (đã hợp tác)':''}.<br>Nhấn <strong>＋ Thêm lượt mời</strong> hoặc <strong>📥 Import Excel</strong>.</div></div>`;
   const thead=`<tr>
     <th class="stt">#</th>
-    <th style="min-width:135px">Nguồn</th>
     <th style="min-width:220px">KOC / liên hệ</th>
     <th style="min-width:150px">Phụ trách</th>
     ${productSummaryTh}
@@ -3403,14 +3441,13 @@ function _kocProdCamp() {
     const productRawTd = isProductScoped ? '' : '<td>' + (r.maSp ? '<span style="font-size:11px;font-weight:700;color:#7c3aed;display:block">' + esc(r.maSp) + '</span>' : '') + '<span style="font-size:12px">' + esc(r.tenSp||'') + '</span>' + _kocSpSel2(r.id,'maSp',r.maSp) + '</td>';
     return `<tr style="${dlOver?'background:#fff5f5':''}${inactive?';opacity:0.65':''}">
       <td class="stt">${i+1}</td>
-      ${_kocSourceCell(r)}
       ${_kocPersonSummaryCell(r)}
       ${_kocOwnerSummaryCell(r)}
       ${productSummaryTd}
       ${_kocSampleDemoSummaryCell(r,dlOver)}
       ${_kocVideoPerfSummaryCell(r)}
       <td>${_kocMaKocSel(r.id,'maKoc',r.maKoc)}</td>
-      <td style="font-size:12px;color:#475569">${esc(_kocDisplayName(r))}</td>
+      <td>${_kocCellInput(r.id,'tenKoc',_kocDisplayName(r),'Ten KOC')}</td>
       <td>${_kocCdSel(r.id,'maCd',r.maCd)}</td>
       ${productRawTd}
       <td>${_kocTtBadge(r.trangThai)}<br>${_kocSel(r.id,'trangThai',r.trangThai,'kocProdUpd',KOC_TT_COLLAB)}</td>
@@ -3475,7 +3512,6 @@ function _kocCollabView() {
   if(!rows.length) return note+`<div class="empty-b"><div class="ei">🤝</div><div class="em">Chưa có KOC nào hợp tác.<br>Chuyển trạng thái sang <strong>"Đồng ý hợp tác"</strong> trong tab KOC theo SP/CD.</div></div>`;
   const thead=`<tr>
     <th class="stt">#</th>
-    <th style="min-width:135px">Nguồn</th>
     <th style="min-width:220px">KOC / liên hệ</th>
     <th style="min-width:150px">Phụ trách</th>
     <th style="min-width:230px">Mẫu & giao hàng</th>
@@ -3502,22 +3538,21 @@ function _kocCollabView() {
     const gmvCp=+r.chiPhiBooking>0?+(+r.gmv/+r.chiPhiBooking).toFixed(2):null;
     return `<tr>
       <td class="stt">${i+1}</td>
-      ${_kocSourceCell(r)}
       ${_kocPersonSummaryCell(r)}
       ${_kocOwnerSummaryCell(r)}
       ${_kocSampleDemoSummaryCell(r,false)}
       ${_kocVideoPerfSummaryCell(r)}
       <td style="font-weight:700;color:#3b82f6">${esc(r.maKoc||'—')}</td>
-      <td>${esc(tenKoc)}</td>
+      <td>${_kocCellInput(r.id,'tenKoc',tenKoc,'Ten KOC')}</td>
       <td>${esc(r.tenCd||r.maCd||'—')}</td>
       <td>${esc(r.tenSp||r.maSp||'—')}</td>
-      <td>${_kocTtBadge(r.trangThai)}</td>
+      <td>${_kocSel(r.id,'trangThai',r.trangThai,'kocProdUpd',KOC_TT_COLLAB)}</td>
       <td class="num">${+r.chiPhiBooking?fmtK(+r.chiPhiBooking)+'đ':'—'}</td>
       <td>${r.deadlineDemo?formatDateVN(r.deadlineDemo):'—'}</td>
-      <td>${_kocTtBadge(r.demo)}</td>
+      <td>${_kocSel(r.id,'demo',r.demo,'kocProdUpd',KOC_DEMO_OPTS)}</td>
       <td class="num">${r.videoCamKet||'—'}</td>
       <td class="num">${r.videoDaAir||'—'}</td>
-      <td>${renderLinkCell(r.linkVideo)}</td>
+      <td>${renderLinkCell(r.linkVideo,r.id,'linkVideo','kocProdUpd')}</td>
       <td>${r.ngayAir?formatDateVN(r.ngayAir):'—'}</td>
       <td class="num">${+r.gmv?fmtK(+r.gmv)+'đ':'—'}</td>
       <td class="num">${+r.soMonBanRa||'—'}</td>
@@ -3525,7 +3560,7 @@ function _kocCollabView() {
       <td>${_kocEffBadge(gmvCp)}</td>
     </tr>`;
   }).join('');
-  return note+`<div class="tbl-wrap"><table class="tbl"><thead>${thead}</thead><tbody>${tbody}</tbody></table></div>`;
+  return _kocProdDatalists()+note+`<div class="tbl-wrap"><table class="tbl"><thead>${thead}</thead><tbody>${tbody}</tbody></table></div>`;
 }
 
 /* ──── 5. BÁO CÁO HIỆU QUẢ — 3 chiều ──── */
@@ -4488,6 +4523,7 @@ function b2bImport(file) {
 window.addEventListener('load', async () => {
   initSidebarToggle();
   bindKocTabEvents();
+  bindKocSaveShortcut();
   if (!demoCurrentUser()) { demoShowLogin(); return; }
   try {
     await Promise.all([syncDown(), demoRefreshUsers()]);
