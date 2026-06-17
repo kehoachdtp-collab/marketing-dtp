@@ -534,15 +534,17 @@ const mktApi = {
     };
     let user = await tryLogin(normalized);
     const aliases = await demoLoadUsernameAliasesForLogin();
-    const aliasForId = user ? aliases.byId?.[user.id] : '';
-    if (user && aliasForId && aliasForId !== user.username && normalized === user.username) return null;
-    if (user && aliasForId) return { ...user, real_username: user.username, username: aliasForId };
-    if (!user) {
-      const realUsername = aliases.byAlias?.[normalized];
-      if (realUsername && realUsername !== normalized) {
-        user = await tryLogin(realUsername);
-        if (user) return { ...user, real_username: realUsername, username: normalized };
-      }
+    if (user) {
+      const aliasForId = aliases.byId?.[user.id] || '';
+      const aliasMapsToDbUsername = !!aliasForId && aliases.byAlias?.[aliasForId] === user.username;
+      if (aliasForId && aliasForId !== user.username && aliasMapsToDbUsername && normalized === user.username) return null;
+      if (aliasForId && aliasMapsToDbUsername) return { ...user, real_username: user.username, username: aliasForId };
+      return user;
+    }
+    const realUsername = aliases.byAlias?.[normalized];
+    if (realUsername && realUsername !== normalized) {
+      user = await tryLogin(realUsername);
+      if (user) return { ...user, real_username: realUsername, username: normalized };
     }
     return user;
   },
@@ -762,6 +764,22 @@ function demoCleanUsernameAliases(payload){
   const byAlias = src.byAlias && typeof src.byAlias === 'object' ? src.byAlias : {};
   return { byId: {...byId}, byAlias: {...byAlias}, updatedAt: src.updatedAt || null };
 }
+function demoAliasTime(payload){
+  const t = Date.parse(payload?.updatedAt || '');
+  return Number.isFinite(t) ? t : 0;
+}
+function demoMergeUsernameAliases(localPayload, cloudPayload){
+  const local = demoCleanUsernameAliases(localPayload);
+  const cloud = demoCleanUsernameAliases(cloudPayload);
+  const localIsNewer = demoAliasTime(local) >= demoAliasTime(cloud);
+  const older = localIsNewer ? cloud : local;
+  const newer = localIsNewer ? local : cloud;
+  return demoCleanUsernameAliases({
+    byId: {...older.byId, ...newer.byId},
+    byAlias: {...older.byAlias, ...newer.byAlias},
+    updatedAt: newer.updatedAt || older.updatedAt || null,
+  });
+}
 function demoGetUsernameAliases(){
   try { return demoCleanUsernameAliases(JSON.parse(localStorage.getItem(DEMO_USERNAME_ALIASES_KEY) || '{}')); }
   catch(_) { return demoCleanUsernameAliases(null); }
@@ -772,21 +790,34 @@ function demoSetUsernameAliases(payload){
   return clean;
 }
 async function demoLoadUsernameAliasesForLogin(){
+  const local = demoGetUsernameAliases();
   try {
     const cloud = await mktApi.kvGet(DEMO_USERNAME_ALIASES_KEY);
-    if (cloud) return demoSetUsernameAliases(cloud);
+    if (cloud) {
+      const merged = demoMergeUsernameAliases(local, cloud);
+      demoSetUsernameAliases(merged);
+      if (JSON.stringify(merged) !== JSON.stringify(demoCleanUsernameAliases(cloud))) {
+        mktApi.kvSet(DEMO_USERNAME_ALIASES_KEY, merged, null).catch(e => console.warn('[users] alias repair failed', e));
+      }
+      return merged;
+    }
   } catch(e) { console.warn('[users] alias load failed', e); }
-  return demoGetUsernameAliases();
+  return local;
 }
 function demoApplyUsernameAliases(users){
   const aliases = demoGetUsernameAliases();
   return (users||[]).map(u => {
     const alias = aliases.byId?.[u.id];
-    return alias && alias !== u.username ? { ...u, realUsername: u.username, username: alias } : u;
+    const aliasMapsToDbUsername = !!alias && aliases.byAlias?.[alias] === u.username;
+    return alias && alias !== u.username && aliasMapsToDbUsername ? { ...u, realUsername: u.username, username: alias } : u;
   });
 }
 async function demoSaveUsernameAlias(userId, realUsername, aliasUsername, callerId){
-  const aliases = demoGetUsernameAliases();
+  let aliases = demoGetUsernameAliases();
+  try {
+    const cloud = await mktApi.kvGet(DEMO_USERNAME_ALIASES_KEY);
+    if (cloud) aliases = demoMergeUsernameAliases(aliases, cloud);
+  } catch(e) { console.warn('[users] alias prefetch failed', e); }
   Object.keys(aliases.byAlias || {}).forEach(k => { if (aliases.byAlias[k] === realUsername || k === aliasUsername) delete aliases.byAlias[k]; });
   if (aliasUsername && realUsername && aliasUsername !== realUsername) {
     aliases.byId[userId] = aliasUsername;
@@ -796,8 +827,11 @@ async function demoSaveUsernameAlias(userId, realUsername, aliasUsername, caller
   }
   aliases.updatedAt = new Date().toISOString();
   demoSetUsernameAliases(aliases);
-  try { await mktApi.kvSet(DEMO_USERNAME_ALIASES_KEY, aliases, callerId || null); } catch(e) { console.warn('[users] alias save failed', e); }
-  return aliases;
+  let cloudSaved = false;
+  let cloudError = null;
+  try { await mktApi.kvSet(DEMO_USERNAME_ALIASES_KEY, aliases, callerId || null); cloudSaved = true; }
+  catch(e) { cloudError = e; console.warn('[users] alias save failed', e); }
+  return { ...aliases, cloudSaved, cloudError };
 }
 
 /* Chuyển user từ Supabase (display_name, permissions là preset string) → format demoUser */
@@ -1015,12 +1049,13 @@ async function demoSaveUser(oldUsername){
   const usernameChanged = newUsername !== u.username;
   try {
     let updateResult = null;
+    let aliasResult = null;
     if (canManageDemoUsers()) {
       updateResult = await mktApi.updateUser(caller.id, u.id, newUsername, newDisplay, u.role, newPresets, null, usernameChanged);
       if (usernameChanged) {
         const realUsername = u.realUsername || u.username;
-        if (updateResult?.aliasFallback) await demoSaveUsernameAlias(u.id, realUsername, newUsername, caller.id);
-        else await demoSaveUsernameAlias(u.id, realUsername, realUsername, caller.id);
+        if (updateResult?.aliasFallback) aliasResult = await demoSaveUsernameAlias(u.id, realUsername, newUsername, caller.id);
+        else aliasResult = await demoSaveUsernameAlias(u.id, realUsername, realUsername, caller.id);
       }
     }
     if (canResetDemoPasswords()) {
@@ -1032,7 +1067,8 @@ async function demoSaveUser(oldUsername){
       const fresh = demoGetUsers().find(x => x.id === u.id);
       if (fresh) demoWriteSession({ user: fresh, loginAt: Date.now() });
     }
-    toast(updateResult?.aliasFallback ? 'Da luu user tu dong. Username moi dung duoc khi dang nhap.' : 'Da luu user.');
+    if (updateResult?.aliasFallback && aliasResult && !aliasResult.cloudSaved) toast('Da luu tren may nay, nhung chua dong bo username len cloud. Bam Luu lai.');
+    else toast(updateResult?.aliasFallback ? 'Da luu user. Username moi da dong bo de dang nhap.' : 'Da luu user.');
     render();
   } catch(e) {
     console.error('[saveUser]', e);
