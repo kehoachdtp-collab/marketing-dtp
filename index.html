@@ -2161,21 +2161,84 @@ function _kocSyncMasterFromProductRows(){
   return changed;
 }
 
-function bindKocSaveShortcut(){
-  if(window.__mktKocSaveShortcutBound) return;
-  window.__mktKocSaveShortcutBound=true;
-  document.addEventListener('keydown', function(event){
-    const key=String(event.key||'').toLowerCase();
-    if(!(event.ctrlKey||event.metaKey) || key!=='s') return;
-    if(curMod==='sale' && saleTab==='koc'){
-      event.preventDefault();
-      const active=document.activeElement;
-      if(active && ['INPUT','TEXTAREA','SELECT'].includes(active.tagName)) active.blur();
-      _kocSaveAll();
-      toast('Da luu KOC.');
+function dashboardSaveCurrent(reason, ctx){
+  const context = ctx || {};
+  if (!demoCurrentUser()) return false;
+  let handled = true;
+  try {
+    if (curMod === 'b2b') {
+      if (typeof b2bAutoSave === 'function') b2bAutoSave();
+      if (typeof b2bPtList !== 'undefined') setStore(K.b2bAsgn, b2bPtList);
+    } else if (curMod === 'sale') {
+      if (saleTab === 'koc') {
+        _kocSaveAll();
+      } else {
+        setStore(K.saleCamp, saleCampaigns || []);
+        setStore(K.saleAds, saleAdsRows || []);
+        setStore(K.saleOrder, saleOrderRows || []);
+        setStore(K.saleInv, saleInvRows || []);
+        setStore(K.saleMst, saleMstRows || []);
+      }
+    } else if (curMod === 'hr') {
+      if (typeof hrAutoSave === 'function') hrAutoSave();
+    } else if (curMod === 'dataSources') {
+      if (typeof saveGoogleSheetConfig === 'function' && typeof readGoogleSheetConfig === 'function') {
+        saveGoogleSheetConfig(readGoogleSheetConfig());
+      }
+    } else if (curMod === 'users') {
+      if (context.userRow && typeof demoSaveUser === 'function') {
+        demoSaveUser(context.userRow);
+        return true;
+      }
+      handled = false;
+    } else {
+      handled = false;
     }
-  });
+    if (handled) toast('Da luu.');
+    return handled;
+  } catch (e) {
+    console.error('[dashboardSaveCurrent]', e);
+    toast('Khong luu duoc. Kiem tra lai du lieu dang nhap.');
+    return false;
+  }
 }
+
+function dashboardCommitActiveEditAndSave(reason){
+  const active = document.activeElement;
+  const userRow = active?.closest?.('[data-user-row]')?.getAttribute('data-user-row') || null;
+  const tag = (active?.tagName || '').toUpperCase();
+  if (active && typeof active.blur === 'function' && ['INPUT','TEXTAREA','SELECT'].includes(tag)) active.blur();
+  setTimeout(function(){ dashboardSaveCurrent(reason, { userRow }); }, 0);
+}
+
+function isDashboardShortcutTarget(target){
+  if (!target || !target.closest) return false;
+  if (target.closest('#login-screen')) return false;
+  return !!target.closest('.app-shell, #content, .main-content, .sidebar, .topbar');
+}
+
+function bindDashboardSaveShortcuts(){
+  if(window.__mktDashboardSaveShortcutBound) return;
+  window.__mktDashboardSaveShortcutBound=true;
+  document.addEventListener('keydown', function(event){
+    if (event.defaultPrevented || event.isComposing) return;
+    const target = event.target;
+    if (!isDashboardShortcutTarget(target)) return;
+    const key = String(event.key || '').toLowerCase();
+    const tag = (target?.tagName || '').toUpperCase();
+    const type = String(target?.type || '').toLowerCase();
+    const isSaveKey = (event.ctrlKey || event.metaKey) && key === 's';
+    const isSingleLineEnter = key === 'enter'
+      && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey
+      && (tag === 'INPUT' || tag === 'SELECT')
+      && !['button','submit','reset','file','checkbox','radio'].includes(type);
+    if (!isSaveKey && !isSingleLineEnter) return;
+    event.preventDefault();
+    dashboardCommitActiveEditAndSave(isSaveKey ? 'shortcut' : 'enter');
+  }, true);
+}
+
+function bindKocSaveShortcut(){ bindDashboardSaveShortcuts(); }
 
 function bindKocTabEvents(){
   if(window.__mktKocTabEventsBound) return;
