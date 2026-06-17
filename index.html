@@ -754,10 +754,24 @@ const DEMO_PERMISSION_PRESETS = {
   import:{label:'Xem + sửa + import', value:{view:true,edit:true,import:true,export:false,manageUsers:false,resetPassword:false}},
   full:{label:'Toàn quyền module', value:{view:true,edit:true,import:true,export:true,manageUsers:true,resetPassword:true}}
 };
-function demoPerm(preset){ return {...DEMO_PERMISSION_PRESETS[preset].value}; }
+const DEMO_USER_ADMIN_PRESETS = {
+  none:{label:'Không truy cập', value:{view:false,edit:false,import:false,export:false,manageUsers:false,resetPassword:false}},
+  view:{label:'Chỉ xem user', value:{view:true,edit:false,import:false,export:false,manageUsers:false,resetPassword:false}},
+  manage:{label:'Quản lý user', value:{view:true,edit:true,import:false,export:false,manageUsers:true,resetPassword:false}},
+  reset:{label:'Reset mật khẩu', value:{view:true,edit:false,import:false,export:false,manageUsers:false,resetPassword:true}},
+  full:{label:'Toàn quyền admin', value:{view:true,edit:true,import:true,export:true,manageUsers:true,resetPassword:true}}
+};
+function demoPresetMap(module){ return module === 'users' ? DEMO_USER_ADMIN_PRESETS : DEMO_PERMISSION_PRESETS; }
+function demoPermForModule(module, preset){
+  const map = demoPresetMap(module);
+  let key = preset || 'none';
+  if (module === 'users' && !map[key]) key = (key === 'edit' || key === 'import') ? 'manage' : (key === 'full' ? 'full' : 'none');
+  return {...(map[key] || map.none).value};
+}
+function demoPerm(preset){ return demoPermForModule(null, preset); }
 function demoUser(username, password, displayName, role, presets){
   const permissions = {};
-  Object.keys(DEMO_MODULE_LABELS).forEach(k => permissions[k] = demoPerm(presets[k] || 'none'));
+  Object.keys(DEMO_MODULE_LABELS).forEach(k => permissions[k] = demoPermForModule(k, presets[k] || 'none'));
   return {username,password,displayName,role,permissions};
 }
 
@@ -844,7 +858,7 @@ function _supaToDemoUser(supaUser){
   const permissions = {};
   Object.keys(DEMO_MODULE_LABELS).forEach(k => {
     const preset = (typeof presets[k] === 'string') ? presets[k] : 'none';
-    permissions[k] = demoPerm(preset);
+    permissions[k] = demoPermForModule(k, preset);
   });
   return {
     id: supaUser.id,
@@ -959,7 +973,7 @@ async function demoSaveCloudUsers(payload, callerId){
 function demoCloudToDemoUser(record){
   const u = demoNormalizeCloudUser(record);
   const permissions = {};
-  Object.keys(DEMO_MODULE_LABELS).forEach(k => permissions[k] = demoPerm(u.presets[k] || 'none'));
+  Object.keys(DEMO_MODULE_LABELS).forEach(k => permissions[k] = demoPermForModule(k, u.presets[k] || 'none'));
   return { id:u.id, username:u.username, realUsername:u.legacyUsername, legacyUsername:u.legacyUsername, displayName:u.displayName, role:u.role, status:u.status, permissions, presets:u.presets };
 }
 function demoCloudToSupaUser(record, legacyUser){
@@ -1197,15 +1211,21 @@ function showAccessDenied(mod){
     topbarTitle.textContent = DEMO_MODULE_LABELS[mod] || DEMO_MODULE_LABELS[demoModuleKey(mod)] || 'Kh\u00f4ng c\u00f3 quy\u1ec1n';
   }
 }
-function demoPresetFromPermission(p){
+function demoPresetFromPermission(p, module){
   if (!p || !p.view) return 'none';
+  if (module === 'users') {
+    if (p.manageUsers && p.resetPassword) return 'full';
+    if (p.resetPassword) return 'reset';
+    if (p.manageUsers) return 'manage';
+    return 'view';
+  }
   if (p.manageUsers || p.resetPassword || p.export) return 'full';
   if (p.import) return 'import';
   if (p.edit) return 'edit';
   return 'view';
 }
 function demoPresetSelect(username, module, current, disabled){
-  const opts = Object.entries(DEMO_PERMISSION_PRESETS).map(([key,item]) => `<option value="${key}" ${current===key?'selected':''}>${item.label}</option>`).join('');
+  const opts = Object.entries(demoPresetMap(module)).map(([key,item]) => `<option value="${key}" ${current===key?'selected':''}>${item.label}</option>`).join('');
   return `<select data-demo-user="${demoEsc(username)}" data-demo-module="${module}" ${disabled?'disabled':''}>${opts}</select>`;
 }
 function demoNormalizeUsername(value){ return String(value || '').trim().toLowerCase(); }
@@ -1534,11 +1554,11 @@ function renderDataSourcesPage(){
       <td><input data-user-username value="${demoEsc(u.username)}" autocomplete="off" ${(!canManage || isAdmin)?'disabled':''}></td>
       <td><input data-user-display value="${demoEsc(u.displayName)}" ${(!canManage || isAdmin)?'disabled':''}></td>
       <td><input data-user-password type="password" autocomplete="new-password" placeholder="Nhập mật khẩu mới nếu cần" ${canReset?'':'disabled'}></td>
-      <td>${isAdmin?'<span class="demo-chip">Toàn quyền</span>':demoPresetSelect(u.username,'dashboard',demoPresetFromPermission(u.permissions.dashboard),!canManage)}</td>
-      <td>${isAdmin?'<span class="demo-chip">Toàn quyền</span>':demoPresetSelect(u.username,'b2b',demoPresetFromPermission(u.permissions.b2b),!canManage)}</td>
-      <td>${isAdmin?'<span class="demo-chip">Toàn quyền</span>':demoPresetSelect(u.username,'sale',demoPresetFromPermission(u.permissions.sale),!canManage)}</td>
-      <td>${isAdmin?'<span class="demo-chip">Toàn quyền</span>':demoPresetSelect(u.username,'hr',demoPresetFromPermission(u.permissions.hr),!canManage)}</td>
-      <td>${isAdmin?'<span class="demo-chip">Toàn quyền</span>':demoPresetSelect(u.username,'users',demoPresetFromPermission(u.permissions.users),!canManage)}</td>
+      <td>${isAdmin?'<span class="demo-chip">Toàn quyền</span>':demoPresetSelect(u.username,'dashboard',demoPresetFromPermission(u.permissions.dashboard,'dashboard'),!canManage)}</td>
+      <td>${isAdmin?'<span class="demo-chip">Toàn quyền</span>':demoPresetSelect(u.username,'b2b',demoPresetFromPermission(u.permissions.b2b,'b2b'),!canManage)}</td>
+      <td>${isAdmin?'<span class="demo-chip">Toàn quyền</span>':demoPresetSelect(u.username,'sale',demoPresetFromPermission(u.permissions.sale,'sale'),!canManage)}</td>
+      <td>${isAdmin?'<span class="demo-chip">Toàn quyền</span>':demoPresetSelect(u.username,'hr',demoPresetFromPermission(u.permissions.hr,'hr'),!canManage)}</td>
+      <td>${isAdmin?'<span class="demo-chip">Toàn quyền</span>':demoPresetSelect(u.username,'users',demoPresetFromPermission(u.permissions.users,'users'),!canManage)}</td>
       <td style="white-space:nowrap">
         <button class="btn btn-primary" onclick="demoSaveUser('${demoEsc(u.username)}')" ${(!canManage&&!canReset)?'disabled':''}>Lưu</button>
         ${(!isAdmin && canManage) ? `<button class="btn" style="color:#dc2626;border-color:#fecaca;margin-left:6px" onclick="demoDeleteUser('${demoEsc(u.username)}')">Xoá</button>` : ''}
