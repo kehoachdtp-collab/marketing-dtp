@@ -763,6 +763,22 @@ function setStore(key, value) {
     _scheduleDashboardChangeNotification(k);
   }
 }
+function clearPendingSync(k){
+  if (_kvSyncTimers[k]) {
+    clearTimeout(_kvSyncTimers[k].t);
+    delete _kvSyncTimers[k];
+  }
+}
+async function syncKeyNow(key, value) {
+  const k = key.startsWith('mkt_') ? key : 'mkt_' + key;
+  try { localStorage.setItem(k, JSON.stringify(value)); } catch(e) {}
+  if (!isSyncKey(k)) return true;
+  clearPendingSync(k);
+  const u = demoCurrentUser();
+  await mktApi.kvSet(k, value, u && u.id ? u.id : null);
+  return true;
+}
+
 // Đẩy hết dữ liệu chờ sync trước khi rời trang
 window.addEventListener('beforeunload', () => { Object.keys(_kvSyncTimers).forEach(_flushKvSync); });
 
@@ -1262,6 +1278,7 @@ async function demoLogin(ev){
     toast('✅ Đăng nhập thành công! Đang đồng bộ dữ liệu...');
     // Đồng bộ dữ liệu nghiệp vụ + danh sách user từ cloud xuống
     await Promise.all([syncDown(), demoRefreshUsers()]);
+    reloadDashboardStateFromStore();
     demoShowApp();
     toast('✅ Đã đồng bộ xong!');
   } catch(e) {
@@ -2101,8 +2118,18 @@ function _syncSaleSidebar() {
       x.classList.toggle('active', x.dataset.kocSub === kocSubTab && saleTab === 'koc'));
   }
 }
+function reloadDashboardStateFromStore(){
+  try {
+    if (typeof b2bLoad === 'function') b2bLoad();
+    if (typeof saleLoad === 'function') saleLoad();
+    if (typeof hrLoad === 'function') hrLoad();
+  } catch(e) { console.warn('[sync] reload state failed', e); }
+}
 async function refresh() {
-  try { await Promise.all([syncDown(), demoRefreshUsers(), refreshNotificationsFromCloud(false)]); } catch(e) { console.warn('[refresh]', e); }
+  try {
+    await Promise.all([syncDown(), demoRefreshUsers(), refreshNotificationsFromCloud(false)]);
+    reloadDashboardStateFromStore();
+  } catch(e) { console.warn('[refresh]', e); }
   render(); setTs(); updateNotificationsUi(); toast('Da cap nhat!');
 }
 
@@ -4493,10 +4520,18 @@ function _kocPickAndImport(){
   const modal=document.getElementById('kocSheetPickerModal');if(!modal)return;
   const idx=+modal.querySelector('input[name=kocSheetPick]:checked').value;
   const wb=modal.__wb;modal.remove();
-  kocImportSheet(wb,wb.SheetNames[idx]);
+  kocImportSheet(wb,wb.SheetNames[idx]).catch(e=>{ console.error('[kocImportSheet]', e); toast('Import loi: '+(e.message||e)); });
 }
 
-function kocImportSheet(wb,sheetName){
+async function kocSyncCloudNow(){
+  _kocSyncMasterFromProductRows();
+  await syncKeyNow(K.kocMst, kocMstRows);
+  await syncKeyNow(K.kocProd, kocProdRows);
+  await syncKeyNow(K.kocContracts, kocContractRows);
+  await syncKeyNow(K.saleKoc, kocProdRows);
+}
+
+async function kocImportSheet(wb,sheetName){
   const ws=wb.Sheets[sheetName];
   const data=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
   if(!data.length){toast('⚠️ Sheet trống!');return;}
@@ -4557,9 +4592,17 @@ function kocImportSheet(wb,sheetName){
     else kocProdRows.push(...imported);
   }
   _kocSaveAll();
+  let synced=false;
+  try {
+    await kocSyncCloudNow();
+    synced=true;
+  } catch(e) {
+    console.warn('[sync] KOC import cloud sync failed', e);
+  }
   kocSubTab=isMst?'master':'prod';
   saleRerender();
-  toast(`✅ Đã import ${imported.length} dòng vào "${isMst?'KOC Master':'KOC × SP/CD'}" từ sheet "${esc(sheetName)}"!`);
+  if (synced) toast(`Da import ${imported.length} dong vao "${isMst?'KOC Master':'KOC x SP/CD'}" va dong bo cloud. May khac bam Cap nhat/F5 se thay.`);
+  else toast(`Da import ${imported.length} dong vao may nay nhung CHUA dong bo cloud. Hay thu bam Luu/Cap nhat hoac kiem tra mang.`);
 }
 function _saleAdsTab()   { return _saleTbl(saleAdsRows, SALE_ADS_COLS,'saleAdsUpd','saleAdsAdd','saleAdsDel','Chưa có dữ liệu Ads nào.<br>Cần tạo Chiến dịch trước.'); }
 function _saleOrdTab()   { return _saleTbl(saleOrderRows,SALE_ORD_COLS,'saleOrdUpd','saleOrdAdd','saleOrdDel','Chưa có đơn hàng nào.<br>Thêm đơn hoặc import Excel (bước sau).'); }
