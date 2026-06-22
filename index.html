@@ -468,14 +468,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <section class="login-panel">
       <div class="login-panel-title">&#272;&#259;ng nh&#7853;p</div>
       <div class="login-sub">Nh&#7853;p t&#224;i kho&#7843;n n&#7897;i b&#7897; &#273;&#7875; truy c&#7853;p h&#7879; th&#7889;ng MKT Dashboard.</div>
-      <form class="login-form" onsubmit="demoLogin(event)">
+      <form class="login-form" onsubmit="demoLogin(event)" autocomplete="off" data-lpignore="true" data-1p-ignore="true">
         <div class="login-field">
           <label for="demo-username">T&#234;n &#273;&#259;ng nh&#7853;p</label>
-          <input id="demo-username" name="username" autocomplete="username" placeholder="username ho&#7863;c email" required>
+          <input id="demo-username" name="mkt_login_user" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" value="" placeholder="username ho&#7863;c email" required>
         </div>
         <div class="login-field">
           <label for="demo-password">M&#7853;t kh&#7849;u</label>
-          <input id="demo-password" name="password" type="password" autocomplete="current-password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" required>
+          <input id="demo-password" name="mkt_login_pass" type="password" autocomplete="new-password" value="" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" required>
         </div>
         <div class="login-error" id="login-error"></div>
         <button class="login-btn" type="submit">&#272;&#259;ng nh&#7853;p</button>
@@ -1227,6 +1227,12 @@ function canImportMod(mod){ return demoCan(mod,'import'); }
 function canManageDemoUsers(){ return demoCan('users','manageUsers'); }
 function canResetDemoPasswords(){ return demoCan('users','resetPassword'); }
 function demoEsc(v){ return String(v ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function clearLoginAutofillFields(){
+  const userInput = document.getElementById('demo-username');
+  const passInput = document.getElementById('demo-password');
+  if (userInput) userInput.value = '';
+  if (passInput) passInput.value = '';
+}
 function demoShowLogin(message, ok){
   document.body.classList.add('auth-boot');
   const err = document.getElementById('login-error');
@@ -1236,6 +1242,11 @@ function demoShowLogin(message, ok){
     err.classList.toggle('ok', !!ok);
   }
   const input = document.getElementById('demo-username');
+  if (!message) {
+    clearLoginAutofillFields();
+    setTimeout(clearLoginAutofillFields, 80);
+    setTimeout(clearLoginAutofillFields, 350);
+  }
   if (input) setTimeout(()=>input.focus(), 50);
 }
 function demoShowApp(){
