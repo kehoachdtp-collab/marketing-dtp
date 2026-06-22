@@ -2605,6 +2605,7 @@ const KOC_SUBTABS = [
   {id:'master',   l:'📋 Danh sách KOC'},
   {id:'scripts',  l:'📝 Kịch bản'},
   {id:'prod',     l:'🤝 KOC hợp tác'},
+  {id:'tiktok',   l:'🤖 AI TikTok'},
   {id:'contracts', l:'📄 Hợp đồng'},
   {id:'report',   l:'📈 Báo cáo'},
 ];
@@ -3293,7 +3294,7 @@ function _saleKocTab() {
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px;align-items:center">
       ${actions.join('')}
     </div>`;
-  const renderers = {overview:renderKocOverview,master:renderKocMaster,scripts:renderKocScripts,prod:renderKocProductCampaign,contracts:renderKocContracts,compliance:renderKocCompliance,report:renderKocReport};
+  const renderers = {overview:renderKocOverview,master:renderKocMaster,scripts:renderKocScripts,prod:renderKocProductCampaign,tiktok:renderKocTiktok,contracts:renderKocContracts,compliance:renderKocCompliance,report:renderKocReport};
   const body = (renderers[kocSubTab] || renderKocOverview)();
   return nav + body;
 }
@@ -3304,6 +3305,149 @@ function renderKocProductCampaign(){ return _kocProdCamp(); }
 function renderKocCollaboration(){ return _kocCollabView(); }
 function renderKocReport(){ return _kocReport(); }
 function renderKocContracts(){ return _kocContracts(); }
+function renderKocTiktok(){ return _kocTiktok(); }
+
+/* ════════════════════════════════════════════════════════════
+   AI PHÂN TÍCH FILE TIKTOK SHOP  (upload Excel xuất từ Seller Center)
+════════════════════════════════════════════════════════════ */
+let _tiktokAnalysis = null;
+// Parser số kiểu VN/TikTok: "95804469,44" "1.234.567" "1.2M" "đ"
+function _tkNum(v){
+  if(typeof v==='number') return v;
+  let s=String(v??'').trim().toLowerCase().replace(/[₫đvnd\s]/g,'');
+  if(!s) return 0;
+  const mul = /tr|triệu|m\b/.test(s)?1e6 : /k|nghìn|ngàn/.test(s)?1e3 : 1;
+  s=s.replace(/tr|triệu|nghìn|ngàn|[km]\b/g,'');
+  const hasDot=s.includes('.'), hasCom=s.includes(',');
+  if(hasDot&&hasCom){ s=s.replace(/\./g,'').replace(',', '.'); }      // 1.234.567,89
+  else if(hasCom){ const p=s.split(','); s=(p[p.length-1].length<=2)? s.replace(',', '.') : s.replace(/,/g,''); }
+  else if(hasDot){ const p=s.split('.'); s=(p[p.length-1].length===3 && p.length>1)? s.replace(/\./g,'') : s; }
+  const n=parseFloat(s.replace(/[^\d.\-]/g,''));
+  return (isNaN(n)?0:n)*mul;
+}
+function _tkFmt(n){ n=Math.round(n||0); if(Math.abs(n)>=1e9)return (n/1e9).toFixed(2).replace(/\.?0+$/,'')+' tỷ'; if(Math.abs(n)>=1e6)return (n/1e6).toFixed(1).replace(/\.0$/,'')+' tr'; return n.toLocaleString('vi-VN'); }
+function _tkNorm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,''); }
+
+async function tiktokAnalyzeFile(file){
+  if(!file) return;
+  try{ await ensureXlsxLoaded(); }catch(e){ toast('Không tải được thư viện Excel.'); return; }
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const wb=XLSX.read(ev.target.result,{type:'binary',cellDates:true});
+      // gộp tất cả sheet, lấy sheet có nhiều dữ liệu nhất
+      let best=null,bestRows=0;
+      wb.SheetNames.forEach(nm=>{ const d=XLSX.utils.sheet_to_json(wb.Sheets[nm],{header:1,defval:''}); if(d.length>bestRows){bestRows=d.length;best={nm,d};} });
+      if(!best||best.d.length<2){ toast('⚠️ File trống hoặc không đọc được.'); return; }
+      _tiktokAnalysis=_tiktokAnalyze(best.d, best.nm, file.name);
+      saleRerender();
+      toast('✅ Đã phân tích '+best.d.length+' dòng từ "'+best.nm+'"');
+    }catch(err){ console.error(err); toast('❌ Lỗi đọc file: '+(err.message||err)); }
+  };
+  reader.readAsBinaryString(file);
+  const inp=document.getElementById('tiktokFileIn'); if(inp) inp.value='';
+}
+
+function _tiktokAnalyze(rows, sheetName, fileName){
+  const headers=(rows[0]||[]).map(h=>String(h).trim());
+  const H=headers.map(_tkNorm);
+  const find=(...pats)=>{ for(const p of pats){ const i=H.findIndex(h=>h.includes(p)); if(i>=0) return i; } return -1; };
+  // nhận diện cột
+  const cName = find('tennhasangtao','creator','nhasangtao','tensanpham','tenkenh','productname','sanpham','ten','name','title');
+  const cGmv  = find('gmv','doanhso','doanhthu','revenue','sales');
+  const cSold = find('luotban','itemssold','soluongban','daban','sold','quantity','soluong','luotgiaohang');
+  const cOrd  = find('don','order','soluongdon');
+  const cComm = find('hoahong','commission');
+  const cView = find('luotxem','view','impression');
+  const cStock= find('tonkho','stock','inventory','conlai');
+  const cCommit=find('camket','luotban30','luotban7');
+  // entity type
+  const isCreator = cName>=0 && (H[cName].includes('creator')||H[cName].includes('nhasangtao')||H[cName].includes('kenh'));
+  const kind = isCreator ? 'KOC / Nhà sáng tạo' : (H.some(h=>h.includes('sanpham')||h.includes('product')) ? 'Sản phẩm' : 'Dòng dữ liệu');
+
+  const items=[];
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i]; if(!r||r.every(c=>c===''||c==null)) continue;
+    const name=cName>=0?String(r[cName]||'').trim():('Dòng '+i);
+    if(!name) continue;
+    items.push({
+      name,
+      gmv:  cGmv>=0 ? _tkNum(r[cGmv]) : 0,
+      sold: cSold>=0? _tkNum(r[cSold]): 0,
+      ord:  cOrd>=0 ? _tkNum(r[cOrd]) : 0,
+      comm: cComm>=0? _tkNum(r[cComm]): 0,
+      view: cView>=0? _tkNum(r[cView]): 0,
+      stock:cStock>=0?_tkNum(r[cStock]):null,
+    });
+  }
+  const totGmv=items.reduce((a,b)=>a+b.gmv,0);
+  const totSold=items.reduce((a,b)=>a+b.sold,0);
+  const totOrd=items.reduce((a,b)=>a+b.ord,0);
+  const totView=items.reduce((a,b)=>a+b.view,0);
+  const withGmv=items.filter(x=>x.gmv>0);
+  const top=[...items].sort((a,b)=>b.gmv-a.gmv).slice(0,10);
+  const zero=items.filter(x=>x.gmv===0 && (x.view>0||x.sold===0)); // có mặt nhưng chưa ra đơn
+  const convRate = totView>0 ? (totSold/totView*100) : null;
+
+  // gợi ý hành động
+  const recs=[];
+  if(withGmv.length && top[0]) recs.push(`🏆 <strong>${esc(top[0].name)}</strong> dẫn đầu với GMV <strong>${_tkFmt(top[0].gmv)}đ</strong> — ưu tiên giữ hàng & nhân bản content cho ${isCreator?'KOC':'SP'} này.`);
+  const top20=Math.ceil(items.length*0.2)||1;
+  const gmvTop20=[...items].sort((a,b)=>b.gmv-a.gmv).slice(0,top20).reduce((a,b)=>a+b.gmv,0);
+  if(totGmv>0) recs.push(`📊 Top 20% (${top20} ${isCreator?'KOC':'SP'}) đang tạo <strong>${(gmvTop20/totGmv*100).toFixed(0)}%</strong> tổng GMV — tập trung nguồn lực vào nhóm này.`);
+  if(zero.length) recs.push(`⚠️ <strong>${zero.length}</strong> ${isCreator?'KOC':'SP'} chưa ra đơn (GMV = 0)${isCreator?' — cân nhắc đổi kịch bản, nhắc đăng video, hoặc dừng hợp tác.':' — xem lại giá, hình ảnh, hoặc đẩy quảng cáo.'}`);
+  if(cStock>=0){ const restock=items.filter(x=>x.stock!=null&&x.stock<=10&&x.sold>0).sort((a,b)=>b.sold-a.sold).slice(0,5);
+    if(restock.length) recs.push(`📦 <strong>${restock.length}</strong> SP bán chạy nhưng tồn ≤10: ${restock.map(x=>esc(x.name)+' (tồn '+x.stock+')').join(', ')} — <strong>nhập thêm gấp</strong>.`); }
+  if(convRate!=null) recs.push(`🎯 Tỷ lệ chuyển đổi ~<strong>${convRate.toFixed(2)}%</strong> (bán/lượt xem)${convRate<1?' — thấp, cải thiện hook 3 giây đầu & CTA.':' — tốt, tăng ngân sách để mở rộng.'}`);
+
+  return {kind, sheetName, fileName, items, top, totGmv, totSold, totOrd, totView, zeroCount:zero.length, recs, isCreator,
+    cols:{cName,cGmv,cSold,cOrd,cComm,cView,cStock}, headers};
+}
+
+function _kocTiktok(){
+  const upload=`<div style="background:linear-gradient(135deg,#0f172a,#1e293b);border-radius:16px;padding:22px;color:#fff;margin-bottom:16px">
+    <div style="font-size:18px;font-weight:850;display:flex;align-items:center;gap:8px">🤖 AI phân tích TikTok Shop</div>
+    <div style="font-size:13px;color:#94a3b8;margin:6px 0 16px;line-height:1.6">Vào <strong style="color:#cbd5e1">TikTok Seller Center → Số liệu phân tích / Affiliate</strong> → xuất Excel (sản phẩm, KOC, hoặc đơn hàng) → tải lên đây. App tự nhận diện cột GMV, lượt bán, lượt xem… và đưa ra phân tích + gợi ý tăng doanh số.</div>
+    <input type="file" id="tiktokFileIn" accept=".xlsx,.xls,.csv" style="display:none" onchange="tiktokAnalyzeFile(this.files[0])">
+    <button onclick="document.getElementById('tiktokFileIn').click()" style="background:linear-gradient(90deg,#0284c7,#38bdf8);color:#fff;border:0;border-radius:10px;padding:11px 22px;font-weight:800;font-size:14px;cursor:pointer">📊 Tải file Excel TikTok lên</button>
+    ${_tiktokAnalysis?`<button onclick="_tiktokAnalysis=null;saleRerender()" style="background:transparent;color:#94a3b8;border:1.5px solid #475569;border-radius:10px;padding:11px 18px;font-weight:700;font-size:13px;cursor:pointer;margin-left:8px">Xóa kết quả</button>`:''}
+  </div>`;
+  if(!_tiktokAnalysis) return upload+`<div class="empty-b"><div class="ei">📈</div><div class="em">Chưa có dữ liệu.<br>Tải file Excel xuất từ TikTok Shop lên để AI phân tích.</div></div>`;
+  const a=_tiktokAnalysis;
+  const card=(lbl,val,sub)=>`<div style="background:#fff;border:1px solid #eef2f7;border-radius:12px;padding:14px 16px;flex:1;min-width:130px"><div style="font-size:11px;color:#64748b;text-transform:uppercase;font-weight:700;letter-spacing:.3px">${lbl}</div><div style="font-size:22px;font-weight:850;color:#0f172a;margin-top:3px">${val}</div>${sub?`<div style="font-size:11px;color:#94a3b8;margin-top:2px">${sub}</div>`:''}</div>`;
+  const kpis=`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+    ${card('Tổng GMV',_tkFmt(a.totGmv)+'đ', a.kind)}
+    ${card('Lượt bán',_tkFmt(a.totSold))}
+    ${a.totOrd?card('Đơn hàng',_tkFmt(a.totOrd)):''}
+    ${a.totView?card('Lượt xem',_tkFmt(a.totView)):''}
+    ${card('Số '+(a.isCreator?'KOC':'mục'), a.items.length, a.zeroCount+' chưa ra đơn')}
+  </div>`;
+  const recs=`<div style="background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:14px;padding:16px 18px;margin-bottom:16px">
+    <div style="font-weight:850;color:#0369a1;font-size:14px;margin-bottom:10px">💡 Gợi ý hành động tăng doanh số</div>
+    <ul style="margin:0;padding-left:18px;line-height:1.9;font-size:13px;color:#0c4a6e">${a.recs.map(r=>`<li>${r}</li>`).join('')}</ul>
+  </div>`;
+  const rows=a.top.map((x,i)=>`<tr>
+    <td style="text-align:center;font-weight:700;color:${i<3?'#ea580c':'#94a3b8'}">${i+1}</td>
+    <td style="font-weight:600">${esc(x.name)}</td>
+    <td style="text-align:right;font-weight:800;color:#16a34a">${_tkFmt(x.gmv)}đ</td>
+    <td style="text-align:right">${_tkFmt(x.sold)}</td>
+    ${a.totView?`<td style="text-align:right;color:#64748b">${_tkFmt(x.view)}</td>`:''}
+    ${a.cols.cComm>=0?`<td style="text-align:right;color:#7c3aed">${_tkFmt(x.comm)}đ</td>`:''}
+  </tr>`).join('');
+  const table=`<div style="background:#fff;border:1px solid #eef2f7;border-radius:14px;padding:4px 4px 8px;overflow-x:auto">
+    <div style="font-weight:800;color:#1e2e4a;font-size:14px;padding:12px 14px 8px">🏆 Top ${a.top.length} theo GMV — <span style="color:#64748b;font-weight:600;font-size:12px">nguồn: ${esc(a.fileName)} · sheet "${esc(a.sheetName)}"</span></div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="background:#f8fafc">
+        <th style="padding:8px 10px;text-align:center;font-size:11px;color:#475569">#</th>
+        <th style="padding:8px 10px;text-align:left;font-size:11px;color:#475569">${a.isCreator?'KOC / Nhà sáng tạo':'Tên'}</th>
+        <th style="padding:8px 10px;text-align:right;font-size:11px;color:#475569">GMV</th>
+        <th style="padding:8px 10px;text-align:right;font-size:11px;color:#475569">Lượt bán</th>
+        ${a.totView?`<th style="padding:8px 10px;text-align:right;font-size:11px;color:#475569">Lượt xem</th>`:''}
+        ${a.cols.cComm>=0?`<th style="padding:8px 10px;text-align:right;font-size:11px;color:#475569">Hoa hồng</th>`:''}
+      </tr></thead><tbody>${rows}</tbody>
+    </table></div>`;
+  return upload+kpis+recs+table;
+}
 
 /* ════════════════════════════════════════════════════════════
    KỊCH BẢN — placeholder UI (chờ wire Supabase + OpenAI)
