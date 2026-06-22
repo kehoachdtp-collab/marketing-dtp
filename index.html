@@ -23,7 +23,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .sb-brand-sub{font-size:11px;color:rgba(255,255,255,.45);margin-top:3px}
 .sb-brand-main{min-width:0;flex:1}
 .sb-session{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:8px}
-.sb-session-meta{display:flex;flex-direction:column;gap:3px;min-width:0}
+.sb-session-meta{display:flex;flex-direction:column;gap:4px;min-width:0}
+.sb-sync-row{display:flex;align-items:center;gap:7px;min-width:0}
 .sb-session .topbar-ts{font-size:10.5px;color:rgba(255,255,255,.42);line-height:1.25}
 .sb-session .topbar-user{font-size:11.5px;color:rgba(255,255,255,.88);font-weight:800;white-space:normal;line-height:1.25}
 .sb-session-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
@@ -34,7 +35,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .sb-session .notification-panel{left:0;right:auto;top:38px;color:#1e293b;width:min(360px,calc(100vw - 32px))}
 .sb-session .btn{padding:6px 9px;border-radius:9px;border-color:rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:rgba(255,255,255,.92);font-size:11.5px;font-weight:800}
 .sb-session .btn:hover{background:rgba(255,255,255,.16);border-color:rgba(147,197,253,.75);color:#fff}
-.sb-update-icon{width:34px;height:32px;padding:0!important;display:inline-flex;align-items:center;justify-content:center;font-size:15px}
+.sb-update-icon{width:26px;height:24px;padding:0!important;display:inline-flex;align-items:center;justify-content:center;font-size:13px;border-radius:7px}
 .sb-logout-item{margin-top:6px;border-top:1px solid rgba(255,255,255,.08)}
 .sb-nav{padding:12px 8px;flex:1}
 .sb-section{font-size:10px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1px;padding:10px 10px 5px}
@@ -512,11 +513,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="sb-brand-sub">Dashboard theo dõi hiệu quả MKT</div>
       <div class="sb-session">
         <div class="sb-session-meta">
-          <span class="topbar-ts" id="topbar-ts"></span>
+          <div class="sb-sync-row">
+            <span class="topbar-ts" id="topbar-ts"></span>
+            <button class="btn sb-update-icon" onclick="refresh()" title="C&#7853;p nh&#7853;t" aria-label="C&#7853;p nh&#7853;t">&#128260;</button>
+          </div>
           <span class="topbar-user" id="topbar-user"></span>
-        </div>
-        <div class="sb-session-actions">
-          <button class="btn sb-update-icon" onclick="refresh()" title="C&#7853;p nh&#7853;t" aria-label="C&#7853;p nh&#7853;t">&#128260;</button>
         </div>
       </div>
     </div>
