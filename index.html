@@ -13,6 +13,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .sb{width:256px;background:#1e2e4a;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
 .sb-brand{padding:20px 16px 16px;border-bottom:1px solid rgba(255,255,255,.1);display:flex;gap:12px;align-items:flex-start}
 .sb-logo{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.sb-brand-icon-stack{width:44px;display:flex;flex-direction:column;align-items:center;gap:8px;flex-shrink:0}
+.sb-brand-icon-stack .notification-wrap{justify-content:center}
+.sb-brand-icon-stack .notification-btn{width:38px;height:34px;border-color:rgba(255,255,255,.18);background:rgba(255,255,255,.09);color:#fff;box-shadow:none}
+.sb-brand-icon-stack .notification-btn:hover{background:rgba(255,255,255,.16);border-color:rgba(147,197,253,.75);color:#fff}
+.sb-brand-icon-stack .notification-badge{border-color:#1e2e4a}
+.sb-brand-icon-stack .notification-panel{left:0;right:auto;top:40px;color:#1e293b;width:min(360px,calc(100vw - 32px))}
 .sb-brand-name{font-size:14px;font-weight:700;color:#fff;line-height:1.3}
 .sb-brand-sub{font-size:11px;color:rgba(255,255,255,.45);margin-top:3px}
 .sb-brand-main{min-width:0;flex:1}
@@ -28,6 +34,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .sb-session .notification-panel{left:0;right:auto;top:38px;color:#1e293b;width:min(360px,calc(100vw - 32px))}
 .sb-session .btn{padding:6px 9px;border-radius:9px;border-color:rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:rgba(255,255,255,.92);font-size:11.5px;font-weight:800}
 .sb-session .btn:hover{background:rgba(255,255,255,.16);border-color:rgba(147,197,253,.75);color:#fff}
+.sb-update-icon{width:34px;height:32px;padding:0!important;display:inline-flex;align-items:center;justify-content:center;font-size:15px}
+.sb-logout-item{margin-top:6px;border-top:1px solid rgba(255,255,255,.08)}
 .sb-nav{padding:12px 8px;flex:1}
 .sb-section{font-size:10px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1px;padding:10px 10px 5px}
 .sb-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;cursor:pointer;font-size:13.5px;font-weight:500;color:rgba(255,255,255,.65);transition:all .15s;margin-bottom:2px;user-select:none}
@@ -54,12 +62,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .sidebar .sb-nav{overflow-y:auto;overflow-x:hidden}
 .sidebar-toggle{position:absolute;right:0;top:96px;transform:translateX(50%);width:30px;height:30px;border-radius:999px;border:1.5px solid rgba(226,232,240,.95);background:#fff;color:#1e2e4a;box-shadow:0 8px 22px rgba(15,23,42,.22);display:flex;align-items:center;justify-content:center;font-size:22px;line-height:1;font-weight:800;cursor:pointer;z-index:50;transition:all .15s}
 .sidebar-toggle:hover{background:#eff6ff;border-color:#93c5fd;color:#2563eb}
-.sidebar-label,.sidebar-section-title,.sb-brand-name,.sb-brand-sub{transition:opacity .15s ease,width .15s ease}
+.sidebar-label,.sidebar-section-title,.sb-brand-name,.sb-brand-sub,.sb-session{transition:opacity .15s ease,width .15s ease}
 .main-content{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;transition:all .2s ease}
 .app-shell.sidebar-collapsed .sidebar{width:72px}
 .app-shell.sidebar-collapsed .sidebar-toggle{right:0}
 .app-shell.sidebar-collapsed .sb-brand{justify-content:center;align-items:center;padding:18px 8px 14px}
-.app-shell.sidebar-collapsed .sb-brand>div:not(.sb-logo){display:none}
+.app-shell.sidebar-collapsed .sb-brand-main{display:none}
 .app-shell.sidebar-collapsed .sb-nav{padding:12px 8px}
 .app-shell.sidebar-collapsed .sb-item{justify-content:center;gap:0;padding:11px 0}
 .app-shell.sidebar-collapsed .sb-item-icon{width:auto;font-size:18px}
@@ -495,8 +503,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <aside class="sb sidebar" id="sidebar">
   <button type="button" class="sidebar-toggle" id="sidebar-toggle" onclick="toggleSidebar()" aria-label="Thu gọn sidebar" title="Thu gọn sidebar">‹</button>
   <div class="sb-brand">
-    <div class="sb-logo">📊</div>
-    <div>
+    <div class="sb-brand-icon-stack">
+      <div class="sb-logo">📊</div>
+      <div class="notification-wrap" id="notification-wrap"><button class="notification-btn" type="button" onclick="toggleNotifications()" title="Th&#244;ng b&#225;o">&#128276;<span class="notification-badge" id="notification-badge"></span></button><div class="notification-panel" id="notification-panel"></div></div>
+    </div>
+    <div class="sb-brand-main">
       <div class="sb-brand-name">Planning Department</div>
       <div class="sb-brand-sub">Dashboard theo dõi hiệu quả MKT</div>
       <div class="sb-session">
@@ -505,9 +516,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <span class="topbar-user" id="topbar-user"></span>
         </div>
         <div class="sb-session-actions">
-          <div class="notification-wrap" id="notification-wrap"><button class="notification-btn" type="button" onclick="toggleNotifications()" title="Th&#244;ng b&#225;o">&#128276;<span class="notification-badge" id="notification-badge"></span></button><div class="notification-panel" id="notification-panel"></div></div>
-          <button class="btn" onclick="demoLogout()">&#272;&#259;ng xu&#7845;t</button>
-          <button class="btn" onclick="refresh()">&#128260; C&#7853;p nh&#7853;t</button>
+          <button class="btn sb-update-icon" onclick="refresh()" title="C&#7853;p nh&#7853;t" aria-label="C&#7853;p nh&#7853;t">&#128260;</button>
         </div>
       </div>
     </div>
@@ -545,6 +554,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <span class="sb-item-icon">🔗</span> <span class="sidebar-label">Nguồn dữ liệu</span></div>
     <div class="sb-item" id="nav-users" title="Quản lý user" onclick="navTo('users',this)">
       <span class="sb-item-icon">👤</span> <span class="sidebar-label">Quản lý user</span></div>
+    <div class="sb-item sb-logout-item" id="nav-logout" title="&#272;&#259;ng xu&#7845;t" onclick="demoLogout()">
+      <span class="sb-item-icon">&#128682;</span> <span class="sidebar-label">&#272;&#259;ng xu&#7845;t</span></div>
   </nav>
 </aside>
 
@@ -1855,10 +1866,8 @@ function toast(msg) {
 }
 
 function setTs() {
-  document.getElementById('topbar-ts').textContent =
-    'Cập nhật ' + new Date().toLocaleTimeString('vi-VN');
+  document.getElementById('topbar-ts').textContent = new Date().toLocaleTimeString('vi-VN');
 }
-
 
 const NOTIFY_KEY_LABELS = {
   mkt_b2b_crm_data:['b2b','Business to Business'],
