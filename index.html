@@ -775,14 +775,59 @@ function getStore(key, fallback) {
   }
 }
 const _kvSyncTimers = {};
-function _flushKvSync(k) {
+/* ── Chống ghi đè: ghi nhớ id đã thấy từ cloud + merge trước khi push ── */
+const _kvKnownIds = {};   // key → Set các id client đã đồng bộ từ cloud
+function _kvSetKnown(k, arr) {
+  if (!Array.isArray(arr)) return;
+  const s = new Set();
+  arr.forEach(r => { if (r && typeof r === 'object' && r.id != null) s.add(String(r.id)); });
+  _kvKnownIds[k] = s;
+}
+/* Gộp local + cloud theo id:
+   - local có id → local thắng (đã sửa tại máy này)
+   - cloud-only & id ĐÃ BIẾT → đã xóa tại máy này → bỏ (tôn trọng xóa)
+   - cloud-only & id CHƯA BIẾT → máy khác vừa thêm → GIỮ (chống mất dữ liệu) */
+function _kvMergeForPush(k, local, cloud) {
+  if (!Array.isArray(cloud) || !Array.isArray(local)) return local;
+  if (!local.every(x => x && typeof x === 'object' && x.id != null)) return local; // chỉ merge mảng object có id
+  if (!cloud.every(x => x && typeof x === 'object')) return local;
+  const known = _kvKnownIds[k] || new Set();
+  const localIds = new Set();
+  local.forEach(r => { if (r && r.id != null) localIds.add(String(r.id)); });
+  const merged = local.slice();
+  cloud.forEach(r => {
+    if (!r || r.id == null) return;
+    const id = String(r.id);
+    if (localIds.has(id)) return;   // local đã có
+    if (known.has(id)) return;      // đã xóa chủ động
+    merged.push(r);                 // dòng mới từ máy khác → giữ lại
+  });
+  return merged;
+}
+async function _flushKvSync(k) {
   if (_kvSyncTimers[k]) { clearTimeout(_kvSyncTimers[k].t); }
   const pending = _kvSyncTimers[k];
   if (!pending) return;
   delete _kvSyncTimers[k];
   const u = demoCurrentUser();
   const userId = u && u.id ? u.id : null;
-  mktApi.kvSet(k, pending.value, userId).catch(err => console.warn('[sync] kv_set failed for', k, err));
+  let toPush = pending.value;
+  try {
+    if (Array.isArray(pending.value)) {
+      let cloud = null;
+      try { cloud = await mktApi.kvGet(k); } catch(_) {}
+      if (Array.isArray(cloud)) {
+        const merged = _kvMergeForPush(k, pending.value, cloud);
+        if (merged.length !== pending.value.length) {
+          toPush = merged;
+          try { localStorage.setItem(k, JSON.stringify(merged)); } catch(_) {}
+          console.warn('[sync] merge giữ', merged.length - pending.value.length, 'dòng từ cloud cho', k);
+        }
+      }
+    }
+    await mktApi.kvSet(k, toPush, userId);
+    _kvSetKnown(k, toPush);
+  } catch(err) { console.warn('[sync] kv_set failed for', k, err); }
 }
 function setStore(key, value) {
   const k = key.startsWith('mkt_') ? key : 'mkt_' + key;
@@ -807,6 +852,7 @@ async function syncKeyNow(key, value) {
   clearPendingSync(k);
   const u = demoCurrentUser();
   await mktApi.kvSet(k, value, u && u.id ? u.id : null);
+  _kvSetKnown(k, value);
   return true;
 }
 
@@ -820,6 +866,7 @@ async function syncDown() {
     rows.forEach(r => {
       if (SYNC_KEYS.includes(r.key)) {
         localStorage.setItem(r.key, JSON.stringify(r.payload));
+        _kvSetKnown(r.key, r.payload);   // ghi nhận id đã thấy từ cloud
         updated++;
       }
     });
