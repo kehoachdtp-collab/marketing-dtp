@@ -2490,7 +2490,9 @@ function _b2bLeads() {
     <th style="width:36px"></th>
   </tr>`;
 
-  const tbody = rows.map((r,i) => {
+  const _pgr = _paginate('b2b', rows, 50);
+  const tbody = _pgr.pageRows.map((r,idx) => {
+    const i = _pgr.offset + idx;
     const dupCls = r._dBoth?'dup-red':r._dSdt||r._dMst?'dup':'';
     const bdg = r._dBoth
       ? `<span class="bdg bdg-red">Trùng SĐT+MST</span>`
@@ -2505,13 +2507,13 @@ function _b2bLeads() {
     </tr>`;
   }).join('');
 
-  return stats + chipsHtml + actBar + `
+  return stats + chipsHtml + actBar + _pgr.bar + `
     <div class="tbl-wrap">
       <table class="tbl">
         <thead>${thead}</thead>
         <tbody>${tbody}</tbody>
       </table>
-    </div>`;
+    </div>` + _pgr.bar;
 }
 /* ═══════════════════════════════════════
    SALE ONLINE MODULE
@@ -2641,6 +2643,26 @@ function _kocProdDistinct(){
 function _kocProdTab(i){ const t=_kocProdTabsCache[i]; if(t){ kocProdFilter=t.name; kocProdPage=0; saleRerender(); } }
 function kocProdToggleCollab(){ kocProdOnlyCollab=!kocProdOnlyCollab; kocProdPage=0; saleRerender(); }
 function kocProdGoPage(p){ kocProdPage=p; saleRerender(); const el=document.getElementById('content'); if(el)el.scrollTop=0; }
+
+/* ── Paginator dùng chung cho bảng lớn (master, b2b, hr...) ── */
+const _pg = {};
+function _pgGo(key,p){ _pg[key]=p; const el=document.getElementById('content'); if(el)el.scrollTop=0; if(key==='b2b'){ if(typeof b2bRerender==='function') b2bRerender(); } else if(key==='hr'){ if(typeof hrRerender==='function') hrRerender(); } else { saleRerender(); } }
+function _paginate(key, rows, size){
+  const total=rows.length, pages=Math.max(1,Math.ceil(total/size));
+  if(_pg[key]==null) _pg[key]=0;
+  if(_pg[key]>=pages) _pg[key]=pages-1;
+  if(_pg[key]<0) _pg[key]=0;
+  const cur=_pg[key], offset=cur*size;
+  const pageRows=rows.slice(offset, offset+size);
+  let bar='';
+  if(pages>1){
+    const btn=(p,lbl,dis,on)=>`<button ${dis?'disabled':''} onclick="_pgGo('${key}',${p})" style="padding:5px 11px;border-radius:7px;font-size:12.5px;font-weight:700;cursor:${dis?'default':'pointer'};border:1.5px solid ${on?'#2563eb':'#e2e8f0'};background:${on?'#2563eb':'#fff'};color:${on?'#fff':dis?'#cbd5e1':'#475569'}">${lbl}</button>`;
+    let nums=''; const w=2;
+    for(let p=0;p<pages;p++){ if(p===0||p===pages-1||(p>=cur-w&&p<=cur+w)) nums+=btn(p,p+1,false,p===cur); else if(p===cur-w-1||p===cur+w+1) nums+='<span style="color:#94a3b8;padding:0 2px">…</span>'; }
+    bar=`<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin:12px 0;justify-content:center">${btn(cur-1,'‹ Trước',cur===0,false)}${nums}${btn(cur+1,'Sau ›',cur===pages-1,false)}<span style="font-size:12px;color:#64748b;margin-left:8px">Trang ${cur+1}/${pages} · ${total} dòng</span></div>`;
+  }
+  return {pageRows, bar, offset};
+}
 
 /* ── Popup thêm lượt mời: tra cứu KOC theo SĐT hoặc Mã ID ── */
 let _kocInviteMatch = null;
@@ -4403,8 +4425,13 @@ function _kocMaster() {
     <th style="min-width:75px">Lượt mời</th>
     <th style="width:34px"></th>
   </tr>`;
-  const tbody=rows.map((r,i)=>{
-    const cnt=kocProdRows.filter(p=>p.maKoc===r.maKoc||(!r.maKoc&&p.tenKoc===r.ten)).length;
+  // Đếm prod theo maKoc 1 lần (tránh O(n²))
+  const _cntByMa={}; const _emptyMaProds=[];
+  kocProdRows.forEach(p=>{ if(p.maKoc){ _cntByMa[p.maKoc]=(_cntByMa[p.maKoc]||0)+1; } else if(p.tenKoc){ _emptyMaProds.push(p.tenKoc); } });
+  const _pgr=_paginate('kocmst', rows, 50);
+  const tbody=_pgr.pageRows.map((r,idx)=>{
+    const i=_pgr.offset+idx;
+    const cnt = r.maKoc ? (_cntByMa[r.maKoc]||0) : _emptyMaProds.filter(t=>t===r.ten).length;
     return `<tr>
       <td class="stt">${i+1}</td>
       <td class="koc-code-cell"><input class="koc-code-input" value="${esc(r.maKoc||'')}" title="Sua ma KOC" onchange="kocMstUpd(${r.id},'maKoc',this.value)" onkeydown="if((event.ctrlKey||event.metaKey)&&String(event.key).toLowerCase()==='s'){event.preventDefault();this.blur();}"></td>
@@ -4421,7 +4448,7 @@ function _kocMaster() {
       <td><button class="del-btn" onclick="kocMstDel(${r.id})">✕</button></td>
     </tr>`;
   }).join('');
-  return addBar+`<div class="tbl-wrap"><table class="tbl"><thead>${thead}</thead><tbody>${tbody}</tbody></table></div>`;
+  return addBar+_pgr.bar+`<div class="tbl-wrap"><table class="tbl"><thead>${thead}</thead><tbody>${tbody}</tbody></table></div>`+_pgr.bar;
 }
 
 /* ──── 3. KOC THEO SP / CHIẾN DỊCH ──── */
@@ -5455,7 +5482,7 @@ function b2bDelRow(id) {
   b2bRows = b2bRows.filter(r => r.id != id);
   b2bAutoSave(); b2bRerender();
 }
-function b2bSetFilter(f) { b2bFilter = f; b2bRerender(); }
+function b2bSetFilter(f) { b2bFilter = f; _pg['b2b']=0; b2bRerender(); }
 
 function b2bAddPT(sel, id, k) {
   const n = prompt('Tên người phụ trách mới:');
