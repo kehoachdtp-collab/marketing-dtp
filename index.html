@@ -3510,8 +3510,139 @@ function kocContractSimpleWord(d){const t=kocContractTpl(d.templateId);const isA
 function kocContractExport(id){const d=kocContractRows.find(x=>x.id===id)||kocContractReadForm();const blob=new Blob(['\ufeff',kocContractSimpleWord(d)],{type:'application/msword;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=kocContractFileName(`${kocContractTpl(d.templateId).kind==='acceptance'?'bien-ban-nghiem-thu':'hop-dong'}-${d.kocName||d.maKoc}-${d.productName}`)+'.doc';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},300);if(d.id){const r=kocContractRows.find(x=>x.id===d.id);if(r&&r.status==='draft'){r.status='exported';kocContractSaveRows()}}}
 function kocContractAttachSigned(id,file){if(!file)return;const r=kocContractRows.find(x=>x.id===id);if(!r)return;const meta={name:file.name,size:file.size,type:file.type,attachedAt:new Date().toISOString()};const finish=()=>{r.signedFile=meta;r.status='signed';kocContractSaveRows();saleRerender();toast('Da dinh kem file da ky.')};if(file.size>850000){meta.note='File lon, chi luu ten file trong demo de tranh qua dung luong localStorage.';finish();return}const reader=new FileReader();reader.onload=()=>{meta.dataUrl=reader.result;finish()};reader.readAsDataURL(file)}
 
+/* ════════════════════════════════════════════════════════════
+   BATCH CCCD → nhiều hợp đồng cùng lúc (upload N ảnh, tự gom mặt trước/sau)
+════════════════════════════════════════════════════════════ */
+let _kcBatch = { files: [], people: null, busy: false };
+function _kcNatSort(a,b){ return String(a.name).localeCompare(String(b.name),undefined,{numeric:true,sensitivity:'base'}); }
+// Phân loại mặt trước/sau từ text OCR
+function _cccdSide(text){
+  const n = complianceNormalize(text);
+  let front=0, back=0;
+  if(/hovaten|fullname/.test(n)) front+=2;
+  if(/ngaysinh|dateofbirth/.test(n)) front++;
+  if(/gioitinh|quoctich|quequan|noithuongtru|cogiatriden|placeofresidence/.test(n)) front++;
+  if(/dacdiemnhandang|personalidentification/.test(n)) back+=2;
+  if(/cuctruong|cuccanhsat/.test(n)) back+=2;
+  if(/ngaycap|dateofissue/.test(n)) back++;
+  if(/idvnm|<<</.test(n)) back++;   // vùng MRZ ở mặt sau
+  return back>front ? 'back' : 'front';
+}
+function kcBatchPick(files){
+  _kcBatch.files = Array.from(files||[]).filter(f=>/^image\//.test(f.type)).sort(_kcNatSort);
+  _kcBatch.people = null;
+  const box=document.getElementById('kc_batch_status');
+  if(box) box.innerHTML = _kcBatch.files.length ? `<span style="color:#0369a1;font-weight:700">Đã chọn ${_kcBatch.files.length} ảnh.</span> Bấm <strong>Bắt đầu OCR</strong> để nhận diện.` : '<span style="color:#94a3b8">Chưa chọn ảnh.</span>';
+}
+async function kcBatchRun(){
+  if(_kcBatch.busy) return;
+  if(!_kcBatch.files.length){ toast('⚠️ Hãy chọn ảnh CCCD trước.'); return; }
+  try{ await ensureTesseractLoaded(); }catch(e){ toast('Không tải được OCR.'); return; }
+  _kcBatch.busy=true;
+  const status=document.getElementById('kc_batch_status');
+  const parsed=[];
+  for(let i=0;i<_kcBatch.files.length;i++){
+    const f=_kcBatch.files[i];
+    if(status) status.innerHTML=`⏳ Đang OCR ảnh <strong>${i+1}/${_kcBatch.files.length}</strong>: ${esc(f.name)} …`;
+    let text='';
+    try{ let r; try{ r=await Tesseract.recognize(f,'vie+eng'); }catch(_){ r=await Tesseract.recognize(f,'eng'); } text=r?.data?.text||''; }catch(e){ text=''; }
+    parsed.push({ file:f, url:URL.createObjectURL(f), side:_cccdSide(text), parse:kocContractParseCccdText(text) });
+  }
+  // Gom theo người: duyệt theo thứ tự, "front" mở người mới, "back" gắn vào người gần nhất chưa có mặt sau
+  const people=[]; let cur=null;
+  parsed.forEach(it=>{
+    if(it.side==='front' || !cur){
+      cur={ front: it.side==='front'?it:null, back: it.side==='back'?it:null,
+        name:it.parse.name||'', cccd:it.parse.cccd||'', dob:it.parse.dob||'',
+        address:it.parse.address||'', issueDate:it.parse.issueDate||'', issuePlace:'Bộ Công An' };
+      if(it.side==='back') cur.front=null;
+      people.push(cur);
+    } else if(it.side==='back'){
+      if(cur && !cur.back){ cur.back=it; if(it.parse.issueDate) cur.issueDate=it.parse.issueDate; if(!cur.cccd&&it.parse.cccd) cur.cccd=it.parse.cccd; }
+      else { cur={ front:null, back:it, name:it.parse.name||'', cccd:it.parse.cccd||'', dob:it.parse.dob||'', address:it.parse.address||'', issueDate:it.parse.issueDate||'', issuePlace:'Bộ Công An' }; people.push(cur); }
+    }
+  });
+  _kcBatch.people=people; _kcBatch.busy=false;
+  if(status) status.innerHTML=`✅ Xong! Nhận diện <strong>${people.length}</strong> người từ ${parsed.length} ảnh. Kiểm tra lại bảng dưới rồi bấm <strong>Tạo tất cả hợp đồng</strong>.`;
+  kcBatchRenderReview();
+}
+function kcBatchSet(i,field,val){ if(_kcBatch.people&&_kcBatch.people[i]) _kcBatch.people[i][field]=val; }
+function kcBatchDel(i){ if(_kcBatch.people){ _kcBatch.people.splice(i,1); kcBatchRenderReview(); } }
+function kcBatchSwap(i){ const p=_kcBatch.people&&_kcBatch.people[i]; if(p){ const t=p.front; p.front=p.back; p.back=t; kcBatchRenderReview(); } }
+function kcBatchRenderReview(){
+  const box=document.getElementById('kc_batch_review'); if(!box) return;
+  const ppl=_kcBatch.people||[];
+  if(!ppl.length){ box.innerHTML=''; return; }
+  const thumb=(it,lbl)=>it?`<div style="text-align:center"><img src="${it.url}" style="width:64px;height:42px;object-fit:cover;border-radius:5px;border:1px solid #cbd5e1"><div style="font-size:9px;color:#64748b">${lbl}</div></div>`:`<div style="width:64px;height:42px;border:1px dashed #cbd5e1;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#cbd5e1">${lbl}<br>thiếu</div>`;
+  const inp=(i,f,v,ph)=>`<input value="${esc(v||'')}" onchange="kcBatchSet(${i},'${f}',this.value)" placeholder="${ph||''}" style="width:100%;border:1px solid #e2e8f2;border-radius:6px;padding:5px 7px;font-size:12px">`;
+  const rows=ppl.map((p,i)=>{
+    const warn=!p.name||!p.cccd;
+    return `<tr style="${warn?'background:#fff7ed':''}">
+      <td style="text-align:center;font-weight:700;color:#64748b">${i+1}</td>
+      <td><div style="display:flex;gap:5px">${thumb(p.front,'Trước')}${thumb(p.back,'Sau')}</div>
+          <button onclick="kcBatchSwap(${i})" style="margin-top:3px;font-size:10px;border:1px solid #e2e8f0;background:#fff;border-radius:5px;padding:2px 6px;cursor:pointer">⇄ Đảo trước/sau</button></td>
+      <td>${inp(i,'name',p.name,'Họ tên')}${warn&&!p.name?'<div style="font-size:10px;color:#dc2626">Thiếu tên</div>':''}</td>
+      <td>${inp(i,'cccd',p.cccd,'Số CCCD')}${warn&&!p.cccd?'<div style="font-size:10px;color:#dc2626">Thiếu CCCD</div>':''}</td>
+      <td>${inp(i,'dob',p.dob,'DD/MM/YYYY')}</td>
+      <td>${inp(i,'issueDate',p.issueDate,'Ngày cấp')}</td>
+      <td>${inp(i,'address',p.address,'Địa chỉ')}</td>
+      <td style="text-align:center"><button onclick="kcBatchDel(${i})" style="color:#dc2626;border:1px solid #fecaca;background:#fff;border-radius:5px;padding:3px 8px;cursor:pointer">✕</button></td>
+    </tr>`;
+  }).join('');
+  box.innerHTML=`<div style="margin-top:14px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden">
+    <div style="padding:10px 14px;font-weight:800;color:#1e2e4a;font-size:13.5px;background:#f8fafc;border-bottom:1px solid #eef2f7">📋 Review ${ppl.length} người — sửa trực tiếp nếu OCR sai, dùng <strong>⇄</strong> nếu lẫn mặt trước/sau</div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:760px">
+      <thead><tr style="background:#f1f5f9">${['#','Ảnh','Họ tên','Số CCCD','Ngày sinh','Ngày cấp','Địa chỉ',''].map(h=>`<th style="padding:7px 8px;text-align:left;font-size:10.5px;color:#475569;text-transform:uppercase">${h}</th>`).join('')}</tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div></div>`;
+}
+function kcBatchCreateAll(){
+  if(!canEditMod('sale')){ toast('Bạn không có quyền sửa Sale Online.'); return; }
+  const ppl=_kcBatch.people||[];
+  if(!ppl.length){ toast('⚠️ Chưa có người nào. Hãy OCR trước.'); return; }
+  const tpl=document.getElementById('kc_batch_template')?.value||'nadi_food_contract';
+  const product=(document.getElementById('kc_batch_product')?.value||'').trim();
+  const campaign=(document.getElementById('kc_batch_campaign')?.value||'').trim();
+  if(!product){ toast('⚠️ Hãy nhập Sản phẩm áp dụng cho cả lô.'); document.getElementById('kc_batch_product')?.focus(); return; }
+  const missing=ppl.filter(p=>!p.name).length;
+  if(missing && !confirm(`${missing} người chưa có họ tên. Vẫn tạo hợp đồng (để trống tên)?`)) return;
+  const created=[];
+  ppl.forEach(p=>{
+    const row={ id:kocContractId(), dealId:'', maKoc:'', kocName:p.name||'', templateId:tpl, status:'draft',
+      contractNo:'', signDate:kocContractDateToday(), productName:product, campaignName:campaign, fee:0, videoLink:'',
+      cccd:p.cccd||'', dob:p.dob||'', issueDate:p.issueDate||'', issuePlace:p.issuePlace||'Bộ Công An',
+      address:p.address||'', phone:'', taxCode:'', bankNo:'', bankName:'', email:'', notes:'Tạo hàng loạt từ CCCD',
+      createdAt:new Date().toISOString(), updatedAt:new Date().toISOString() };
+    kocContractRows.unshift(row); created.push(row);
+  });
+  kocContractSaveRows();
+  toast(`✅ Đã tạo ${created.length} hợp đồng. Đang xuất Word…`);
+  // Xuất Word lần lượt (giãn cách để trình duyệt cho phép tải nhiều file)
+  created.forEach((r,idx)=> setTimeout(()=>kocContractExport(r.id), 500*idx));
+  _kcBatch={ files:[], people:null, busy:false };
+  setTimeout(saleRerender, 500*created.length+300);
+}
+function kcBatchCardHtml(){
+  return `<div style="background:linear-gradient(135deg,#eef2ff,#fdf4ff);border:1.5px solid #ddd6fe;border-radius:14px;padding:16px 18px;margin-bottom:16px">
+    <div style="font-size:15px;font-weight:850;color:#5b21b6">⚡ Tạo nhiều hợp đồng cùng lúc (batch CCCD)</div>
+    <div style="font-size:12.5px;color:#6d28d9;margin:4px 0 12px;line-height:1.6">Tải lên <strong>nhiều ảnh CCCD</strong> (cả mặt trước &amp; sau của nhiều người) → OCR tự nhận diện &amp; gom theo người → tạo &amp; xuất <strong>tất cả hợp đồng Word</strong> một lần. Mẹo đỡ lẫn: đặt tên file theo thứ tự (vd <em>01-truoc, 01-sau, 02-truoc…</em>) hoặc chụp lần lượt trước→sau từng người.</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:10px">
+      <div style="display:grid;gap:4px"><label style="font-size:11px;font-weight:700;color:#6d28d9">Mẫu HĐ áp dụng cả lô</label><select id="kc_batch_template" style="border:1.5px solid #ddd6fe;border-radius:8px;padding:8px;font-size:13px;min-width:170px">${kocContractTplOptions('nadi_food_contract')}</select></div>
+      <div style="display:grid;gap:4px"><label style="font-size:11px;font-weight:700;color:#6d28d9">Sản phẩm *</label><input id="kc_batch_product" placeholder="VD: Nadibaby care" style="border:1.5px solid #ddd6fe;border-radius:8px;padding:8px;font-size:13px;min-width:170px"></div>
+      <div style="display:grid;gap:4px"><label style="font-size:11px;font-weight:700;color:#6d28d9">Chiến dịch</label><input id="kc_batch_campaign" placeholder="(tùy chọn)" style="border:1.5px solid #ddd6fe;border-radius:8px;padding:8px;font-size:13px;min-width:150px"></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <input type="file" id="kc_batch_files" accept="image/*" multiple style="display:none" onchange="kcBatchPick(this.files)">
+      <button onclick="document.getElementById('kc_batch_files').click()" style="background:#fff;border:1.5px solid #a78bfa;color:#6d28d9;border-radius:9px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer">📂 Chọn nhiều ảnh CCCD</button>
+      <button onclick="kcBatchRun()" style="background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;border:0;border-radius:9px;padding:9px 18px;font-weight:800;font-size:13px;cursor:pointer">🔍 Bắt đầu OCR</button>
+      <button onclick="kcBatchCreateAll()" style="background:#16a34a;color:#fff;border:0;border-radius:9px;padding:9px 18px;font-weight:800;font-size:13px;cursor:pointer">📄 Tạo tất cả hợp đồng + Xuất Word</button>
+    </div>
+    <div id="kc_batch_status" style="font-size:12.5px;color:#64748b;margin-top:10px">Chưa chọn ảnh.</div>
+    <div id="kc_batch_review"></div>
+  </div>`;
+}
 function kocContractRenderRows(){if(!kocContractRows.length)return `<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:20px">Ch&#432;a c&#243; h&#7907;p &#273;&#7891;ng n&#224;o. Ch&#7885;n KOC, nh&#7853;p CCCD v&#224; b&#7845;m L&#432;u h&#7891; s&#417;.</td></tr>`;return kocContractRows.map(r=>{const signed=r.signedFile?(r.signedFile.dataUrl?`<a class="link-url" href="${r.signedFile.dataUrl}" download="${esc(r.signedFile.name)}">${esc(r.signedFile.name)}</a>`:`<span class="koc-contract-badge ok">${esc(r.signedFile.name)}</span><div class="koc-contract-mini">File l&#7899;n: demo ch&#7881; l&#432;u t&#234;n.</div>`):'<span class="koc-contract-badge warn">Ch&#432;a &#273;&#237;nh k&#232;m</span>';return `<tr><td><b>${esc(r.kocName||'')}</b><div class="koc-contract-mini">${esc(r.maKoc||'')}</div></td><td>${esc(r.productName||'')}<div class="koc-contract-mini">${esc(r.campaignName||'')}</div></td><td>${kocContractTemplateLabel(r.templateId)}</td><td><span class="koc-contract-badge blue">${kocContractStatusLabel(r.status)}</span></td><td>${esc(r.contractNo||'')}<div class="koc-contract-mini">${esc(r.signDate||'')}</div></td><td>${kocContractMoney(r.fee)}</td><td>${signed}</td><td><button class="btn" onclick="kocContractEdit('${r.id}')">S&#7917;a</button> <button class="btn" onclick="kocContractExport('${r.id}')">T&#7843;i Word</button><label class="btn" style="display:inline-block;margin-top:6px"><input type="file" style="display:none" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onchange="kocContractAttachSigned('${r.id}',this.files[0])">&#272;&#237;nh k&#232;m &#273;&#227; k&#253;</label> <button class="btn" style="color:#dc2626;border-color:#fecaca" onclick="kocContractDelete('${r.id}')">X&#243;a</button></td></tr>`}).join('')}
-function _kocContracts(){if(!canViewMod('sale'))return demoAccessDeniedHtml();const canEdit=canEditMod('sale');return `<div class="page-header"><div class="page-title">&#128196; H&#7907;p &#273;&#7891;ng KOC</div><div class="page-sub">T&#7841;o h&#7907;p &#273;&#7891;ng/bi&#234;n b&#7843;n nghi&#7879;m thu theo t&#7915;ng KOC + s&#7843;n ph&#7849;m. OCR CCCD l&#224; demo, lu&#244;n ki&#7875;m tra l&#7841;i tr&#432;&#7899;c khi g&#7917;i KOC k&#253;.</div></div><div class="koc-contract-note">M&#7851;u g&#7889;c &#273;&#227; l&#432;u: H&#272; KOC th&#7921;c ph&#7849;m, H&#272; KOC m&#7929; ph&#7849;m, Bi&#234;n b&#7843;n nghi&#7879;m thu. B&#7843;n demo xu&#7845;t Word .doc t&#7915; d&#7919; li&#7879;u &#273;&#227; &#273;i&#7873;n; file DOCX g&#7889;c c&#243; th&#7875; t&#7843;i v&#7873; &#273;&#7875; &#273;&#7889;i chi&#7871;u.</div><div class="koc-contract-grid" id="kc_contract_form"><section class="koc-contract-card"><div class="koc-contract-title">1. Th&#244;ng tin h&#7907;p &#273;&#7891;ng</div><div class="koc-contract-sub">Ch&#7885;n d&#242;ng KOC theo s&#7843;n ph&#7849;m/chi&#7871;n d&#7883;ch &#273;&#7875; t&#7921; &#273;i&#7873;n t&#234;n, s&#7843;n ph&#7849;m, chi ph&#237; booking.</div><div class="koc-contract-form"><input type="hidden" id="kc_record_id"><input type="hidden" id="kc_deal_id"><input type="hidden" id="kc_ma_koc"><div class="koc-contract-field full"><label>Ch&#7885;n KOC + s&#7843;n ph&#7849;m/chi&#7871;n d&#7883;ch</label>${kocContractDealPickerHtml()}</div><div class="koc-contract-field"><label>M&#7851;u</label><select id="kc_template">${kocContractTplOptions('nadi_food_contract')}</select></div><div class="koc-contract-field"><label>Tr&#7841;ng th&#225;i</label><select id="kc_status">${kocContractStatusOptions('draft')}</select></div><div class="koc-contract-field"><label>S&#7889; H&#272;/BBNT</label><input id="kc_contract_no" placeholder="VD: .../KOC/2026"></div><div class="koc-contract-field"><label>Ng&#224;y k&#253;</label><input id="kc_sign_date" value="${kocContractDateToday()}" placeholder="DD/MM/YYYY"></div><div class="koc-contract-field"><label>S&#7843;n ph&#7849;m</label><input id="kc_product" placeholder="Laforin Stick / Nadibaby..."></div><div class="koc-contract-field"><label>Chi&#7871;n d&#7883;ch</label><input id="kc_campaign"></div><div class="koc-contract-field"><label>Chi ph&#237; booking</label><input id="kc_fee" type="number" min="0"></div><div class="koc-contract-field"><label>Link video/profile</label><input id="kc_video_link" placeholder="https://..."></div><div class="koc-contract-field full"><label>Ghi ch&#250; / KPI nghi&#7879;m thu</label><textarea id="kc_notes" placeholder="VD: KPI view, deadline, ghi ch&#250; thanh to&#225;n..."></textarea></div></div><div class="koc-contract-actions"><button class="btn" onclick="kocContractClearForm()">H&#7891; s&#417; m&#7899;i</button><button class="btn" onclick="kocContractTemplateLink()">T&#7843;i m&#7851;u g&#7889;c</button><button class="btn btn-primary" onclick="kocContractSaveFromForm(false)" ${canEdit?'':'disabled'}>L&#432;u h&#7891; s&#417;</button><button class="btn btn-primary" onclick="kocContractReview()" ${canEdit?'':'disabled'}>Review tr&#432;&#7899;c</button></div><div id="kc_review_panel" class="koc-contract-review"></div></section><section class="koc-contract-card"><div class="koc-contract-title">2. CCCD & th&#244;ng tin thanh to&#225;n</div><div class="koc-contract-sub">&#272;&#237;nh k&#232;m &#7843;nh CCCD &#273;&#7875; OCR t&#7921; g&#7907;i &#253;. C&#7847;n ki&#7875;m tra l&#7841;i v&#236; OCR c&#243; th&#7875; sai d&#7845;u/s&#7889;.</div><div class="koc-contract-form"><div class="koc-contract-field full"><label>&#7842;nh CCCD</label><input type="file" accept="image/*" onchange="kocContractReadCccd(this.files[0])"></div><div class="koc-contract-field"><label>H&#7885; t&#234;n</label><input id="kc_full_name"></div><div class="koc-contract-field"><label>S&#7889; CCCD</label><input id="kc_cccd"></div><div class="koc-contract-field"><label>Ng&#224;y sinh</label><input id="kc_dob" placeholder="DD/MM/YYYY"></div><div class="koc-contract-field"><label>Ng&#224;y c&#7845;p</label><input id="kc_issue_date" placeholder="DD/MM/YYYY"></div><div class="koc-contract-field"><label>N&#417;i c&#7845;p</label><input id="kc_issue_place" value="B&#7897; C&#244;ng An"></div><div class="koc-contract-field"><label>S&#272;T</label><input id="kc_phone"></div><div class="koc-contract-field full"><label>&#272;&#7883;a ch&#7881; th&#432;&#7901;ng tr&#250;/qu&#234; qu&#225;n</label><input id="kc_address"></div><div class="koc-contract-field"><label>MST c&#225; nh&#226;n</label><input id="kc_tax"></div><div class="koc-contract-field"><label>Email</label><input id="kc_email"></div><div class="koc-contract-field"><label>S&#7889; t&#224;i kho&#7843;n</label><input id="kc_bank_no"></div><div class="koc-contract-field"><label>Ng&#226;n h&#224;ng</label><input id="kc_bank_name"></div></div><div class="koc-contract-ocr" id="kc_ocr_output"></div><div class="koc-contract-warn">L&#432;u &#253; b&#7843;o m&#7853;t: &#7843;nh CCCD kh&#244;ng &#273;&#432;&#7907;c upload l&#234;n server trong phase demo; OCR ch&#7841;y tr&#234;n tr&#236;nh duy&#7879;t. Ch&#7881; l&#432;u th&#244;ng tin text b&#7841;n x&#225;c nh&#7853;n v&#224;o h&#7891; s&#417; h&#7907;p &#273;&#7891;ng.</div></section></div><section class="koc-contract-card"><div class="user-admin-head"><div><div class="koc-contract-title">Danh s&#225;ch h&#7907;p &#273;&#7891;ng theo KOC + s&#7843;n ph&#7849;m</div><div class="koc-contract-sub">M&#7895;i d&#242;ng l&#432;u m&#7897;t h&#7891; s&#417; h&#7907;p &#273;&#7891;ng/bi&#234;n b&#7843;n v&#224; file &#273;&#227; k&#253; n&#7871;u c&#243;.</div></div></div><div class="tbl-wrap"><table class="koc-contract-table"><thead><tr><th>KOC</th><th>S&#7843;n ph&#7849;m/CD</th><th>M&#7851;u</th><th>Tr&#7841;ng th&#225;i</th><th>S&#7889;/ng&#224;y</th><th>Chi ph&#237;</th><th>File &#273;&#227; k&#253;</th><th>Thao t&#225;c</th></tr></thead><tbody>${kocContractRenderRows()}</tbody></table></div></section>`}
+function _kocContracts(){if(!canViewMod('sale'))return demoAccessDeniedHtml();const canEdit=canEditMod('sale');return `<div class="page-header"><div class="page-title">&#128196; H&#7907;p &#273;&#7891;ng KOC</div><div class="page-sub">T&#7841;o h&#7907;p &#273;&#7891;ng/bi&#234;n b&#7843;n nghi&#7879;m thu theo t&#7915;ng KOC + s&#7843;n ph&#7849;m. OCR CCCD l&#224; demo, lu&#244;n ki&#7875;m tra l&#7841;i tr&#432;&#7899;c khi g&#7917;i KOC k&#253;.</div></div><div class="koc-contract-note">M&#7851;u g&#7889;c &#273;&#227; l&#432;u: H&#272; KOC th&#7921;c ph&#7849;m, H&#272; KOC m&#7929; ph&#7849;m, Bi&#234;n b&#7843;n nghi&#7879;m thu. B&#7843;n demo xu&#7845;t Word .doc t&#7915; d&#7919; li&#7879;u &#273;&#227; &#273;i&#7873;n; file DOCX g&#7889;c c&#243; th&#7875; t&#7843;i v&#7873; &#273;&#7875; &#273;&#7889;i chi&#7871;u.</div>${kcBatchCardHtml()}<div class="koc-contract-grid" id="kc_contract_form"><section class="koc-contract-card"><div class="koc-contract-title">1. Th&#244;ng tin h&#7907;p &#273;&#7891;ng</div><div class="koc-contract-sub">Ch&#7885;n d&#242;ng KOC theo s&#7843;n ph&#7849;m/chi&#7871;n d&#7883;ch &#273;&#7875; t&#7921; &#273;i&#7873;n t&#234;n, s&#7843;n ph&#7849;m, chi ph&#237; booking.</div><div class="koc-contract-form"><input type="hidden" id="kc_record_id"><input type="hidden" id="kc_deal_id"><input type="hidden" id="kc_ma_koc"><div class="koc-contract-field full"><label>Ch&#7885;n KOC + s&#7843;n ph&#7849;m/chi&#7871;n d&#7883;ch</label>${kocContractDealPickerHtml()}</div><div class="koc-contract-field"><label>M&#7851;u</label><select id="kc_template">${kocContractTplOptions('nadi_food_contract')}</select></div><div class="koc-contract-field"><label>Tr&#7841;ng th&#225;i</label><select id="kc_status">${kocContractStatusOptions('draft')}</select></div><div class="koc-contract-field"><label>S&#7889; H&#272;/BBNT</label><input id="kc_contract_no" placeholder="VD: .../KOC/2026"></div><div class="koc-contract-field"><label>Ng&#224;y k&#253;</label><input id="kc_sign_date" value="${kocContractDateToday()}" placeholder="DD/MM/YYYY"></div><div class="koc-contract-field"><label>S&#7843;n ph&#7849;m</label><input id="kc_product" placeholder="Laforin Stick / Nadibaby..."></div><div class="koc-contract-field"><label>Chi&#7871;n d&#7883;ch</label><input id="kc_campaign"></div><div class="koc-contract-field"><label>Chi ph&#237; booking</label><input id="kc_fee" type="number" min="0"></div><div class="koc-contract-field"><label>Link video/profile</label><input id="kc_video_link" placeholder="https://..."></div><div class="koc-contract-field full"><label>Ghi ch&#250; / KPI nghi&#7879;m thu</label><textarea id="kc_notes" placeholder="VD: KPI view, deadline, ghi ch&#250; thanh to&#225;n..."></textarea></div></div><div class="koc-contract-actions"><button class="btn" onclick="kocContractClearForm()">H&#7891; s&#417; m&#7899;i</button><button class="btn" onclick="kocContractTemplateLink()">T&#7843;i m&#7851;u g&#7889;c</button><button class="btn btn-primary" onclick="kocContractSaveFromForm(false)" ${canEdit?'':'disabled'}>L&#432;u h&#7891; s&#417;</button><button class="btn btn-primary" onclick="kocContractReview()" ${canEdit?'':'disabled'}>Review tr&#432;&#7899;c</button></div><div id="kc_review_panel" class="koc-contract-review"></div></section><section class="koc-contract-card"><div class="koc-contract-title">2. CCCD & th&#244;ng tin thanh to&#225;n</div><div class="koc-contract-sub">&#272;&#237;nh k&#232;m &#7843;nh CCCD &#273;&#7875; OCR t&#7921; g&#7907;i &#253;. C&#7847;n ki&#7875;m tra l&#7841;i v&#236; OCR c&#243; th&#7875; sai d&#7845;u/s&#7889;.</div><div class="koc-contract-form"><div class="koc-contract-field full"><label>&#7842;nh CCCD</label><input type="file" accept="image/*" onchange="kocContractReadCccd(this.files[0])"></div><div class="koc-contract-field"><label>H&#7885; t&#234;n</label><input id="kc_full_name"></div><div class="koc-contract-field"><label>S&#7889; CCCD</label><input id="kc_cccd"></div><div class="koc-contract-field"><label>Ng&#224;y sinh</label><input id="kc_dob" placeholder="DD/MM/YYYY"></div><div class="koc-contract-field"><label>Ng&#224;y c&#7845;p</label><input id="kc_issue_date" placeholder="DD/MM/YYYY"></div><div class="koc-contract-field"><label>N&#417;i c&#7845;p</label><input id="kc_issue_place" value="B&#7897; C&#244;ng An"></div><div class="koc-contract-field"><label>S&#272;T</label><input id="kc_phone"></div><div class="koc-contract-field full"><label>&#272;&#7883;a ch&#7881; th&#432;&#7901;ng tr&#250;/qu&#234; qu&#225;n</label><input id="kc_address"></div><div class="koc-contract-field"><label>MST c&#225; nh&#226;n</label><input id="kc_tax"></div><div class="koc-contract-field"><label>Email</label><input id="kc_email"></div><div class="koc-contract-field"><label>S&#7889; t&#224;i kho&#7843;n</label><input id="kc_bank_no"></div><div class="koc-contract-field"><label>Ng&#226;n h&#224;ng</label><input id="kc_bank_name"></div></div><div class="koc-contract-ocr" id="kc_ocr_output"></div><div class="koc-contract-warn">L&#432;u &#253; b&#7843;o m&#7853;t: &#7843;nh CCCD kh&#244;ng &#273;&#432;&#7907;c upload l&#234;n server trong phase demo; OCR ch&#7841;y tr&#234;n tr&#236;nh duy&#7879;t. Ch&#7881; l&#432;u th&#244;ng tin text b&#7841;n x&#225;c nh&#7853;n v&#224;o h&#7891; s&#417; h&#7907;p &#273;&#7891;ng.</div></section></div><section class="koc-contract-card"><div class="user-admin-head"><div><div class="koc-contract-title">Danh s&#225;ch h&#7907;p &#273;&#7891;ng theo KOC + s&#7843;n ph&#7849;m</div><div class="koc-contract-sub">M&#7895;i d&#242;ng l&#432;u m&#7897;t h&#7891; s&#417; h&#7907;p &#273;&#7891;ng/bi&#234;n b&#7843;n v&#224; file &#273;&#227; k&#253; n&#7871;u c&#243;.</div></div></div><div class="tbl-wrap"><table class="koc-contract-table"><thead><tr><th>KOC</th><th>S&#7843;n ph&#7849;m/CD</th><th>M&#7851;u</th><th>Tr&#7841;ng th&#225;i</th><th>S&#7889;/ng&#224;y</th><th>Chi ph&#237;</th><th>File &#273;&#227; k&#253;</th><th>Thao t&#225;c</th></tr></thead><tbody>${kocContractRenderRows()}</tbody></table></div></section>`}
 
 let scriptTab = 'all';
 let _scriptsCache = null;
