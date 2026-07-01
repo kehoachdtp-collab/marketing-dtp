@@ -770,6 +770,11 @@ const mktApi = {
 ═══════════════════════════════════════ */
 const MKT_NOTIFICATIONS_KEY = 'mkt_demo_notifications';
 const MKT_NOTIFICATION_READ_PREFIX = 'mkt_demo_notifications_read_at_';
+const MKT_LOCAL_BACKUPS_KEY = 'mkt_local_data_backups';
+const MKT_AUTO_SYNC_MS = 45000;
+const MKT_BACKUP_MIN_INTERVAL_MS = 120000;
+const MKT_BACKUP_MAX_ITEMS = 14;
+const MKT_BACKUP_MAX_TOTAL_BYTES = 2500000;
 const SYNC_KEYS = [MKT_NOTIFICATIONS_KEY,'mkt_b2b_crm_data','mkt_b2b_cost_data','mkt_b2b_assignee_options','mkt_sale_campaigns','mkt_sale_orders','mkt_sale_ads_data','mkt_shop_tasks','mkt_sale_koc_data','mkt_sale_koc_master','mkt_sale_koc_product_campaigns','mkt_sale_koc_prospects','mkt_sale_koc_collaborations','mkt_sale_koc_collab','mkt_sale_koc_ptlist','mkt_sale_koc_contracts','mkt_sale_inventory','mkt_sale_product_master','mkt_recruitment_campaign_data','mkt_recruitment_msg_data','mkt_data_sources','mkt_google_sheet_configs','mkt_google_sheet_mappings','mkt_sync_logs','mkt_compliance_reviews','mkt_compliance_rules','mkt_product_approved_claims','mkt_product_banned_claims','mkt_compliance_draft','mkt_demo_username_aliases','mkt_demo_users_cloud'];
 
 function isSyncKey(k){ return SYNC_KEYS.includes(k); }
@@ -789,6 +794,51 @@ function getStore(key, fallback) {
 const _kvSyncTimers = {};
 /* ── Chống ghi đè: ghi nhớ id đã thấy từ cloud + merge trước khi push ── */
 const _kvKnownIds = {};   // key → Set các id client đã đồng bộ từ cloud
+const _mktLastBackupAt = {};
+let _mktAutoSyncTimer = null;
+function _mktJson(value){ try { return JSON.stringify(value); } catch(_) { return 'null'; } }
+function _mktByteSize(text){ return new Blob([String(text || '')]).size; }
+function _mktBusinessKey(k){
+  return isSyncKey(k) && !new Set([MKT_NOTIFICATIONS_KEY,'mkt_sync_logs','mkt_compliance_draft','mkt_demo_username_aliases','mkt_demo_users_cloud']).has(k);
+}
+function _mktReadBackups(){
+  try { const rows = JSON.parse(localStorage.getItem(MKT_LOCAL_BACKUPS_KEY) || '[]'); return Array.isArray(rows) ? rows : []; }
+  catch(_) { return []; }
+}
+function _mktWriteBackups(rows){
+  let out = Array.isArray(rows) ? rows.slice(0, MKT_BACKUP_MAX_ITEMS) : [];
+  while (out.length && _mktByteSize(JSON.stringify(out)) > MKT_BACKUP_MAX_TOTAL_BYTES) out.pop();
+  try { localStorage.setItem(MKT_LOCAL_BACKUPS_KEY, JSON.stringify(out)); } catch(_) {}
+}
+function _mktBackupBeforeOverwrite(k, oldRaw, newRaw, reason){
+  if (!_mktBusinessKey(k) || !oldRaw || oldRaw === newRaw) return;
+  const now = Date.now();
+  if (now - (_mktLastBackupAt[k] || 0) < MKT_BACKUP_MIN_INTERVAL_MS) return;
+  if (_mktByteSize(oldRaw) > 900000) return;
+  _mktLastBackupAt[k] = now;
+  const u = (typeof demoCurrentUser === 'function') ? demoCurrentUser() : null;
+  const rows = _mktReadBackups();
+  rows.unshift({ id:'bk_'+now+'_'+Math.random().toString(36).slice(2,7), key:k, reason:reason||'write', at:new Date(now).toISOString(), user:u?.displayName||u?.username||'', raw:oldRaw });
+  _mktWriteBackups(rows);
+}
+function mktListLocalBackups(){ return _mktReadBackups().map(({raw,...meta})=>meta); }
+function mktRestoreLocalBackup(id){
+  const b = _mktReadBackups().find(x=>x.id===id);
+  if (!b) { toast('Không tìm thấy backup.'); return false; }
+  localStorage.setItem(b.key, b.raw);
+  clearPendingSync(b.key);
+  const payload = JSON.parse(b.raw);
+  syncKeyNow(b.key, payload).catch(e=>console.warn('[backup restore sync]', e));
+  reloadDashboardStateFromStore(); render(); toast('Đã khôi phục backup local.'); return true;
+}
+function mktIsEditing(){
+  const a = document.activeElement;
+  if (!a || !a.tagName) return false;
+  if (a.closest && a.closest('#login-screen')) return true;
+  const tag = a.tagName.toUpperCase();
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || a.isContentEditable;
+}
+function mktHasPendingSync(){ return Object.keys(_kvSyncTimers || {}).length > 0; }
 function _kvSetKnown(k, arr) {
   if (!Array.isArray(arr)) return;
   const s = new Set();
@@ -843,7 +893,10 @@ async function _flushKvSync(k) {
 }
 function setStore(key, value) {
   const k = key.startsWith('mkt_') ? key : 'mkt_' + key;
-  try { localStorage.setItem(k, JSON.stringify(value)); } catch(e) {}
+  const raw = _mktJson(value);
+  const oldRaw = localStorage.getItem(k);
+  _mktBackupBeforeOverwrite(k, oldRaw, raw, 'local_write');
+  try { localStorage.setItem(k, raw); } catch(e) {}
   // Debounce push lên Supabase: gộp nhiều lần sửa liên tiếp thành 1 request
   if (isSyncKey(k)) {
     if (_kvSyncTimers[k]) clearTimeout(_kvSyncTimers[k].t);
@@ -859,7 +912,10 @@ function clearPendingSync(k){
 }
 async function syncKeyNow(key, value) {
   const k = key.startsWith('mkt_') ? key : 'mkt_' + key;
-  try { localStorage.setItem(k, JSON.stringify(value)); } catch(e) {}
+  const raw = _mktJson(value);
+  const oldRaw = localStorage.getItem(k);
+  _mktBackupBeforeOverwrite(k, oldRaw, raw, 'sync_now');
+  try { localStorage.setItem(k, raw); } catch(e) {}
   if (!isSyncKey(k)) return true;
   clearPendingSync(k);
   const u = demoCurrentUser();
@@ -871,24 +927,53 @@ async function syncKeyNow(key, value) {
 // Đẩy hết dữ liệu chờ sync trước khi rời trang
 window.addEventListener('beforeunload', () => { Object.keys(_kvSyncTimers).forEach(_flushKvSync); });
 
-async function syncDown() {
+async function syncDown(options = {}) {
   try {
     const rows = await mktApi.kvGetAll();
-    let updated = 0;
+    let seen = 0, updated = 0;
+    const changedKeys = [];
     rows.forEach(r => {
       if (SYNC_KEYS.includes(r.key)) {
-        localStorage.setItem(r.key, JSON.stringify(r.payload));
-        _kvSetKnown(r.key, r.payload);   // ghi nhận id đã thấy từ cloud
-        updated++;
+        seen++;
+        const raw = _mktJson(r.payload);
+        const oldRaw = localStorage.getItem(r.key);
+        if (oldRaw !== raw) {
+          _mktBackupBeforeOverwrite(r.key, oldRaw, raw, 'cloud_pull');
+          localStorage.setItem(r.key, raw);
+          updated++;
+          changedKeys.push(r.key);
+        }
+        _kvSetKnown(r.key, r.payload);
       }
     });
-    console.log('[sync] pulled', updated, 'keys from Supabase');
+    if (!options.quiet) console.log('[sync] pulled', updated, 'changed keys /', seen, 'seen from Supabase');
     updateNotificationsUi();
-    return updated;
+    return options.returnKeys ? { seen, updated, changedKeys } : updated;
   } catch(e) {
     console.warn('[sync] syncDown failed', e);
-    return 0;
+    return options.returnKeys ? { seen:0, updated:0, changedKeys:[], error:e } : 0;
   }
+}
+async function flushPendingSyncNow(){
+  const keys = Object.keys(_kvSyncTimers || {});
+  for (const k of keys) await _flushKvSync(k);
+}
+async function mktAutoSyncTick(){
+  if (!demoCurrentUser || !demoCurrentUser()) return;
+  if (document.body.classList.contains('auth-boot')) return;
+  if (mktHasPendingSync() || mktIsEditing()) return;
+  const res = await syncDown({ quiet:true, returnKeys:true });
+  if (res.updated > 0 && !mktIsEditing()) {
+    reloadDashboardStateFromStore();
+    render();
+    setTs();
+    console.log('[sync] auto-refreshed', res.changedKeys);
+  }
+}
+function startMktAutoSync(){
+  if (_mktAutoSyncTimer) return;
+  _mktAutoSyncTimer = setInterval(mktAutoSyncTick, MKT_AUTO_SYNC_MS);
+  setTimeout(mktAutoSyncTick, 8000);
 }
 
 /* ═══════════════════════════════════════
@@ -1324,6 +1409,7 @@ function demoShowLogin(message, ok){
 function demoShowApp(){
   document.body.classList.remove('auth-boot');
   demoUpdateChrome();
+  startMktAutoSync();
   if (!canViewMod(curMod)) curMod = 'overview';
   if (curMod === 'sale' && saleTab === 'products' && !isDemoAdmin()) saleTab = 'overview';
   render();
@@ -2229,6 +2315,7 @@ function reloadDashboardStateFromStore(){
 }
 async function refresh() {
   try {
+    await flushPendingSyncNow();
     await Promise.all([syncDown(), demoRefreshUsers(), refreshNotificationsFromCloud(false)]);
     reloadDashboardStateFromStore();
   } catch(e) { console.warn('[refresh]', e); }
