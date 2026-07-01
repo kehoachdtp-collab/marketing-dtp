@@ -447,7 +447,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ds-table input,.ds-table select{width:100%;border:1px solid #dbe3ef;border-radius:7px;padding:6px 7px;font-size:12px;background:#fff}
 .ds-section-gap{margin-top:16px}
 @media(max-width:1100px){.ds-grid{grid-template-columns:1fr}.ds-form-grid{grid-template-columns:1fr}}
-@media(max-width:900px){.auth-boot .login-screen{padding:22px 14px}.login-header{margin-bottom:18px}.login-panel{padding:30px 22px}.login-card::before,.login-card::after{display:none}.login-sales-lines{display:none}.login-badges{display:none}.login-field input{height:52px}.login-btn{height:56px}}
+@media(max-width:900px){.auth-boot .login-screen{padding:22px 14px}.login-header{margin-bottom:18px}.login-panel{padding:30px 22px}.login-card::before,.login-card::after{display:none}.login-sales-lines{display:none}.login-badges{display:none}.login-field input{height:52px}.login-btn{height:56px}}/* Shop tasks module */
+.shop-task-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.shop-task-toolbar .grow{flex:1;min-width:180px}
+.shop-task-filter{border:1px solid #dbe3ef;border-radius:9px;background:#fff;padding:8px 10px;font-size:12.5px;color:#1e293b;outline:none;min-width:150px}
+.shop-task-filter:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+.shop-task-kpis{display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:10px;margin-bottom:14px}
+.shop-task-kpi{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;box-shadow:0 1px 3px rgba(15,23,42,.05)}
+.shop-task-kpi strong{display:block;font-size:22px;color:#17233f;line-height:1.1}.shop-task-kpi span{display:block;margin-top:4px;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;font-weight:800;color:#64748b}.shop-task-kpi.warn strong{color:#d97706}.shop-task-kpi.danger strong{color:#dc2626}.shop-task-kpi.good strong{color:#16a34a}
+.shop-task-status{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:850;white-space:nowrap;background:#f1f5f9;color:#475569}.shop-task-status.done{background:#dcfce7;color:#15803d}.shop-task-status.overdue{background:#fee2e2;color:#b91c1c}.shop-task-status.soon{background:#fff7ed;color:#c2410c}.shop-task-status.progress{background:#eff6ff;color:#1d4ed8}
+.shop-task-link{display:inline-block;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#2563eb;text-decoration:underline}
+.shop-task-report-grid{display:grid;grid-template-columns:minmax(320px,1fr) minmax(320px,1fr);gap:14px;margin-top:14px}.shop-task-report-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px;box-shadow:0 1px 3px rgba(15,23,42,.05)}.shop-task-report-card h3{font-size:15px;color:#0f172a;margin-bottom:9px}.shop-task-report-text{white-space:pre-line;font-size:12.5px;line-height:1.55;color:#334155;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:11px;min-height:150px}.shop-task-onepage{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12.5px}.shop-task-onepage .full{grid-column:1/-1}.shop-task-onepage-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px}.shop-task-onepage-box b{display:block;color:#0f172a;margin-bottom:4px}
+@media(max-width:1150px){.shop-task-kpis{grid-template-columns:repeat(3,1fr)}.shop-task-report-grid{grid-template-columns:1fr}}@media(max-width:760px){.shop-task-kpis{grid-template-columns:1fr 1fr}.shop-task-filter{min-width:120px}}
 </style>
 </head>
 <body class="auth-boot app-shell">
@@ -541,6 +552,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="sb-sub-item" data-sale-tab="koc" onclick="navSaleSub('koc')"><span class="sidebar-label">KOC / Affiliate</span></div>
         <div class="sb-sub-item" data-sale-tab="compliance" onclick="navSaleSub('compliance')"><span class="sidebar-label">⚖️ Kiểm duyệt nội dung</span></div>
         <div class="sb-sub-item" data-sale-tab="ads" onclick="navSaleSub('ads')"><span class="sidebar-label">Ads</span></div>
+        <div class="sb-sub-item" data-sale-tab="shopTasks" onclick="navSaleSub('shopTasks')"><span class="sidebar-label">Nhiệm vụ Shop</span></div>
         <div class="sb-sub-item" data-sale-tab="orders" onclick="navSaleSub('orders')"><span class="sidebar-label">Đơn hàng & DT</span></div>
         <div class="sb-sub-item" data-sale-tab="profit" onclick="navSaleSub('profit')"><span class="sidebar-label">Chi phí & Lãi lỗ</span></div>
         <div class="sb-sub-item" data-sale-tab="inventory" onclick="navSaleSub('inventory')"><span class="sidebar-label">Kiểm kho</span></div>
@@ -758,7 +770,7 @@ const mktApi = {
 ═══════════════════════════════════════ */
 const MKT_NOTIFICATIONS_KEY = 'mkt_demo_notifications';
 const MKT_NOTIFICATION_READ_PREFIX = 'mkt_demo_notifications_read_at_';
-const SYNC_KEYS = [MKT_NOTIFICATIONS_KEY,'mkt_b2b_crm_data','mkt_b2b_cost_data','mkt_b2b_assignee_options','mkt_sale_campaigns','mkt_sale_orders','mkt_sale_ads_data','mkt_sale_koc_data','mkt_sale_koc_master','mkt_sale_koc_product_campaigns','mkt_sale_koc_prospects','mkt_sale_koc_collaborations','mkt_sale_koc_collab','mkt_sale_koc_ptlist','mkt_sale_koc_contracts','mkt_sale_inventory','mkt_sale_product_master','mkt_recruitment_campaign_data','mkt_recruitment_msg_data','mkt_data_sources','mkt_google_sheet_configs','mkt_google_sheet_mappings','mkt_sync_logs','mkt_compliance_reviews','mkt_compliance_rules','mkt_product_approved_claims','mkt_product_banned_claims','mkt_compliance_draft','mkt_demo_username_aliases','mkt_demo_users_cloud'];
+const SYNC_KEYS = [MKT_NOTIFICATIONS_KEY,'mkt_b2b_crm_data','mkt_b2b_cost_data','mkt_b2b_assignee_options','mkt_sale_campaigns','mkt_sale_orders','mkt_sale_ads_data','mkt_shop_tasks','mkt_sale_koc_data','mkt_sale_koc_master','mkt_sale_koc_product_campaigns','mkt_sale_koc_prospects','mkt_sale_koc_collaborations','mkt_sale_koc_collab','mkt_sale_koc_ptlist','mkt_sale_koc_contracts','mkt_sale_inventory','mkt_sale_product_master','mkt_recruitment_campaign_data','mkt_recruitment_msg_data','mkt_data_sources','mkt_google_sheet_configs','mkt_google_sheet_mappings','mkt_sync_logs','mkt_compliance_reviews','mkt_compliance_rules','mkt_product_approved_claims','mkt_product_banned_claims','mkt_compliance_draft','mkt_demo_username_aliases','mkt_demo_users_cloud'];
 
 function isSyncKey(k){ return SYNC_KEYS.includes(k); }
 
@@ -889,6 +901,7 @@ const K = {
   saleCamp : 'mkt_sale_campaigns',
   saleOrder: 'mkt_sale_orders',
   saleAds  : 'mkt_sale_ads_data',
+  shopTasks: 'mkt_shop_tasks',
   saleKoc  : 'mkt_sale_koc_data',              /* backward compat sync */
   kocMst   : 'mkt_sale_koc_master',            /* KOC MASTER */
   kocProd  : 'mkt_sale_koc_product_campaigns', /* KOC × SP/CD */
@@ -1924,6 +1937,7 @@ const NOTIFY_KEY_LABELS = {
   mkt_sale_campaigns:['sale','Sale Online'],
   mkt_sale_orders:['sale','Don hang & doanh thu'],
   mkt_sale_ads_data:['sale','Ads Sale Online'],
+  mkt_shop_tasks:['sale','Nhiem vu Shop'],
   mkt_sale_koc_data:['koc','KOC / Affiliate'],
   mkt_sale_koc_master:['koc','Danh sach KOC'],
   mkt_sale_koc_product_campaigns:['koc','KOC theo SP/CD'],
@@ -2107,6 +2121,7 @@ const SALE_TOP_TABS = [
   {id:'koc',       l:'KOC / Affiliate'},
   {id:'compliance',l:'Kiểm duyệt nội dung'},
   {id:'ads',       l:'Ads'},
+  {id:'shopTasks', l:'Nhiệm vụ Shop'},
   {id:'orders',    l:'Đơn hàng & DT'},
   {id:'profit',    l:'Chi phí & Lãi lỗ'},
   {id:'inventory', l:'Kiểm kho'},
@@ -2818,7 +2833,7 @@ const SALE_INV_COLS = [
 
 /* ── State ── */
 let saleCampaigns = [], saleAdsRows = [];
-let saleOrderRows = [], saleInvRows = [], saleMstRows = [];
+let saleOrderRows = [], saleInvRows = [], saleMstRows = [], saleShopTaskRows = [];
 let saleTab = 'overview';
 
 /* ── KOC 2-layer state ── */
@@ -2922,6 +2937,7 @@ function dashboardSaveCurrent(reason, ctx){
         setStore(K.saleOrder, saleOrderRows || []);
         setStore(K.saleInv, saleInvRows || []);
         setStore(K.saleMst, saleMstRows || []);
+        setStore(K.shopTasks, saleShopTaskRows || []);
       }
     } else if (curMod === 'hr') {
       if (typeof hrAutoSave === 'function') hrAutoSave();
@@ -3002,6 +3018,7 @@ function saleLoad() {
   saleOrderRows = getSaleOrders();
   saleInvRows   = getSaleInventory();
   saleMstRows   = getSaleMaster();
+  saleShopTaskRows = getStore(K.shopTasks, []);
   kocPtList     = getStore(K.kocPtList, kocPtList);
   kocContractRows = getStore(K.kocContracts, []);
 
@@ -3171,6 +3188,16 @@ function saleCampDel(id)    {_saleDel(K.saleCamp,saleCampaigns,id,saleCampaigns)
 function saleAdsUpd(id,k,v) {_saleUpd(K.saleAds,saleAdsRows,id,k,v)}
 function saleAdsAdd()       {_saleAdd(K.saleAds,saleAdsRows)}
 function saleAdsDel(id)     {_saleDel(K.saleAds,saleAdsRows,id,saleAdsRows)}
+function shopTaskUpd(id,k,v){
+  const r=saleShopTaskRows.find(r=>r.id==id); if(!r)return;
+  r[k] = ['ngayGhiNhan','deadline','ngayHoanThanh'].includes(k) ? parseDateSafe(v) : v;
+  setStore(K.shopTasks, saleShopTaskRows);
+}
+function shopTaskAdd(){
+  saleShopTaskRows.unshift({id:Date.now()+Math.random(),ngayGhiNhan:new Date().toISOString().slice(0,10),san:'TikTok Shop',tienDo:'Chưa làm'});
+  setStore(K.shopTasks, saleShopTaskRows); saleRerender();
+}
+function shopTaskDel(id){ _saleDel(K.shopTasks,saleShopTaskRows,id,saleShopTaskRows); }
 function saleOrdUpd(id,k,v) {_saleUpd(K.saleOrder,saleOrderRows,id,k,v)}
 function saleOrdAdd()       {_saleAdd(K.saleOrder,saleOrderRows)}
 function saleOrdDel(id)     {_saleDel(K.saleOrder,saleOrderRows,id,saleOrderRows)}
@@ -3229,7 +3256,7 @@ function renderSale() {
   updateTopbarNav();
   const body = ({
     overview:_saleOverview, products:_saleProdMst, campaigns:_saleCampTab,
-    koc:_saleKocTab, compliance:()=>renderCompliancePage('sale'), ads:_saleAdsTab, orders:_saleOrdTab,
+    koc:_saleKocTab, compliance:()=>renderCompliancePage('sale'), ads:_saleAdsTab, shopTasks:_saleShopTasksTab, orders:_saleOrdTab,
     profit:_saleProfitTab, inventory:_saleInvTab,
     reviews:()=>_ph('⭐','Tab Đánh giá KH — bước tiếp theo.'),
     alerts:_saleAlertsTab,
@@ -4994,6 +5021,187 @@ async function kocImportSheet(wb,sheetName){
   saleRerender();
   if (synced) toast(`Da import ${imported.length} dong vao "${isMst?'KOC Master':'KOC x SP/CD'}" va dong bo cloud. May khac bam Cap nhat/F5 se thay.`);
   else toast(`Da import ${imported.length} dong vao may nay nhung CHUA dong bo cloud. Hay thu bam Luu/Cap nhat hoac kiem tra mang.`);
+}
+function _shopTaskNorm(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,''); }
+const SHOP_TASK_PLATFORMS=['','TikTok Shop','Shopee','Lazada','Tiki','Website','Facebook','Khác'];
+const SHOP_TASK_TYPES=['','Tối ưu tiêu đề','Tối ưu ảnh/video','Tối ưu SEO/từ khóa','Tạo voucher/khuyến mại','Đăng feed/shop tab','Livestream','Flash sale','Sửa giá/tồn kho','Tăng đánh giá','Khác'];
+const SHOP_TASK_PROGRESS=['','Chưa làm','Đang làm','Đã đăng','Chờ duyệt','Hoàn thành','Tạm dừng'];
+const SHOP_TASK_HEADER_MAP={
+  'ngayghinhan':'ngayGhiNhan','ngay':'ngayGhiNhan','date':'ngayGhiNhan',
+  'san':'san','platform':'san','kenh':'san','sanban':'san',
+  'sanpham':'sanPham','tensanpham':'sanPham','product':'sanPham',
+  'masp':'maSP','mahang':'maSP','sku':'maSP','productcode':'maSP',
+  'idsanphamtrensan':'platformProductId','idsptrensan':'platformProductId','productid':'platformProductId','itemid':'platformProductId','id':'platformProductId',
+  'dexuatnhiemvu':'deXuatNhiemVu','dexuat':'deXuatNhiemVu','nhiemvu':'deXuatNhiemVu','task':'deXuatNhiemVu',
+  'loainhiemvu':'loaiNhiemVu','loai':'loaiNhiemVu','tasktype':'loaiNhiemVu',
+  'tacdongdukien':'tacDongDuKien','tacdong':'tacDongDuKien','impact':'tacDongDuKien',
+  'deadline':'deadline','hanhoanthanh':'deadline','handone':'deadline',
+  'phutrach':'phuTrach','owner':'phuTrach','nguoiphutrach':'phuTrach',
+  'tiendo':'tienDo','progress':'tienDo','trangthai':'tienDo',
+  'linkdang':'linkDang','link':'linkDang','postlink':'linkDang','urldang':'linkDang',
+  'ngayhoanthanh':'ngayHoanThanh','doneat':'ngayHoanThanh','completiondate':'ngayHoanThanh',
+  'ghichu':'ghiChu','note':'ghiChu','notes':'ghiChu'
+};
+function shopTaskAutoStatus(r){
+  const progress=String(r.tienDo||'').trim().toLowerCase();
+  if(r.ngayHoanThanh || progress.includes('hoàn thành') || progress.includes('hoan thanh')) return 'Hoàn thành';
+  const dl=parseDateSafe(r.deadline); if(!dl) return progress.includes('đang')||progress.includes('dang')?'Đang làm':'Chưa có deadline';
+  const today=parseDateSafe(new Date());
+  const diff=Math.round((new Date(dl+'T00:00:00')-new Date(today+'T00:00:00'))/86400000);
+  if(diff<0) return 'Quá hạn';
+  if(diff<=2) return 'Sắp đến hạn';
+  return progress.includes('đang')||progress.includes('dang')?'Đang làm':'Đúng hạn';
+}
+function shopTaskStatusClass(st){ return st==='Hoàn thành'?'done':st==='Quá hạn'?'overdue':st==='Sắp đến hạn'?'soon':st==='Đang làm'?'progress':''; }
+function _shopTaskVal(id){ const el=document.getElementById('shop-filter-'+id); return el?el.value:''; }
+function shopTaskFilteredRows(){
+  const q=_shopTaskNorm(_shopTaskVal('q'));
+  const san=_shopTaskVal('san'), type=_shopTaskVal('type'), status=_shopTaskVal('status'), owner=_shopTaskVal('owner');
+  return saleShopTaskRows.filter(r=>{
+    const st=shopTaskAutoStatus(r);
+    const hay=[r.san,r.sanPham,r.maSP,r.platformProductId,r.deXuatNhiemVu,r.loaiNhiemVu,r.tacDongDuKien,r.phuTrach,r.linkDang,r.ghiChu,st].join(' ');
+    if(q && !_shopTaskNorm(hay).includes(q)) return false;
+    if(san && r.san!==san) return false;
+    if(type && r.loaiNhiemVu!==type) return false;
+    if(status && st!==status) return false;
+    if(owner && r.phuTrach!==owner) return false;
+    return true;
+  });
+}
+function shopTaskKpis(rows){
+  const all=saleShopTaskRows, filtered=rows||shopTaskFilteredRows();
+  const statusAll=all.map(shopTaskAutoStatus);
+  const done=statusAll.filter(s=>s==='Hoàn thành').length;
+  const overdue=statusAll.filter(s=>s==='Quá hạn').length;
+  const soon=statusAll.filter(s=>s==='Sắp đến hạn').length;
+  const doing=statusAll.filter(s=>s==='Đang làm').length;
+  const rate=all.length?Math.round(done/all.length*100):0;
+  return {total:all.length, shown:filtered.length, done, overdue, soon, doing, rate};
+}
+function _shopTaskOptions(values, selected, blank){
+  const arr=[...new Set((values||[]).filter(Boolean))];
+  return `<option value="">${blank||'Tất cả'}</option>`+arr.map(v=>`<option value="${esc(v)}" ${selected===v?'selected':''}>${esc(v)}</option>`).join('');
+}
+function _shopTaskCell(r,k,type,opts){
+  const id=r.id, v=esc(r[k]||'');
+  if(type==='date') return `<input type="text" value="${formatDateVN(r[k])}" placeholder="DD/MM/YYYY" onchange="shopTaskUpd(${id},'${k}',this.value)">`;
+  if(type==='select') return `<select onchange="shopTaskUpd(${id},'${k}',this.value)">${(opts||[]).map(o=>`<option ${r[k]===o?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
+  if(type==='link') return `<input type="text" value="${v}" placeholder="https://..." onchange="shopTaskUpd(${id},'${k}',this.value)">${r[k]?`<a class="shop-task-link" href="${esc(r[k])}" target="_blank" rel="noopener noreferrer" title="${esc(r[k])}">${esc(r[k])}</a>`:''}`;
+  return `<input type="text" value="${v}" onchange="shopTaskUpd(${id},'${k}',this.value)">`;
+}
+function shopTaskSaveNow(){ setStore(K.shopTasks,saleShopTaskRows); toast('Đã lưu Nhiệm vụ Shop.'); }
+function shopTaskFiltersChanged(){ saleRerender(); }
+function shopTaskReportText(rows){
+  const k=shopTaskKpis(rows); const topOver=(rows||[]).filter(r=>shopTaskAutoStatus(r)==='Quá hạn').slice(0,5);
+  const topSoon=(rows||[]).filter(r=>shopTaskAutoStatus(r)==='Sắp đến hạn').slice(0,5);
+  return [
+    'BÁO CÁO NHIỆM VỤ SHOP',
+    'Tổng nhiệm vụ: '+k.total+' | Đang hiển thị: '+k.shown,
+    'Hoàn thành: '+k.done+' ('+k.rate+'%) | Đang làm: '+k.doing+' | Sắp đến hạn: '+k.soon+' | Quá hạn: '+k.overdue,
+    '',
+    'Việc quá hạn:', topOver.length?topOver.map((r,i)=>(i+1)+'. '+(r.sanPham||r.maSP||'Chưa rõ SP')+' - '+(r.deXuatNhiemVu||'Chưa rõ nhiệm vụ')+' | Deadline '+formatDateVN(r.deadline)+' | '+(r.phuTrach||'Chưa giao')).join('\n'):'Không có',
+    '',
+    'Việc sắp đến hạn:', topSoon.length?topSoon.map((r,i)=>(i+1)+'. '+(r.sanPham||r.maSP||'Chưa rõ SP')+' - '+(r.deXuatNhiemVu||'Chưa rõ nhiệm vụ')+' | Deadline '+formatDateVN(r.deadline)+' | '+(r.phuTrach||'Chưa giao')).join('\n'):'Không có'
+  ].join('\n');
+}
+function shopTaskCopyReport(){ const txt=shopTaskReportText(shopTaskFilteredRows()); navigator.clipboard?.writeText(txt); toast('Đã copy báo cáo text.'); }
+function shopTaskOnePageHtml(rows){
+  const k=shopTaskKpis(rows); const byOwner={}; const byType={};
+  (rows||[]).forEach(r=>{ byOwner[r.phuTrach||'Chưa giao']=(byOwner[r.phuTrach||'Chưa giao']||0)+1; byType[r.loaiNhiemVu||'Khác']=(byType[r.loaiNhiemVu||'Khác']||0)+1; });
+  const topObj=o=>Object.entries(o).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([a,b])=>`${esc(a)}: <b>${b}</b>`).join('<br>')||'—';
+  return `<div class="shop-task-onepage">
+    <div class="shop-task-onepage-box"><b>KPI</b>Tổng: ${k.total}<br>Hoàn thành: ${k.done} (${k.rate}%)<br>Đang làm: ${k.doing}</div>
+    <div class="shop-task-onepage-box"><b>Cảnh báo</b>Sắp đến hạn: ${k.soon}<br>Quá hạn: ${k.overdue}<br>Đang hiển thị: ${k.shown}</div>
+    <div class="shop-task-onepage-box"><b>Theo phụ trách</b>${topObj(byOwner)}</div>
+    <div class="shop-task-onepage-box"><b>Theo loại nhiệm vụ</b>${topObj(byType)}</div>
+    <div class="shop-task-onepage-box full"><b>Ưu tiên hôm nay</b>${(rows||[]).filter(r=>['Quá hạn','Sắp đến hạn'].includes(shopTaskAutoStatus(r))).slice(0,6).map(r=>`${esc(r.sanPham||r.maSP||'SP')} - ${esc(r.deXuatNhiemVu||'Nhiệm vụ')} (${esc(shopTaskAutoStatus(r))})`).join('<br>')||'Không có cảnh báo deadline.'}</div>
+  </div>`;
+}
+async function shopTaskImportFile(file){
+  if(!file) return;
+  if(!canImportMod('sale')){ toast('Bạn không có quyền import Sale Online.'); return; }
+  try{ await ensureXlsxLoaded(); }catch(e){ toast('Không tải được thư viện Excel.'); return; }
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'binary',cellDates:true});
+      const ws=wb.Sheets[wb.SheetNames[0]]; const data=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      if(data.length<2){ toast('File không có dữ liệu.'); return; }
+      const headers=(data[0]||[]).map(h=>_shopTaskNorm(h));
+      const mapped=headers.map(h=>SHOP_TASK_HEADER_MAP[h]||'');
+      const imported=[];
+      data.slice(1).forEach(row=>{
+        if(!row || row.every(c=>String(c||'').trim()==='')) return;
+        const obj={id:Date.now()+Math.random()};
+        mapped.forEach((k,i)=>{ if(!k) return; obj[k]=['ngayGhiNhan','deadline','ngayHoanThanh'].includes(k)?parseDateSafe(row[i]):String(row[i]??'').trim(); });
+        if(!obj.ngayGhiNhan) obj.ngayGhiNhan=new Date().toISOString().slice(0,10);
+        imported.push(obj);
+      });
+      if(!imported.length){ toast('Không có dòng hợp lệ để import.'); return; }
+      const append = saleShopTaskRows.length ? confirm('Hiện có '+saleShopTaskRows.length+' nhiệm vụ. OK = cộng thêm, Cancel = ghi đè.') : true;
+      if(append) saleShopTaskRows.push(...imported); else saleShopTaskRows.splice(0,saleShopTaskRows.length,...imported);
+      setStore(K.shopTasks,saleShopTaskRows); saleRerender(); toast('Đã import '+imported.length+' nhiệm vụ Shop.');
+    }catch(err){ console.error(err); toast('Lỗi đọc file import Nhiệm vụ Shop.'); }
+  };
+  reader.readAsBinaryString(file);
+  const inp=document.getElementById('shopTaskImportInput'); if(inp) inp.value='';
+}
+function _saleShopTasksTab(){
+  const canEdit=canEditMod('sale'), canImport=canImportMod('sale');
+  const rows=shopTaskFilteredRows(); const k=shopTaskKpis(rows);
+  const sanSel=_shopTaskVal('san'), typeSel=_shopTaskVal('type'), statusSel=_shopTaskVal('status'), ownerSel=_shopTaskVal('owner'), qVal=_shopTaskVal('q');
+  const ownerOptions=[...new Set(saleShopTaskRows.map(r=>r.phuTrach).filter(Boolean))];
+  const statusOptions=['Hoàn thành','Quá hạn','Sắp đến hạn','Đang làm','Đúng hạn','Chưa có deadline'];
+  const cols=['Ngày ghi nhận','Sàn','Sản phẩm','Mã SP','ID sản phẩm trên sàn','Đề xuất nhiệm vụ','Loại nhiệm vụ','Tác động dự kiến','Deadline','Phụ trách','Tiến độ','Link đăng','Trạng thái tự động','Ngày hoàn thành','Ghi chú'];
+  const body=rows.map((r,i)=>{ const st=shopTaskAutoStatus(r); return `<tr>
+    <td class="stt">${i+1}</td>
+    <td style="min-width:110px">${_shopTaskCell(r,'ngayGhiNhan','date')}</td>
+    <td style="min-width:130px">${_shopTaskCell(r,'san','select',SHOP_TASK_PLATFORMS)}</td>
+    <td style="min-width:190px">${_shopTaskCell(r,'sanPham')}</td>
+    <td style="min-width:95px">${_shopTaskCell(r,'maSP')}</td>
+    <td style="min-width:150px">${_shopTaskCell(r,'platformProductId')}</td>
+    <td style="min-width:230px">${_shopTaskCell(r,'deXuatNhiemVu')}</td>
+    <td style="min-width:150px">${_shopTaskCell(r,'loaiNhiemVu','select',SHOP_TASK_TYPES)}</td>
+    <td style="min-width:180px">${_shopTaskCell(r,'tacDongDuKien')}</td>
+    <td style="min-width:110px">${_shopTaskCell(r,'deadline','date')}</td>
+    <td style="min-width:120px">${_shopTaskCell(r,'phuTrach')}</td>
+    <td style="min-width:120px">${_shopTaskCell(r,'tienDo','select',SHOP_TASK_PROGRESS)}</td>
+    <td style="min-width:190px">${_shopTaskCell(r,'linkDang','link')}</td>
+    <td style="min-width:120px"><span class="shop-task-status ${shopTaskStatusClass(st)}">${esc(st)}</span></td>
+    <td style="min-width:110px">${_shopTaskCell(r,'ngayHoanThanh','date')}</td>
+    <td style="min-width:220px">${_shopTaskCell(r,'ghiChu')}</td>
+    <td><button class="del-btn" ${canEdit?'':'disabled'} onclick="shopTaskDel(${r.id})">×</button></td>
+  </tr>`; }).join('');
+  return `<div class="shop-task-kpis">
+    <div class="shop-task-kpi"><strong>${k.total}</strong><span>Tổng nhiệm vụ</span></div>
+    <div class="shop-task-kpi"><strong>${k.shown}</strong><span>Đang hiển thị</span></div>
+    <div class="shop-task-kpi good"><strong>${k.done}</strong><span>Hoàn thành</span></div>
+    <div class="shop-task-kpi warn"><strong>${k.soon}</strong><span>Sắp đến hạn</span></div>
+    <div class="shop-task-kpi danger"><strong>${k.overdue}</strong><span>Quá hạn</span></div>
+    <div class="shop-task-kpi"><strong>${k.rate}%</strong><span>Tỷ lệ hoàn thành</span></div>
+  </div>
+  <div class="shop-task-toolbar">
+    <input id="shop-filter-q" class="shop-task-filter grow" value="${esc(qVal)}" placeholder="Tìm sản phẩm, mã SP, nhiệm vụ, phụ trách..." onchange="shopTaskFiltersChanged()">
+    <select id="shop-filter-san" class="shop-task-filter" onchange="shopTaskFiltersChanged()">${_shopTaskOptions(SHOP_TASK_PLATFORMS.filter(Boolean),sanSel,'Tất cả sàn')}</select>
+    <select id="shop-filter-type" class="shop-task-filter" onchange="shopTaskFiltersChanged()">${_shopTaskOptions(SHOP_TASK_TYPES.filter(Boolean),typeSel,'Tất cả loại')}</select>
+    <select id="shop-filter-status" class="shop-task-filter" onchange="shopTaskFiltersChanged()">${_shopTaskOptions(statusOptions,statusSel,'Tất cả trạng thái')}</select>
+    <select id="shop-filter-owner" class="shop-task-filter" onchange="shopTaskFiltersChanged()">${_shopTaskOptions(ownerOptions,ownerSel,'Tất cả phụ trách')}</select>
+  </div>
+  <div class="act-bar">
+    <span class="act-bar-l">${rows.length} dòng nhiệm vụ Shop</span>
+    <div class="act-bar-r">
+      <input type="file" id="shopTaskImportInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="shopTaskImportFile(this.files[0])">
+      <button class="btn" ${canImport?'':'disabled'} onclick="document.getElementById('shopTaskImportInput').click()">📥 Import Excel</button>
+      <button class="btn btn-primary" ${canEdit?'':'disabled'} onclick="shopTaskAdd()">＋ Thêm thủ công</button>
+      <button class="btn" onclick="shopTaskCopyReport()">📋 Copy báo cáo text</button>
+      <button class="btn" onclick="shopTaskSaveNow()">💾 Lưu</button>
+    </div>
+  </div>
+  ${rows.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="stt">#</th>${cols.map(h=>`<th>${h}</th>`).join('')}<th></th></tr></thead><tbody>${body}</tbody></table></div>`:`<div class="empty-b"><div class="ei">🛍️</div><div class="em">Chưa có nhiệm vụ Shop.<br>Nhấn <strong>＋ Thêm thủ công</strong> hoặc <strong>Import Excel</strong>.</div></div>`}
+  <div class="shop-task-report-grid">
+    <div class="shop-task-report-card"><h3>Báo cáo text</h3><div class="shop-task-report-text">${esc(shopTaskReportText(rows))}</div></div>
+    <div class="shop-task-report-card"><h3>Báo cáo 1 trang</h3>${shopTaskOnePageHtml(rows)}</div>
+  </div>`;
 }
 function _saleAdsTab()   { return _saleTbl(saleAdsRows, SALE_ADS_COLS,'saleAdsUpd','saleAdsAdd','saleAdsDel','Chưa có dữ liệu Ads nào.<br>Cần tạo Chiến dịch trước.'); }
 function _saleOrdTab()   { return _saleTbl(saleOrderRows,SALE_ORD_COLS,'saleOrdUpd','saleOrdAdd','saleOrdDel','Chưa có đơn hàng nào.<br>Thêm đơn hoặc import Excel (bước sau).'); }
