@@ -459,6 +459,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .shop-task-link{display:inline-block;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#2563eb;text-decoration:underline}
 .shop-task-report-grid{display:grid;grid-template-columns:minmax(320px,1fr) minmax(320px,1fr);gap:14px;margin-top:14px}.shop-task-report-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px;box-shadow:0 1px 3px rgba(15,23,42,.05)}.shop-task-report-card h3{font-size:15px;color:#0f172a;margin-bottom:9px}.shop-task-report-text{white-space:pre-line;font-size:12.5px;line-height:1.55;color:#334155;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:11px;min-height:150px}.shop-task-onepage{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12.5px}.shop-task-onepage .full{grid-column:1/-1}.shop-task-onepage-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px}.shop-task-onepage-box b{display:block;color:#0f172a;margin-bottom:4px}
 @media(max-width:1150px){.shop-task-kpis{grid-template-columns:repeat(3,1fr)}.shop-task-report-grid{grid-template-columns:1fr}}@media(max-width:760px){.shop-task-kpis{grid-template-columns:1fr 1fr}.shop-task-filter{min-width:120px}}
+.employee-task-kpis{display:grid;grid-template-columns:repeat(6,minmax(125px,1fr));gap:10px;margin-bottom:14px}
+.employee-task-kpi{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;box-shadow:0 1px 3px rgba(15,23,42,.05)}
+.employee-task-kpi strong{display:block;font-size:22px;color:#17233f;line-height:1.1}.employee-task-kpi span{display:block;margin-top:4px;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;font-weight:800;color:#64748b}.employee-task-kpi.warn strong{color:#d97706}.employee-task-kpi.danger strong{color:#dc2626}.employee-task-kpi.good strong{color:#16a34a}
+.employee-task-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.employee-task-toolbar .grow{flex:1;min-width:220px}
+.employee-task-filter{border:1px solid #dbe3ef;border-radius:9px;background:#fff;padding:8px 10px;font-size:12.5px;color:#1e293b;outline:none;min-width:145px}.employee-task-filter:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+.employee-task-status{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:850;white-space:nowrap;background:#f1f5f9;color:#475569}.employee-task-status.done{background:#dcfce7;color:#15803d}.employee-task-status.overdue{background:#fee2e2;color:#b91c1c}.employee-task-status.soon{background:#fff7ed;color:#c2410c}.employee-task-status.progress{background:#eff6ff;color:#1d4ed8}.employee-task-status.pause{background:#f8fafc;color:#64748b}
+.employee-task-table input,.employee-task-table select,.employee-task-table textarea{width:100%;min-width:120px;border:1px solid #dbe3ef;border-radius:8px;padding:7px 9px;font-size:12.5px;background:#fff}.employee-task-table textarea{min-width:220px;min-height:38px;resize:vertical}.employee-task-table input:focus,.employee-task-table select:focus,.employee-task-table textarea:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+.employee-task-report-grid{display:grid;grid-template-columns:minmax(320px,1fr) minmax(320px,1fr);gap:14px;margin-top:14px}.employee-task-report-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px;box-shadow:0 1px 3px rgba(15,23,42,.05)}.employee-task-report-card h3{font-size:15px;color:#0f172a;margin-bottom:9px}.employee-task-report-text{white-space:pre-line;font-size:12.5px;line-height:1.55;color:#334155;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:11px;min-height:145px}.employee-task-link{display:inline-block;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#2563eb;text-decoration:underline}
+@media(max-width:1150px){.employee-task-kpis{grid-template-columns:repeat(3,1fr)}.employee-task-report-grid{grid-template-columns:1fr}}@media(max-width:760px){.employee-task-kpis{grid-template-columns:1fr 1fr}.employee-task-filter{min-width:120px}}
+
 </style>
 </head>
 <body class="auth-boot app-shell">
@@ -565,6 +575,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="sb-section sidebar-section-title" id="nav-admin-section">⚙️ Quản trị hệ thống</div>
     <div class="sb-item" id="nav-data-sources" title="Nguồn dữ liệu" onclick="navTo('dataSources',this)">
       <span class="sb-item-icon">🔗</span> <span class="sidebar-label">Nguồn dữ liệu</span></div>
+    <div class="sb-item" id="nav-employee-tasks" title="Theo dõi công việc" onclick="navTo('employeeTasks',this)">
+      <span class="sb-item-icon">✅</span> <span class="sidebar-label">Theo dõi công việc</span></div>
     <div class="sb-item" id="nav-users" title="Quản lý user" onclick="navTo('users',this)">
       <span class="sb-item-icon">👤</span> <span class="sidebar-label">Quản lý user</span></div>
     <div class="sb-item sb-logout-item" id="nav-logout" title="&#272;&#259;ng xu&#7845;t" onclick="demoLogout()">
@@ -775,7 +787,7 @@ const MKT_AUTO_SYNC_MS = 45000;
 const MKT_BACKUP_MIN_INTERVAL_MS = 120000;
 const MKT_BACKUP_MAX_ITEMS = 14;
 const MKT_BACKUP_MAX_TOTAL_BYTES = 2500000;
-const SYNC_KEYS = [MKT_NOTIFICATIONS_KEY,'mkt_b2b_crm_data','mkt_b2b_cost_data','mkt_b2b_assignee_options','mkt_sale_campaigns','mkt_sale_orders','mkt_sale_ads_data','mkt_shop_tasks','mkt_sale_koc_data','mkt_sale_koc_master','mkt_sale_koc_product_campaigns','mkt_sale_koc_prospects','mkt_sale_koc_collaborations','mkt_sale_koc_collab','mkt_sale_koc_ptlist','mkt_sale_koc_contracts','mkt_sale_inventory','mkt_sale_product_master','mkt_recruitment_campaign_data','mkt_recruitment_msg_data','mkt_data_sources','mkt_google_sheet_configs','mkt_google_sheet_mappings','mkt_sync_logs','mkt_compliance_reviews','mkt_compliance_rules','mkt_product_approved_claims','mkt_product_banned_claims','mkt_compliance_draft','mkt_demo_username_aliases','mkt_demo_users_cloud'];
+const SYNC_KEYS = [MKT_NOTIFICATIONS_KEY,'mkt_b2b_crm_data','mkt_b2b_cost_data','mkt_b2b_assignee_options','mkt_sale_campaigns','mkt_sale_orders','mkt_sale_ads_data','mkt_shop_tasks','mkt_employee_tasks','mkt_sale_koc_data','mkt_sale_koc_master','mkt_sale_koc_product_campaigns','mkt_sale_koc_prospects','mkt_sale_koc_collaborations','mkt_sale_koc_collab','mkt_sale_koc_ptlist','mkt_sale_koc_contracts','mkt_sale_inventory','mkt_sale_product_master','mkt_recruitment_campaign_data','mkt_recruitment_msg_data','mkt_data_sources','mkt_google_sheet_configs','mkt_google_sheet_mappings','mkt_sync_logs','mkt_compliance_reviews','mkt_compliance_rules','mkt_product_approved_claims','mkt_product_banned_claims','mkt_compliance_draft','mkt_demo_username_aliases','mkt_demo_users_cloud'];
 
 function isSyncKey(k){ return SYNC_KEYS.includes(k); }
 
@@ -987,6 +999,7 @@ const K = {
   saleOrder: 'mkt_sale_orders',
   saleAds  : 'mkt_sale_ads_data',
   shopTasks: 'mkt_shop_tasks',
+  employeeTasks: 'mkt_employee_tasks',
   saleKoc  : 'mkt_sale_koc_data',              /* backward compat sync */
   kocMst   : 'mkt_sale_koc_master',            /* KOC MASTER */
   kocProd  : 'mkt_sale_koc_product_campaigns', /* KOC × SP/CD */
@@ -1010,7 +1023,7 @@ const DEMO_USERS_KEY = 'mkt_demo_users';
 const DEMO_SESSION_KEY = 'mkt_demo_session';
 const DEMO_USERNAME_ALIASES_KEY = 'mkt_demo_username_aliases';
 const DEMO_CLOUD_USERS_KEY = 'mkt_demo_users_cloud';
-const DEMO_MODULE_LABELS = {dashboard:'Tổng quan MKT',b2b:'B2B',sale:'Sale Online',hr:'Tuyển dụng',dataSources:'Nguồn dữ liệu',users:'Quản lý user'};
+const DEMO_MODULE_LABELS = {dashboard:'Tổng quan MKT',b2b:'B2B',sale:'Sale Online',hr:'Tuyển dụng',dataSources:'Nguồn dữ liệu',employeeTasks:'Theo dõi công việc',users:'Quản lý user'};
 const DEMO_PERMISSION_PRESETS = {
   none:{label:'Không truy cập', value:{view:false,edit:false,import:false,export:false,manageUsers:false,resetPassword:false}},
   view:{label:'Chỉ xem', value:{view:true,edit:false,import:false,export:false,manageUsers:false,resetPassword:false}},
@@ -1370,7 +1383,7 @@ function demoCurrentUser(){
     return session.user;  // session.user là object demoUser format
   } catch(_) { return null; }
 }
-function demoModuleKey(mod){ if (mod === 'overview') return 'dashboard'; if (mod === 'dataSources') return 'users'; return mod; }
+function demoModuleKey(mod){ if (mod === 'overview') return 'dashboard'; if (mod === 'dataSources' || mod === 'employeeTasks') return 'users'; return mod; }
 function demoCan(mod, action){
   const user = demoCurrentUser();
   if (!user) return false;
@@ -1504,7 +1517,7 @@ function demoUpdateChrome(){
   const user = demoCurrentUser();
   const label = document.getElementById('topbar-user');
   if (label) label.textContent = user ? `${user.displayName || user.username} (${user.username})` : '';
-  const navMap = {overview:'nav-overview',b2b:'nav-b2b',sale:'nav-sale',hr:'nav-hr',dataSources:'nav-data-sources',users:'nav-users'};
+  const navMap = {overview:'nav-overview',b2b:'nav-b2b',sale:'nav-sale',hr:'nav-hr',dataSources:'nav-data-sources',employeeTasks:'nav-employee-tasks',users:'nav-users'};
   Object.entries(navMap).forEach(([mod,id]) => {
     const el = document.getElementById(id);
     if (el) el.style.display = canViewMod(mod) ? '' : 'none';
@@ -1652,6 +1665,166 @@ async function demoDeleteUser(username){
     console.error('[deleteUser]', e);
     toast('Loi xoa user: ' + (e.message || e));
   }
+}
+/* EMPLOYEE_TASKS_DEMO_VERSION 1 - theo dõi công việc nhân viên, lưu mkt_employee_tasks và sync cloud. */
+const EMPLOYEE_TASK_STATUSES = ['Chưa làm','Đang làm','Chờ duyệt','Hoàn thành','Tạm dừng'];
+const EMPLOYEE_TASK_PRIORITIES = ['Thấp','Trung bình','Cao','Gấp'];
+const EMPLOYEE_TASK_MODULES = ['B2B','Sale Online','KOC','Tuyển dụng','Quản trị hệ thống','Khác'];
+let employeeTaskRows = [];
+let employeeTaskFilters = {q:'', assignee:'', module:'', status:'', priority:''};
+function employeeTaskId(){ return 'et_' + Date.now() + '_' + Math.random().toString(36).slice(2,7); }
+function employeeTasksLoad(){ employeeTaskRows = getStore(K.employeeTasks, []); if (!Array.isArray(employeeTaskRows)) employeeTaskRows = []; return employeeTaskRows; }
+function employeeTasksSave(showMsg){ setStore(K.employeeTasks, employeeTaskRows || []); if (showMsg) toast('Đã lưu theo dõi công việc.'); }
+function employeeTaskToday(){ const d = new Date(); return d.toISOString().slice(0,10); }
+function employeeTaskAdd(){
+  const u = demoCurrentUser() || {};
+  if (!canEditMod('employeeTasks')) { toast('Bạn không có quyền thêm công việc.'); return; }
+  employeeTaskRows.unshift({id:employeeTaskId(), ngayGiao:employeeTaskToday(), nhanVien:'', module:'Sale Online', congViec:'', moTa:'', uuTien:'Trung bình', deadline:'', trangThai:'Chưa làm', tienDo:0, link:'', ngayHoanThanh:'', nguoiGiao:u.displayName || u.username || '', ghiChu:'', updatedAt:new Date().toISOString()});
+  employeeTasksSave(false); render(); toast('＋ Đã thêm công việc mới.');
+}
+function employeeTaskUpdate(id, field, value){
+  const row = employeeTaskRows.find(x => x.id === id); if (!row) return;
+  if (!canEditMod('employeeTasks')) { toast('Bạn không có quyền sửa công việc.'); render(); return; }
+  if (field === 'tienDo') value = Math.max(0, Math.min(100, Number(value)||0));
+  row[field] = value;
+  if (field === 'trangThai' && value === 'Hoàn thành' && !row.ngayHoanThanh) row.ngayHoanThanh = employeeTaskToday();
+  if (field === 'trangThai' && value !== 'Hoàn thành') row.ngayHoanThanh = row.ngayHoanThanh || '';
+  row.updatedAt = new Date().toISOString();
+  employeeTasksSave(false);
+}
+function employeeTaskDelete(id){
+  if (!canEditMod('employeeTasks')) { toast('Bạn không có quyền xóa công việc.'); return; }
+  if (!confirm('Xóa công việc này?')) return;
+  employeeTaskRows = employeeTaskRows.filter(x => x.id !== id);
+  employeeTasksSave(true); render();
+}
+function employeeTaskOpt(list,current){ return list.map(x => '<option value="'+demoEsc(x)+'" '+(x===current?'selected':'')+'>'+demoEsc(x)+'</option>').join(''); }
+function employeeTaskAutoStatus(row){
+  const st = row.trangThai || 'Chưa làm';
+  if (st === 'Hoàn thành') return {label:'Hoàn thành', cls:'done'};
+  if (st === 'Tạm dừng') return {label:'Tạm dừng', cls:'pause'};
+  const d = parseDateSafe(row.deadline);
+  if (d) {
+    const today = new Date(employeeTaskToday() + 'T00:00:00');
+    const due = new Date(d + 'T00:00:00');
+    const diff = Math.round((due - today)/86400000);
+    if (diff < 0) return {label:'Quá hạn ' + Math.abs(diff) + ' ngày', cls:'overdue'};
+    if (diff <= 2) return {label: diff === 0 ? 'Đến hạn hôm nay' : 'Sắp đến hạn', cls:'soon'};
+  }
+  if (st === 'Đang làm' || st === 'Chờ duyệt') return {label:st, cls:'progress'};
+  return {label:st, cls:''};
+}
+function employeeTaskAssignees(){
+  const fromTasks = employeeTaskRows.map(r => r.nhanVien).filter(Boolean);
+  const fromUsers = (typeof demoGetUsers === 'function' ? demoGetUsers() : []).map(u => u.displayName || u.username).filter(Boolean);
+  return Array.from(new Set(fromTasks.concat(fromUsers))).sort((a,b)=>a.localeCompare(b,'vi'));
+}
+function employeeTaskFilterState(){
+  const g = id => (document.getElementById(id)?.value || '').trim();
+  if (document.getElementById('et-filter-q')) employeeTaskFilters = {q:g('et-filter-q'), assignee:g('et-filter-assignee'), module:g('et-filter-module'), status:g('et-filter-status'), priority:g('et-filter-priority')};
+  return Object.assign({q:'', assignee:'', module:'', status:'', priority:''}, employeeTaskFilters, {q:String(employeeTaskFilters.q || '').toLowerCase()});
+}
+function employeeTaskFilteredRows(){
+  const f = employeeTaskFilterState();
+  return (employeeTaskRows || []).filter(r => {
+    const auto = employeeTaskAutoStatus(r).label;
+    const hay = [r.nhanVien,r.module,r.congViec,r.moTa,r.uuTien,r.deadline,r.trangThai,auto,r.link,r.nguoiGiao,r.ghiChu].join(' ').toLowerCase();
+    if (f.q && !hay.includes(f.q)) return false;
+    if (f.assignee && r.nhanVien !== f.assignee) return false;
+    if (f.module && r.module !== f.module) return false;
+    if (f.priority && r.uuTien !== f.priority) return false;
+    if (f.status) {
+      if (f.status === 'Quá hạn' && employeeTaskAutoStatus(r).cls !== 'overdue') return false;
+      else if (f.status === 'Sắp đến hạn' && employeeTaskAutoStatus(r).cls !== 'soon') return false;
+      else if (!['Quá hạn','Sắp đến hạn'].includes(f.status) && r.trangThai !== f.status) return false;
+    }
+    return true;
+  });
+}
+function employeeTaskKpis(rows){
+  const total = rows.length;
+  const done = rows.filter(r => (r.trangThai||'') === 'Hoàn thành').length;
+  const overdue = rows.filter(r => employeeTaskAutoStatus(r).cls === 'overdue').length;
+  const soon = rows.filter(r => employeeTaskAutoStatus(r).cls === 'soon').length;
+  const doing = rows.filter(r => ['Đang làm','Chờ duyệt'].includes(r.trangThai||'')).length;
+  const avg = total ? Math.round(rows.reduce((s,r)=>s+(Number(r.tienDo)||0),0)/total) : 0;
+  return {total,done,overdue,soon,doing,avg,rate:total?Math.round(done/total*100):0};
+}
+function employeeTaskKpiHtml(k){ return `<div class="employee-task-kpis"><div class="employee-task-kpi"><strong>${k.total}</strong><span>Tổng việc</span></div><div class="employee-task-kpi progress"><strong>${k.doing}</strong><span>Đang làm/chờ duyệt</span></div><div class="employee-task-kpi warn"><strong>${k.soon}</strong><span>Sắp đến hạn</span></div><div class="employee-task-kpi danger"><strong>${k.overdue}</strong><span>Quá hạn</span></div><div class="employee-task-kpi good"><strong>${k.done}</strong><span>Hoàn thành</span></div><div class="employee-task-kpi"><strong>${k.rate}%</strong><span>Tỷ lệ hoàn thành</span></div></div>`; }
+function employeeTaskReport(rows){
+  const k = employeeTaskKpis(rows);
+  const overdue = rows.filter(r => employeeTaskAutoStatus(r).cls === 'overdue').slice(0,8).map(r => '- ' + (r.nhanVien||'Chưa gán') + ': ' + (r.congViec||'Chưa nhập việc') + ' | Deadline ' + (formatDateVN(r.deadline)||'-')).join('\n') || '- Không có việc quá hạn trong bộ lọc.';
+  const soon = rows.filter(r => employeeTaskAutoStatus(r).cls === 'soon').slice(0,8).map(r => '- ' + (r.nhanVien||'Chưa gán') + ': ' + (r.congViec||'Chưa nhập việc') + ' | Deadline ' + (formatDateVN(r.deadline)||'-')).join('\n') || '- Không có việc sắp đến hạn.';
+  const byPerson = {};
+  rows.forEach(r => { const n = r.nhanVien || 'Chưa gán'; byPerson[n] = byPerson[n] || {total:0,done:0,overdue:0}; byPerson[n].total++; if (r.trangThai === 'Hoàn thành') byPerson[n].done++; if (employeeTaskAutoStatus(r).cls === 'overdue') byPerson[n].overdue++; });
+  const people = Object.entries(byPerson).sort((a,b)=>b[1].total-a[1].total).slice(0,8).map(([n,v])=>`- ${n}: ${v.done}/${v.total} hoàn thành, ${v.overdue} quá hạn`).join('\n') || '- Chưa có dữ liệu nhân viên.';
+  return `BÁO CÁO THEO DÕI CÔNG VIỆC\nTổng việc: ${k.total}\nHoàn thành: ${k.done} (${k.rate}%)\nĐang làm/chờ duyệt: ${k.doing}\nSắp đến hạn: ${k.soon}\nQuá hạn: ${k.overdue}\nTiến độ trung bình: ${k.avg}%\n\nVIỆC QUÁ HẠN\n${overdue}\n\nSẮP ĐẾN HẠN\n${soon}\n\nTHEO NHÂN VIÊN\n${people}`;
+}
+function employeeTaskCopyReport(){
+  const text = employeeTaskReport(employeeTaskFilteredRows());
+  if (navigator.clipboard) navigator.clipboard.writeText(text).then(()=>toast('Đã copy báo cáo.')).catch(()=>toast(text));
+  else toast(text);
+}
+function employeeTaskCell(row, field, type){
+  const v = row[field] || '';
+  const disabled = canEditMod('employeeTasks') ? '' : 'disabled';
+  if (field === 'module') return `<select onchange="employeeTaskUpdate('${row.id}','module',this.value)" ${disabled}>${employeeTaskOpt(EMPLOYEE_TASK_MODULES, v || 'Sale Online')}</select>`;
+  if (field === 'uuTien') return `<select onchange="employeeTaskUpdate('${row.id}','uuTien',this.value)" ${disabled}>${employeeTaskOpt(EMPLOYEE_TASK_PRIORITIES, v || 'Trung bình')}</select>`;
+  if (field === 'trangThai') return `<select onchange="employeeTaskUpdate('${row.id}','trangThai',this.value);render()" ${disabled}>${employeeTaskOpt(EMPLOYEE_TASK_STATUSES, v || 'Chưa làm')}</select>`;
+  if (type === 'textarea') return `<textarea onchange="employeeTaskUpdate('${row.id}','${field}',this.value)" ${disabled}>${esc(v)}</textarea>`;
+  const inputType = type || 'text';
+  return `<input type="${inputType}" value="${esc(v)}" onchange="employeeTaskUpdate('${row.id}','${field}',this.value)" ${disabled}>`;
+}
+function employeeTaskRowHtml(row, idx){
+  const auto = employeeTaskAutoStatus(row);
+  const link = String(row.link || '').trim();
+  return `<tr>
+    <td>${idx+1}</td>
+    <td>${employeeTaskCell(row,'ngayGiao','date')}</td>
+    <td>${employeeTaskCell(row,'nhanVien')}</td>
+    <td>${employeeTaskCell(row,'module')}</td>
+    <td>${employeeTaskCell(row,'congViec','textarea')}</td>
+    <td>${employeeTaskCell(row,'moTa','textarea')}</td>
+    <td>${employeeTaskCell(row,'uuTien')}</td>
+    <td>${employeeTaskCell(row,'deadline','date')}</td>
+    <td>${employeeTaskCell(row,'trangThai')}</td>
+    <td><input type="number" min="0" max="100" value="${Number(row.tienDo)||0}" onchange="employeeTaskUpdate('${row.id}','tienDo',this.value)" ${canEditMod('employeeTasks')?'':'disabled'}><div style="font-size:11px;color:#64748b;margin-top:3px">${Number(row.tienDo)||0}%</div></td>
+    <td><span class="employee-task-status ${auto.cls}">${esc(auto.label)}</span></td>
+    <td>${employeeTaskCell(row,'link','url')}${link?`<a class="employee-task-link" href="${esc(link)}" target="_blank" rel="noopener noreferrer" title="${esc(link)}">Mở link</a>`:''}</td>
+    <td>${employeeTaskCell(row,'ngayHoanThanh','date')}</td>
+    <td>${employeeTaskCell(row,'nguoiGiao')}</td>
+    <td>${employeeTaskCell(row,'ghiChu','textarea')}</td>
+    <td><button class="del-btn" onclick="employeeTaskDelete('${row.id}')" ${canEditMod('employeeTasks')?'':'disabled'}>✕</button></td>
+  </tr>`;
+}
+function renderEmployeeTasksPage(){
+  if (!canViewMod('employeeTasks')) return demoAccessDeniedHtml();
+  employeeTasksLoad();
+  const canEdit = canEditMod('employeeTasks');
+  const rows = employeeTaskFilteredRows();
+  const k = employeeTaskKpis(rows);
+  const assignees = employeeTaskAssignees();
+  const report = employeeTaskReport(rows);
+  const f = Object.assign({q:'', assignee:'', module:'', status:'', priority:''}, employeeTaskFilters);
+  const assigneeOpt = [''].concat(assignees).map(x=>`<option value="${demoEsc(x)}" ${x===f.assignee?'selected':''}>${x?demoEsc(x):'Tất cả nhân viên'}</option>`).join('');
+  const moduleOpt = [''].concat(EMPLOYEE_TASK_MODULES).map(x=>`<option value="${demoEsc(x)}" ${x===f.module?'selected':''}>${x?demoEsc(x):'Tất cả module'}</option>`).join('');
+  const statusOpt = ['','Chưa làm','Đang làm','Chờ duyệt','Hoàn thành','Tạm dừng','Sắp đến hạn','Quá hạn'].map(x=>`<option value="${demoEsc(x)}" ${x===f.status?'selected':''}>${x?demoEsc(x):'Tất cả trạng thái'}</option>`).join('');
+  const priOpt = [''].concat(EMPLOYEE_TASK_PRIORITIES).map(x=>`<option value="${demoEsc(x)}" ${x===f.priority?'selected':''}>${x?demoEsc(x):'Tất cả ưu tiên'}</option>`).join('');
+  return `<div class="page-header"><div class="page-title">✅ Theo dõi công việc nhân viên</div><div class="page-sub">Giao việc, theo dõi deadline, tiến độ, cảnh báo quá hạn và báo cáo nhanh theo nhân viên.</div></div>
+    ${employeeTaskKpiHtml(k)}
+    <div class="employee-task-toolbar">
+      <input id="et-filter-q" class="employee-task-filter grow" value="${esc(employeeTaskFilters.q || '')}" placeholder="Tìm nhân viên, công việc, ghi chú..." onchange="employeeTaskFilters.q=this.value;render()">
+      <select id="et-filter-assignee" class="employee-task-filter" onchange="employeeTaskFilters.assignee=this.value;render()">${assigneeOpt}</select>
+      <select id="et-filter-module" class="employee-task-filter" onchange="employeeTaskFilters.module=this.value;render()">${moduleOpt}</select>
+      <select id="et-filter-status" class="employee-task-filter" onchange="employeeTaskFilters.status=this.value;render()">${statusOpt}</select>
+      <select id="et-filter-priority" class="employee-task-filter" onchange="employeeTaskFilters.priority=this.value;render()">${priOpt}</select>
+      <button class="btn btn-primary" onclick="employeeTaskAdd()" ${canEdit?'':'disabled'}>＋ Thêm công việc</button>
+      <button class="btn" onclick="employeeTasksSave(true)" ${canEdit?'':'disabled'}>💾 Lưu</button>
+      <button class="btn" onclick="employeeTaskCopyReport()">Copy báo cáo</button>
+    </div>
+    <div class="tbl-wrap" style="max-height:calc(100vh - 430px)"><table class="tbl employee-task-table"><thead><tr><th>#</th><th>Ngày giao</th><th>Nhân viên</th><th>Module</th><th>Công việc</th><th>Mô tả/KPI</th><th>Ưu tiên</th><th>Deadline</th><th>Trạng thái</th><th>Tiến độ</th><th>Cảnh báo</th><th>Link/tài liệu</th><th>Ngày HT</th><th>Người giao</th><th>Ghi chú</th><th></th></tr></thead><tbody>${rows.length?rows.map(employeeTaskRowHtml).join(''):`<tr><td colspan="16" style="text-align:center;color:#94a3b8;padding:22px">Chưa có công việc. Nhấn <strong>＋ Thêm công việc</strong> để bắt đầu.</td></tr>`}</tbody></table></div>
+    <div class="employee-task-report-grid"><section class="employee-task-report-card"><h3>Báo cáo text</h3><div class="employee-task-report-text">${esc(report)}</div></section><section class="employee-task-report-card"><h3>Báo cáo 1 trang</h3><div class="employee-task-report-text">${esc(report.split('\n\n').slice(0,3).join('\n\n'))}</div></section></div>
+    ${canEdit?'':'<div class="login-note" style="margin-top:12px">Bạn chỉ có quyền xem, không được thêm/sửa/xóa công việc.</div>'}`;
 }
 /* DATA_SOURCES_DEMO_VERSION 1 - Google Sheet config UI only.
    Phase sau có thể đọc Google Sheet qua Apps Script Web App hoặc Google Sheets API.
@@ -1904,7 +2077,7 @@ function renderDataSourcesPage(){
     });
     return;
   }
-  if (curMod === 'users' || curMod === 'dataSources') return;
+  if (curMod === 'users' || curMod === 'dataSources' || curMod === 'employeeTasks') return;
   const canEdit = canEditMod(curMod);
   const canImport = canImportMod(curMod);
   if (!canEdit) {
@@ -2036,6 +2209,7 @@ const NOTIFY_KEY_LABELS = {
   mkt_sale_product_master:['sale','Danh sach san pham'],
   mkt_recruitment_campaign_data:['hr','Tuyen dung'],
   mkt_recruitment_msg_data:['hr','Tin nhan tuyen dung'],
+  mkt_employee_tasks:['users','Theo doi cong viec'],
   mkt_data_sources:['system','Nguon du lieu'],
   mkt_google_sheet_configs:['system','Nguon du lieu'],
   mkt_google_sheet_mappings:['system','Mapping du lieu'],
@@ -2083,6 +2257,7 @@ function notificationActiveArea(fallback){
   if (curMod === 'hr') return {module:'hr', label:'Tuyen dung'};
   if (curMod === 'users') return {module:'users', label:'Quan ly user'};
   if (curMod === 'dataSources') return {module:'system', label:'Nguon du lieu'};
+  if (curMod === 'employeeTasks') return {module:'users', label:'Theo doi cong viec'};
   return fallback;
 }
 function notificationFormatTime(v){
@@ -2199,6 +2374,7 @@ const MOD_TITLE = {
   b2b : '🤝 Business to Business',
   sale: '🛒 Sale Online',
   hr  : '👥 Tuyển dụng',
+  employeeTasks: '✅ Theo dõi công việc',
 };
 const SALE_TOP_TABS = [
   {id:'overview',  l:'Tổng quan'},
@@ -2311,6 +2487,7 @@ function reloadDashboardStateFromStore(){
     if (typeof b2bLoad === 'function') b2bLoad();
     if (typeof saleLoad === 'function') saleLoad();
     if (typeof hrLoad === 'function') hrLoad();
+    if (typeof employeeTasksLoad === 'function') employeeTasksLoad();
   } catch(e) { console.warn('[sync] reload state failed', e); }
 }
 async function refresh() {
@@ -2385,6 +2562,7 @@ function render() {
   else if (curMod === 'sale')     el.innerHTML = renderSale();
   else if (curMod === 'hr')       el.innerHTML = renderHR();
   else if (curMod === 'dataSources') el.innerHTML = renderDataSourcesPage();
+  else if (curMod === 'employeeTasks') el.innerHTML = renderEmployeeTasksPage();
   else if (curMod === 'users')    el.innerHTML = renderDemoUsers();
   else el.innerHTML = demoAccessDeniedHtml();
   applyDemoPermissionsToContent();
@@ -3032,6 +3210,8 @@ function dashboardSaveCurrent(reason, ctx){
       if (typeof saveGoogleSheetConfig === 'function' && typeof readGoogleSheetConfig === 'function') {
         saveGoogleSheetConfig(readGoogleSheetConfig());
       }
+    } else if (curMod === 'employeeTasks') {
+      if (typeof employeeTasksSave === 'function') employeeTasksSave(false);
     } else if (curMod === 'users') {
       if (context.userRow && typeof demoSaveUser === 'function') {
         demoSaveUser(context.userRow);
