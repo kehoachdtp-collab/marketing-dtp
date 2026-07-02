@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>MKT Dashboard — Planning Department</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Supabase client is lazy-loaded after the app paints so slow CDN/network cannot freeze the dashboard. -->
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f1f5f9;color:#1e293b;display:flex;height:100vh;overflow:hidden}
@@ -602,9 +602,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 const SUPA_URL  = 'https://gqtwnebivcyhvpljtkts.supabase.co';
 const SUPA_KEY  = 'sb_publishable_t3NRr4xFeo8fJlyM4vg8QQ_Je6PLXh_';
 const EDGE_AI_CHECK = SUPA_URL + '/functions/v1/clever-worker';
-const supa = window.supabase.createClient(SUPA_URL, SUPA_KEY, { auth: { persistSession: false } });
 
 const LAZY_LIBS = {
+  supabase:'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
   xlsx:'https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js',
   pdfjs:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js',
   tesseract:'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js',
@@ -622,6 +622,37 @@ function loadScriptOnce(id, src){
     if (!existing) document.head.appendChild(s);
   });
   return _lazyLibPromises[id];
+}
+function mktWithTimeout(promise, ms, label){
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error((label || 'request') + '_timeout')), ms || 6000);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+let supa = null;
+let _supaClientPromise = null;
+let _supaDisabledUntil = 0;
+async function getSupaClient(){
+  if (supa) return supa;
+  if (Date.now() < _supaDisabledUntil) throw new Error('supabase_temporarily_disabled');
+  if (!_supaClientPromise) {
+    _supaClientPromise = (async function(){
+      await mktWithTimeout(loadScriptOnce('lazy-supabase', LAZY_LIBS.supabase), 4500, 'supabase_client');
+      if (!window.supabase || !window.supabase.createClient) throw new Error('supabase_client_not_loaded');
+      supa = window.supabase.createClient(SUPA_URL, SUPA_KEY, { auth: { persistSession: false } });
+      return supa;
+    })().catch(function(err){
+      _supaClientPromise = null;
+      _supaDisabledUntil = Date.now() + 60000;
+      throw err;
+    });
+  }
+  return _supaClientPromise;
+}
+async function supaRpc(name, params, timeoutMs){
+  const client = await getSupaClient();
+  return mktWithTimeout(client.rpc(name, params), timeoutMs || 7000, 'supabase_rpc_' + name);
 }
 async function ensureXlsxLoaded(){
   if (window.XLSX) return window.XLSX;
@@ -651,7 +682,7 @@ const mktApi = {
   async login(username, password) {
     const normalized = demoNormalizeUsername(username);
     const tryLogin = async (uname) => {
-      const { data, error } = await supa.rpc('verify_password', { p_username: uname, p_password: password });
+      const { data, error } = await supaRpc('verify_password', { p_username: uname, p_password: password });
       if (error) throw error;
       return (data && data.length) ? data[0] : null;
     };
@@ -682,30 +713,30 @@ const mktApi = {
     }
   },
   async listUsers(callerId) {
-    const { data, error } = await supa.rpc('list_users', { p_caller_id: callerId });
+    const { data, error } = await supaRpc('list_users', { p_caller_id: callerId });
     if (error) throw error;
     return data || [];
   },
   async createUser(callerId, username, password, displayName, role, permissions) {
-    const { data, error } = await supa.rpc('create_user', { p_caller_id: callerId, p_username: username, p_password: password, p_display_name: displayName, p_role: role, p_permissions: permissions });
+    const { data, error } = await supaRpc('create_user', { p_caller_id: callerId, p_username: username, p_password: password, p_display_name: displayName, p_role: role, p_permissions: permissions });
     if (error) throw error;
     return data;
   },
   async updateUser(callerId, id, username, displayName, role, permissions, status, usernameChanged) {
     const oldParams = { p_caller_id: callerId, p_id: id, p_display_name: displayName, p_role: role, p_permissions: permissions, p_status: status };
     if (!usernameChanged) {
-      const oldRes = await supa.rpc('update_user', oldParams);
+      const oldRes = await supaRpc('update_user', oldParams);
       if (oldRes.error) throw oldRes.error;
       return { usernameUpdated: false };
     }
     const nextUsername = demoNormalizeUsername(username);
     const v2Params = { p_caller_id: callerId, p_id: id, p_username: nextUsername, p_display_name: displayName, p_role: role, p_permissions: permissions, p_status: status };
-    const res = await supa.rpc('update_user', v2Params);
+    const res = await supaRpc('update_user', v2Params);
     if (res.error) {
       const msg = String(res.error.message || res.error.details || res.error.code || res.error);
       const missingV2 = /p_username|PGRST202|function|schema cache|Could not find/i.test(msg);
       if (missingV2) {
-        const oldRes = await supa.rpc('update_user', oldParams);
+        const oldRes = await supaRpc('update_user', oldParams);
         if (oldRes.error) throw oldRes.error;
         return { usernameUpdated: false, aliasFallback: true };
       }
@@ -715,61 +746,61 @@ const mktApi = {
   },
 
   async resetPassword(callerId, id, newPassword) {
-    const { error } = await supa.rpc('reset_password', { p_caller_id: callerId, p_id: id, p_new_password: newPassword });
+    const { error } = await supaRpc('reset_password', { p_caller_id: callerId, p_id: id, p_new_password: newPassword });
     if (error) throw error;
   },
   async deleteUser(callerId, id) {
-    const { error } = await supa.rpc('delete_user', { p_caller_id: callerId, p_id: id });
+    const { error } = await supaRpc('delete_user', { p_caller_id: callerId, p_id: id });
     if (error) throw error;
   },
   async kvGetAll() {
-    const { data, error } = await supa.rpc('kv_get_all');
+    const { data, error } = await supaRpc('kv_get_all');
     if (error) throw error;
     return data || [];
   },
   async kvGet(key) {
-    const { data, error } = await supa.rpc('kv_get', { p_key: key });
+    const { data, error } = await supaRpc('kv_get', { p_key: key });
     if (error) throw error;
     return data || null;
   },
   async kvSet(key, payload, userId) {
-    const { error } = await supa.rpc('kv_set', { p_key: key, p_payload: payload, p_user_id: userId });
+    const { error } = await supaRpc('kv_set', { p_key: key, p_payload: payload, p_user_id: userId });
     if (error) throw error;
   },
   async scriptCreate(callerId, title, content, productCode, campaignCode, hook, cta, tags) {
-    const { data, error } = await supa.rpc('script_create', { p_caller_id: callerId, p_title: title, p_content: content, p_product_code: productCode, p_campaign_code: campaignCode, p_hook: hook, p_cta: cta, p_tags: tags || [] });
+    const { data, error } = await supaRpc('script_create', { p_caller_id: callerId, p_title: title, p_content: content, p_product_code: productCode, p_campaign_code: campaignCode, p_hook: hook, p_cta: cta, p_tags: tags || [] });
     if (error) throw error;
     return data;
   },
   async scriptList(status) {
-    const { data, error } = await supa.rpc('script_list', { p_status: status || null });
+    const { data, error } = await supaRpc('script_list', { p_status: status || null });
     if (error) throw error;
     return data || [];
   },
   async scriptGet(id) {
-    const { data, error } = await supa.rpc('script_get', { p_id: id });
+    const { data, error } = await supaRpc('script_get', { p_id: id });
     if (error) throw error;
     return data;
   },
   async scriptApprove(callerId, id, note) {
-    const { error } = await supa.rpc('script_approve', { p_caller_id: callerId, p_id: id, p_note: note || '' });
+    const { error } = await supaRpc('script_approve', { p_caller_id: callerId, p_id: id, p_note: note || '' });
     if (error) throw error;
   },
   async scriptReject(callerId, id, reason) {
-    const { error } = await supa.rpc('script_reject', { p_caller_id: callerId, p_id: id, p_reason: reason || '' });
+    const { error } = await supaRpc('script_reject', { p_caller_id: callerId, p_id: id, p_reason: reason || '' });
     if (error) throw error;
   },
   async scriptAssign(callerId, scriptId, kocCode, note) {
-    const { data, error } = await supa.rpc('script_assign', { p_caller_id: callerId, p_script_id: scriptId, p_koc_code: kocCode, p_note: note || '' });
+    const { data, error } = await supaRpc('script_assign', { p_caller_id: callerId, p_script_id: scriptId, p_koc_code: kocCode, p_note: note || '' });
     if (error) throw error;
     return data;
   },
   async scriptAssignmentUpdate(callerId, id, status, videoUrl, perfStatus, orders, gmv, note) {
-    const { error } = await supa.rpc('script_assignment_update', { p_caller_id: callerId, p_id: id, p_status: status, p_video_url: videoUrl, p_performance_status: perfStatus, p_orders: orders, p_gmv: gmv, p_note: note });
+    const { error } = await supaRpc('script_assignment_update', { p_caller_id: callerId, p_id: id, p_status: status, p_video_url: videoUrl, p_performance_status: perfStatus, p_orders: orders, p_gmv: gmv, p_note: note });
     if (error) throw error;
   },
   async scriptFindSimilar(id, limit) {
-    const { data, error } = await supa.rpc('script_find_similar', { p_id: id, p_limit: limit || 5 });
+    const { data, error } = await supaRpc('script_find_similar', { p_id: id, p_limit: limit || 5 });
     if (error) throw error;
     return data || [];
   },
