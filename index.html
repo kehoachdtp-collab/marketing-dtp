@@ -991,6 +991,76 @@ async function syncDown(options = {}) {
     _mktSyncDownBusy = false;
   }
 }
+function mktUniqueSyncKeys(keys){
+  return Array.from(new Set((keys || [])
+    .filter(Boolean)
+    .map(k => String(k).startsWith('mkt_') ? String(k) : 'mkt_' + String(k))
+    .filter(k => SYNC_KEYS.includes(k))));
+}
+function mktKeysForCurrentView(){
+  if (curMod === 'overview') return mktUniqueSyncKeys([K.b2bCrm,K.b2bCost,K.saleOrder,K.saleAds,K.kocProd,K.rcCamp,K.rcMsg,K.employeeTasks]);
+  if (curMod === 'b2b') return mktUniqueSyncKeys([K.b2bCrm,K.b2bCost,K.b2bAsgn]);
+  if (curMod === 'hr') return mktUniqueSyncKeys([K.rcCamp,K.rcMsg]);
+  if (curMod === 'dataSources') return mktUniqueSyncKeys(['mkt_data_sources','mkt_google_sheet_configs','mkt_google_sheet_mappings','mkt_sync_logs']);
+  if (curMod === 'employeeTasks') return mktUniqueSyncKeys([K.employeeTasks]);
+  if (curMod === 'users') return mktUniqueSyncKeys([DEMO_USERNAME_ALIASES_KEY,DEMO_CLOUD_USERS_KEY]);
+  if (curMod !== 'sale') return [];
+  if (saleTab === 'products') return mktUniqueSyncKeys([K.saleMst]);
+  if (saleTab === 'campaigns') return mktUniqueSyncKeys([K.saleCamp,K.saleMst]);
+  if (saleTab === 'ads') return mktUniqueSyncKeys([K.saleAds]);
+  if (saleTab === 'shopTasks') return mktUniqueSyncKeys([K.shopTasks]);
+  if (saleTab === 'orders') return mktUniqueSyncKeys([K.saleOrder,K.saleMst]);
+  if (saleTab === 'inventory') return mktUniqueSyncKeys([K.saleInv,K.saleMst]);
+  if (saleTab === 'profit') return mktUniqueSyncKeys([K.saleOrder,K.saleAds,K.kocProd,K.saleMst]);
+  if (saleTab === 'alerts') return mktUniqueSyncKeys([K.saleOrder,K.saleAds,K.kocProd,K.saleInv,K.saleMst]);
+  if (saleTab === 'compliance') return mktUniqueSyncKeys(['mkt_compliance_reviews','mkt_compliance_rules','mkt_product_approved_claims','mkt_product_banned_claims']);
+  if (saleTab === 'koc') {
+    if (kocSubTab === 'master') return mktUniqueSyncKeys([K.kocMst]);
+    if (kocSubTab === 'contracts') return mktUniqueSyncKeys([K.kocMst,K.kocProd,K.kocContracts]);
+    if (kocSubTab === 'compliance') return mktUniqueSyncKeys([K.kocProd,'mkt_compliance_reviews','mkt_compliance_rules']);
+    return mktUniqueSyncKeys([K.kocMst,K.kocProd,K.kocContracts]);
+  }
+  return mktUniqueSyncKeys([K.saleOrder,K.saleAds,K.kocProd,K.saleCamp,K.saleMst]);
+}
+async function syncDownKeys(keys, options = {}) {
+  const syncKeys = mktUniqueSyncKeys(keys);
+  const now = Date.now();
+  if (!syncKeys.length) return options.returnKeys ? { seen:0, updated:0, changedKeys:[] } : 0;
+  if (!options.force && _mktSyncDownBusy) {
+    return options.returnKeys ? { seen:0, updated:0, changedKeys:[], skipped:true } : 0;
+  }
+  if (!options.force && options.minGapMs && now - _mktLastSyncDownAt < options.minGapMs) {
+    return options.returnKeys ? { seen:0, updated:0, changedKeys:[], skipped:true } : 0;
+  }
+  _mktSyncDownBusy = true;
+  try {
+    let seen = 0, updated = 0;
+    const changedKeys = [];
+    for (const key of syncKeys) {
+      const payload = await mktApi.kvGet(key);
+      if (payload == null) continue;
+      seen++;
+      const raw = _mktJson(payload);
+      const oldRaw = localStorage.getItem(key);
+      if (oldRaw !== raw) {
+        _mktBackupBeforeOverwrite(key, oldRaw, raw, 'cloud_pull_active');
+        localStorage.setItem(key, raw);
+        updated++;
+        changedKeys.push(key);
+      }
+      _kvSetKnown(key, payload);
+    }
+    _mktLastSyncDownAt = Date.now();
+    if (!options.quiet) console.log('[sync] pulled active', updated, 'changed keys /', seen, 'seen from Supabase');
+    updateNotificationsUi();
+    return options.returnKeys ? { seen, updated, changedKeys } : updated;
+  } catch(e) {
+    console.warn('[sync] syncDownKeys failed', e);
+    return options.returnKeys ? { seen:0, updated:0, changedKeys:[], error:e } : 0;
+  } finally {
+    _mktSyncDownBusy = false;
+  }
+}
 async function flushPendingSyncNow(){
   const keys = Object.keys(_kvSyncTimers || {});
   for (const k of keys) await _flushKvSync(k);
@@ -1000,7 +1070,7 @@ async function mktAutoSyncTick(){
   if (document.body.classList.contains('auth-boot')) return;
   if (mktIsPageHidden()) return;
   if (mktHasPendingSync() || mktIsEditing()) return;
-  const res = await syncDown({ quiet:true, returnKeys:true, minGapMs:MKT_SYNC_MIN_PULL_GAP_MS });
+  const res = await syncDownKeys(mktKeysForCurrentView(), { quiet:true, returnKeys:true, minGapMs:MKT_SYNC_MIN_PULL_GAP_MS });
   if (res.updated > 0 && !mktIsEditing()) {
     const dataChanged = (res.changedKeys || []).some(k => k !== MKT_NOTIFICATIONS_KEY);
     if (dataChanged) {
@@ -1562,7 +1632,7 @@ async function demoLogin(ev){
     toast('Đã đăng nhập. Dữ liệu đang đồng bộ nền...');
     setTimeout(async function(){
       try {
-        await Promise.all([syncDown({ force:true, quiet:true }), demoRefreshUsers()]);
+        await Promise.all([syncDownKeys(mktKeysForCurrentView(), { force:true, quiet:true }), demoRefreshUsers()]);
         reloadDashboardStateFromStore();
         if (!mktIsEditing() && !mktIsPageHidden()) { render(); setTs(); updateNotificationsUi(); }
         toast('Đã đồng bộ xong.');
@@ -6197,7 +6267,7 @@ window.addEventListener('load', async () => {
   demoShowApp();
   setTimeout(async function(){
     try {
-      await Promise.all([syncDown({ force:true, quiet:true }), demoRefreshUsers()]);
+      await Promise.all([syncDownKeys(mktKeysForCurrentView(), { force:true, quiet:true }), demoRefreshUsers()]);
       reloadDashboardStateFromStore();
       if (!mktIsEditing() && !mktIsPageHidden()) { render(); setTs(); updateNotificationsUi(); }
     } catch(e) { console.warn('[init background sync] failed', e); }
