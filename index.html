@@ -655,23 +655,31 @@ const mktApi = {
       if (error) throw error;
       return (data && data.length) ? data[0] : null;
     };
-    const cloudLogin = await demoCloudLogin(normalized, password, tryLogin);
-    if (cloudLogin.found) return cloudLogin.user;
-    let user = await tryLogin(normalized);
-    const aliases = await demoLoadUsernameAliasesForLogin();
-    if (user) {
-      const aliasForId = aliases.byId?.[user.id] || '';
-      const aliasMapsToDbUsername = !!aliasForId && aliases.byAlias?.[aliasForId] === user.username;
-      if (aliasForId && aliasForId !== user.username && aliasMapsToDbUsername && normalized === user.username) return null;
-      if (aliasForId && aliasMapsToDbUsername) return { ...user, real_username: user.username, username: aliasForId };
+    try {
+      const cloudLogin = await demoCloudLogin(normalized, password, tryLogin);
+      if (cloudLogin.found) return cloudLogin.user;
+      let user = await tryLogin(normalized);
+      const aliases = await demoLoadUsernameAliasesForLogin();
+      if (user) {
+        const aliasForId = aliases.byId?.[user.id] || '';
+        const aliasMapsToDbUsername = !!aliasForId && aliases.byAlias?.[aliasForId] === user.username;
+        if (aliasForId && aliasForId !== user.username && aliasMapsToDbUsername && normalized === user.username) return null;
+        if (aliasForId && aliasMapsToDbUsername) return { ...user, real_username: user.username, username: aliasForId };
+        return user;
+      }
+      const realUsername = aliases.byAlias?.[normalized];
+      if (realUsername && realUsername !== normalized) {
+        user = await tryLogin(realUsername);
+        if (user) return { ...user, real_username: realUsername, username: normalized };
+      }
       return user;
+    } catch(e) {
+      if (demoIsNetworkAuthError(e)) {
+        console.warn('[login] Supabase unavailable, trying local fallback', e);
+        return await demoLocalLoginFallback(normalized, password);
+      }
+      throw e;
     }
-    const realUsername = aliases.byAlias?.[normalized];
-    if (realUsername && realUsername !== normalized) {
-      user = await tryLogin(realUsername);
-      if (user) return { ...user, real_username: realUsername, username: normalized };
-    }
-    return user;
   },
   async listUsers(callerId) {
     const { data, error } = await supa.rpc('list_users', { p_caller_id: callerId });
@@ -1329,7 +1337,51 @@ async function demoDeleteCloudUser(user, callerId){
   await demoSaveCloudUsers(cloud, callerId);
 }
 
-function demoDefaultUsers(){ return []; }  // không dùng nữa — Supabase là nguồn
+function demoDefaultUsers(){
+  const full = {dashboard:'full',b2b:'full',sale:'full',hr:'full',users:'full',dataSources:'full',employeeTasks:'full'};
+  const staffAll = {dashboard:'view',b2b:'import',sale:'import',hr:'import',users:'none',dataSources:'none',employeeTasks:'none'};
+  const b2bOnly = {dashboard:'view',b2b:'import',sale:'none',hr:'none',users:'none',dataSources:'none',employeeTasks:'none'};
+  const saleOnly = {dashboard:'view',b2b:'none',sale:'import',hr:'none',users:'none',dataSources:'none',employeeTasks:'none'};
+  const viewer = {dashboard:'view',b2b:'none',sale:'none',hr:'none',users:'none',dataSources:'none',employeeTasks:'none'};
+  return [
+    demoUser('admin','123456','Admin / Owner','admin',full),
+    demoUser('ha','123456','Hạ','manager',staffAll),
+    demoUser('hong','123456','Hồng','b2b',b2bOnly),
+    demoUser('ngan','123456','Ngân','sale_online',saleOnly),
+    demoUser('viewer','123456','Viewer','viewer',viewer),
+  ];
+}
+function demoIsNetworkAuthError(e){
+  const msg = String(e?.message || e || '');
+  return e instanceof TypeError || /failed to fetch|network|fetch|load failed|timeout|cors|err_failed/i.test(msg);
+}
+function demoDemoUserToSupaUser(user, source){
+  if (!user) return null;
+  const username = demoNormalizeUsername(user.username || '');
+  const presets = user.presets || demoPresetsFromPermissions(user.permissions || {});
+  return { id:user.id || ('local_' + username), username, real_username:user.realUsername || user.legacyUsername || username, display_name:user.displayName || username, role:user.role || 'viewer', permissions:presets, status:user.status || 'active', offline_fallback:!!source };
+}
+async function demoLocalLoginFallback(username, password){
+  const normalized = demoNormalizeUsername(username);
+  const clouds = demoGetCloudUsersLocal().users || [];
+  const cloudRecord = clouds.find(u => u.username === normalized || u.legacyUsername === normalized);
+  if (cloudRecord) {
+    if (cloudRecord.status && cloudRecord.status !== 'active') return null;
+    if (cloudRecord.passwordHash) {
+      const ok = await demoVerifyCloudPassword(cloudRecord, password);
+      return ok ? demoCloudToSupaUser(cloudRecord) : null;
+    }
+  }
+  const localUsers = demoGetUsers().concat(demoDefaultUsers());
+  const seen = new Set();
+  for (const u of localUsers) {
+    const un = demoNormalizeUsername(u.username || '');
+    if (!un || seen.has(un)) continue;
+    seen.add(un);
+    if (un === normalized && String(u.password || '') === String(password || '')) return demoDemoUserToSupaUser(u, 'local');
+  }
+  return null;
+}
 
 /* Cache user list cục bộ — tránh fetch mỗi lần check quyền */
 let _cachedUsers = null;
@@ -1475,16 +1527,18 @@ async function demoLogin(ev){
       return;
     }
     const user = _supaToDemoUser(supaUser);
-    localStorage.setItem(DEMO_SESSION_KEY, JSON.stringify({user, loginAt:Date.now()}));
+    localStorage.setItem(DEMO_SESSION_KEY, JSON.stringify({user, loginAt:Date.now(), offlineFallback:!!supaUser.offline_fallback}));
     toast('✅ Đăng nhập thành công! Đang đồng bộ dữ liệu...');
-    // Đồng bộ dữ liệu nghiệp vụ + danh sách user từ cloud xuống
-    await Promise.all([syncDown(), demoRefreshUsers()]);
+    let synced = true;
+    try { await Promise.all([syncDown(), demoRefreshUsers()]); }
+    catch(syncErr) { synced = false; console.warn('[login sync]', syncErr); }
     reloadDashboardStateFromStore();
     demoShowApp();
-    toast('✅ Đã đồng bộ xong!');
+    toast(synced ? '✅ Đã đồng bộ xong!' : 'Đã đăng nhập tạm. Khi kết nối ổn, bấm Cập nhật để đồng bộ.');
   } catch(e) {
     console.error('[login]', e);
-    demoShowLogin('Lỗi kết nối Supabase: ' + (e.message || e));
+    const msg = demoIsNetworkAuthError(e) ? 'Không kết nối được máy chủ dữ liệu. Vui lòng kiểm tra mạng rồi thử lại.' : ('Lỗi đăng nhập: ' + (e.message || e));
+    demoShowLogin(msg);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Đăng nhập'; }
   }
