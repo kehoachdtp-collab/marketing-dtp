@@ -650,9 +650,22 @@ async function getSupaClient(){
   }
   return _supaClientPromise;
 }
+function mktSupaBackoff(err){
+  const msg = String(err?.message || err || '');
+  if (/timeout|failed to fetch|network|fetch|cors|load failed|err_failed|temporarily_disabled|schema cache|PGRST|function/i.test(msg) || !navigator.onLine) {
+    _supaDisabledUntil = Date.now() + 120000;
+  }
+}
+function mktCloudAvailable(){ return Date.now() >= _supaDisabledUntil; }
 async function supaRpc(name, params, timeoutMs){
-  const client = await getSupaClient();
-  return mktWithTimeout(client.rpc(name, params), timeoutMs || 7000, 'supabase_rpc_' + name);
+  if (!mktCloudAvailable()) throw new Error('supabase_temporarily_disabled');
+  try {
+    const client = await getSupaClient();
+    return await mktWithTimeout(client.rpc(name, params), timeoutMs || 7000, 'supabase_rpc_' + name);
+  } catch(err) {
+    mktSupaBackoff(err);
+    throw err;
+  }
 }
 async function ensureXlsxLoaded(){
   if (window.XLSX) return window.XLSX;
@@ -2545,7 +2558,7 @@ async function refreshNotificationsFromCloud(showToast){
 function initNotifications(){
   updateNotificationsUi();
   if (_notificationPollTimer) clearInterval(_notificationPollTimer);
-  refreshNotificationsFromCloud(false);
+  setTimeout(function(){ refreshNotificationsFromCloud(false); }, 12000);
   _notificationPollTimer = setInterval(function(){ refreshNotificationsFromCloud(true); }, MKT_NOTIFICATION_POLL_MS);
   if (!_notificationClickBound) {
     _notificationClickBound = true;
