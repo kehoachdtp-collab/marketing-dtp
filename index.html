@@ -791,7 +791,10 @@ const mktApi = {
 const MKT_NOTIFICATIONS_KEY = 'mkt_demo_notifications';
 const MKT_NOTIFICATION_READ_PREFIX = 'mkt_demo_notifications_read_at_';
 const MKT_LOCAL_BACKUPS_KEY = 'mkt_local_data_backups';
-const MKT_AUTO_SYNC_MS = 45000;
+const MKT_AUTO_SYNC_MS = 120000;
+const MKT_AUTO_SYNC_FIRST_DELAY_MS = 25000;
+const MKT_NOTIFICATION_POLL_MS = 60000;
+const MKT_SYNC_MIN_PULL_GAP_MS = 25000;
 const MKT_BACKUP_MIN_INTERVAL_MS = 120000;
 const MKT_BACKUP_MAX_ITEMS = 14;
 const MKT_BACKUP_MAX_TOTAL_BYTES = 2500000;
@@ -816,6 +819,8 @@ const _kvSyncTimers = {};
 const _kvKnownIds = {};   // key → Set các id client đã đồng bộ từ cloud
 const _mktLastBackupAt = {};
 let _mktAutoSyncTimer = null;
+let _mktSyncDownBusy = false;
+let _mktLastSyncDownAt = 0;
 function _mktJson(value){ try { return JSON.stringify(value); } catch(_) { return 'null'; } }
 function _mktByteSize(text){ return new Blob([String(text || '')]).size; }
 function _mktBusinessKey(k){
@@ -859,6 +864,7 @@ function mktIsEditing(){
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || a.isContentEditable;
 }
 function mktHasPendingSync(){ return Object.keys(_kvSyncTimers || {}).length > 0; }
+function mktIsPageHidden(){ return document.visibilityState === 'hidden'; }
 function _kvSetKnown(k, arr) {
   if (!Array.isArray(arr)) return;
   const s = new Set();
@@ -948,6 +954,14 @@ async function syncKeyNow(key, value) {
 window.addEventListener('beforeunload', () => { Object.keys(_kvSyncTimers).forEach(_flushKvSync); });
 
 async function syncDown(options = {}) {
+  const now = Date.now();
+  if (!options.force && _mktSyncDownBusy) {
+    return options.returnKeys ? { seen:0, updated:0, changedKeys:[], skipped:true } : 0;
+  }
+  if (!options.force && options.minGapMs && now - _mktLastSyncDownAt < options.minGapMs) {
+    return options.returnKeys ? { seen:0, updated:0, changedKeys:[], skipped:true } : 0;
+  }
+  _mktSyncDownBusy = true;
   try {
     const rows = await mktApi.kvGetAll();
     let seen = 0, updated = 0;
@@ -966,12 +980,15 @@ async function syncDown(options = {}) {
         _kvSetKnown(r.key, r.payload);
       }
     });
+    _mktLastSyncDownAt = Date.now();
     if (!options.quiet) console.log('[sync] pulled', updated, 'changed keys /', seen, 'seen from Supabase');
     updateNotificationsUi();
     return options.returnKeys ? { seen, updated, changedKeys } : updated;
   } catch(e) {
     console.warn('[sync] syncDown failed', e);
     return options.returnKeys ? { seen:0, updated:0, changedKeys:[], error:e } : 0;
+  } finally {
+    _mktSyncDownBusy = false;
   }
 }
 async function flushPendingSyncNow(){
@@ -981,19 +998,31 @@ async function flushPendingSyncNow(){
 async function mktAutoSyncTick(){
   if (!demoCurrentUser || !demoCurrentUser()) return;
   if (document.body.classList.contains('auth-boot')) return;
+  if (mktIsPageHidden()) return;
   if (mktHasPendingSync() || mktIsEditing()) return;
-  const res = await syncDown({ quiet:true, returnKeys:true });
+  const res = await syncDown({ quiet:true, returnKeys:true, minGapMs:MKT_SYNC_MIN_PULL_GAP_MS });
   if (res.updated > 0 && !mktIsEditing()) {
-    reloadDashboardStateFromStore();
-    render();
-    setTs();
+    const dataChanged = (res.changedKeys || []).some(k => k !== MKT_NOTIFICATIONS_KEY);
+    if (dataChanged) {
+      reloadDashboardStateFromStore();
+      render();
+      setTs();
+    } else {
+      updateNotificationsUi();
+    }
     console.log('[sync] auto-refreshed', res.changedKeys);
   }
 }
 function startMktAutoSync(){
   if (_mktAutoSyncTimer) return;
   _mktAutoSyncTimer = setInterval(mktAutoSyncTick, MKT_AUTO_SYNC_MS);
-  setTimeout(mktAutoSyncTick, 8000);
+  setTimeout(mktAutoSyncTick, MKT_AUTO_SYNC_FIRST_DELAY_MS);
+  if (!window._mktVisibilitySyncBound) {
+    window._mktVisibilitySyncBound = true;
+    document.addEventListener('visibilitychange', function(){
+      if (!mktIsPageHidden()) setTimeout(mktAutoSyncTick, 1200);
+    });
+  }
 }
 
 /* ═══════════════════════════════════════
@@ -1528,13 +1557,20 @@ async function demoLogin(ev){
     }
     const user = _supaToDemoUser(supaUser);
     localStorage.setItem(DEMO_SESSION_KEY, JSON.stringify({user, loginAt:Date.now(), offlineFallback:!!supaUser.offline_fallback}));
-    toast('✅ Đăng nhập thành công! Đang đồng bộ dữ liệu...');
-    let synced = true;
-    try { await Promise.all([syncDown(), demoRefreshUsers()]); }
-    catch(syncErr) { synced = false; console.warn('[login sync]', syncErr); }
     reloadDashboardStateFromStore();
     demoShowApp();
-    toast(synced ? '✅ Đã đồng bộ xong!' : 'Đã đăng nhập tạm. Khi kết nối ổn, bấm Cập nhật để đồng bộ.');
+    toast('Đã đăng nhập. Dữ liệu đang đồng bộ nền...');
+    setTimeout(async function(){
+      try {
+        await Promise.all([syncDown({ force:true, quiet:true }), demoRefreshUsers()]);
+        reloadDashboardStateFromStore();
+        if (!mktIsEditing() && !mktIsPageHidden()) { render(); setTs(); updateNotificationsUi(); }
+        toast('Đã đồng bộ xong.');
+      } catch(syncErr) {
+        console.warn('[login background sync]', syncErr);
+        toast('Đã đăng nhập. Khi kết nối ổn, bấm Cập nhật để đồng bộ.');
+      }
+    }, 300);
   } catch(e) {
     console.error('[login]', e);
     const msg = demoIsNetworkAuthError(e) ? 'Không kết nối được máy chủ dữ liệu. Vui lòng kiểm tra mạng rồi thử lại.' : ('Lỗi đăng nhập: ' + (e.message || e));
@@ -2389,6 +2425,7 @@ function markNotificationsRead(event){
 }
 async function refreshNotificationsFromCloud(showToast){
   if (!demoCurrentUser || !demoCurrentUser()) return;
+  if (mktIsPageHidden() || _mktSyncDownBusy) return;
   try {
     const rows = await mktApi.kvGet(MKT_NOTIFICATIONS_KEY);
     if (Array.isArray(rows)) {
@@ -2408,7 +2445,7 @@ function initNotifications(){
   updateNotificationsUi();
   if (_notificationPollTimer) clearInterval(_notificationPollTimer);
   refreshNotificationsFromCloud(false);
-  _notificationPollTimer = setInterval(function(){ refreshNotificationsFromCloud(true); }, 20000);
+  _notificationPollTimer = setInterval(function(){ refreshNotificationsFromCloud(true); }, MKT_NOTIFICATION_POLL_MS);
   if (!_notificationClickBound) {
     _notificationClickBound = true;
     document.addEventListener('click', function(e){
@@ -6156,10 +6193,15 @@ window.addEventListener('load', async () => {
   bindKocTabEvents();
   bindKocSaveShortcut();
   if (!demoCurrentUser()) { demoShowLogin(); return; }
-  try {
-    await Promise.all([syncDown(), demoRefreshUsers()]);
-  } catch(e) { console.warn('[init] sync failed', e); }
+  reloadDashboardStateFromStore();
   demoShowApp();
+  setTimeout(async function(){
+    try {
+      await Promise.all([syncDown({ force:true, quiet:true }), demoRefreshUsers()]);
+      reloadDashboardStateFromStore();
+      if (!mktIsEditing() && !mktIsPageHidden()) { render(); setTs(); updateNotificationsUi(); }
+    } catch(e) { console.warn('[init background sync] failed', e); }
+  }, 400);
 });
 
 /* ═══════════════════════════════════════
