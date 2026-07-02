@@ -1113,6 +1113,7 @@ async function mktAutoSyncTick(){
   if (!demoCurrentUser || !demoCurrentUser()) return;
   if (document.body.classList.contains('auth-boot')) return;
   if (mktIsPageHidden()) return;
+  if (!mktCloudAvailable()) return;
   if (mktHasPendingSync() || mktIsEditing()) return;
   const res = await syncDownKeys(mktKeysForCurrentView(), { quiet:true, returnKeys:true, minGapMs:MKT_SYNC_MIN_PULL_GAP_MS });
   if (res.updated > 0 && !mktIsEditing()) {
@@ -2539,7 +2540,7 @@ function markNotificationsRead(event){
 }
 async function refreshNotificationsFromCloud(showToast){
   if (!demoCurrentUser || !demoCurrentUser()) return;
-  if (mktIsPageHidden() || _mktSyncDownBusy) return;
+  if (mktIsPageHidden() || _mktSyncDownBusy || !mktCloudAvailable()) return;
   try {
     const rows = await mktApi.kvGet(MKT_NOTIFICATIONS_KEY);
     if (Array.isArray(rows)) {
