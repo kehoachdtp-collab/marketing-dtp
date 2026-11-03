@@ -176,7 +176,7 @@
         '<td class="kp-num">'+integer(r.orders)+'</td><td class="kp-num"><b>'+money(r.gmv)+'</b></td>'+
         '<td class="kp-num">'+rate(r.roas)+'</td><td class="kp-num">'+booked+
         '<div class="kp-muted">Tổng booking cũ *</div></td><td>'+statusBadge(r.reco)+'</td><td>'+
-        (canWrite()?'<select class="kp-select" onchange="kocPerformanceV2.setDecision('+JSON.stringify(snap.id)+','+JSON.stringify(r.creator).replace(/</g,"\\u003c").replace(/'/g,"\\u0027")+',this.value)">'+options+'</select>':
+        (canWrite()?'<select class="kp-select" onchange="kocPerformanceV2.setDecision('+arg(snap.id)+','+arg(r.creator)+',this.value)">'+options+'</select>':
         html(dec&&dec.status||"—"))+'</td></tr>';
     }).join("");
     var note='<div class="kp-note">* Chi phí booking lấy từ lịch sử KOC master, <b>không phân bổ theo kỳ</b>. ROAS chỉ tính <b>doanh thu gộp / chi phí quảng cáo</b>, không phải lợi nhuận. Gợi ý book lại là sàng lọc sơ bộ; cần kiểm tra phí booking, hoa hồng, giá vốn, mức độ phù hợp sản phẩm và số đơn trước khi duyệt.</div>';
