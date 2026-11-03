@@ -146,11 +146,12 @@
   }
   function changeSnapshot(v){ui.snapshotId=v;ui.status="all";ui.query="";saleRerender();}
   function changeStatus(v){ui.status=v;refreshTable();}
-  function search(v){ui.query=v;refreshTable();}
+  function search(v){ui.query=v;var old=document.getElementById('kp-search'),pos=old&&old.selectionStart;refreshTable();var fresh=document.getElementById('kp-search');if(fresh){fresh.focus();if(pos!=null)fresh.setSelectionRange(pos,pos);}}
   function refreshTable(){
     var box=document.getElementById("kp-data");
     if(box)box.innerHTML=renderData();
   }
+  function arg(v){return "decodeURIComponent('"+encodeURIComponent(String(v)).replace(/'/g,"%27")+"')";}
   function renderData(){
     var snap=activeSnapshot();if(!snap)return '<div class="kp-empty">Chưa có kỳ dữ liệu. Tải file Creative Data từ TikTok để bắt đầu.</div>';
     var report=aggregate(snap),total=report.total,rows=report.rows;
@@ -170,7 +171,7 @@
       }).join("");
       return '<tr><td>'+rnk+'</td><td><strong>'+html(r.creator)+'</strong><div class="kp-muted">'+
         (code?html(code)+" · "+html((masterByCode(code)||{}).ten||""):'Chưa ghép KOC master')+'</div>'+
-        (canWrite()?'<button class="kp-link" onclick="kocPerformanceV2.linkCreator('+JSON.stringify(r.creator).replace(/</g,"\\u003c").replace(/'/g,"\\u0027")+')">'+(code?"Đổi liên kết":"Ghép KOC")+'</button>':"")+
+        (canWrite()?'<button class="kp-link" onclick="kocPerformanceV2.linkCreator('+arg(r.creator)+')">'+(code?"Đổi liên kết":"Ghép KOC")+'</button>':"")+
         '</td><td class="kp-num">'+integer(r.videos)+'</td><td class="kp-num">'+money(r.spent)+'</td>'+
         '<td class="kp-num">'+integer(r.orders)+'</td><td class="kp-num"><b>'+money(r.gmv)+'</b></td>'+
         '<td class="kp-num">'+rate(r.roas)+'</td><td class="kp-num">'+booked+
