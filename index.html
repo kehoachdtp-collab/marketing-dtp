@@ -842,7 +842,7 @@ const MKT_SYNC_MIN_PULL_GAP_MS = 25000;
 const MKT_BACKUP_MIN_INTERVAL_MS = 120000;
 const MKT_BACKUP_MAX_ITEMS = 14;
 const MKT_BACKUP_MAX_TOTAL_BYTES = 2500000;
-const SYNC_KEYS = [MKT_NOTIFICATIONS_KEY,'mkt_b2b_crm_data','mkt_b2b_cost_data','mkt_b2b_assignee_options','mkt_sale_campaigns','mkt_sale_orders','mkt_sale_ads_data','mkt_shop_tasks','mkt_employee_tasks','mkt_sale_koc_data','mkt_sale_koc_master','mkt_sale_koc_product_campaigns','mkt_sale_koc_prospects','mkt_sale_koc_collaborations','mkt_sale_koc_collab','mkt_sale_koc_ptlist','mkt_sale_koc_contracts','mkt_sale_inventory','mkt_sale_product_master','mkt_recruitment_campaign_data','mkt_recruitment_msg_data','mkt_data_sources','mkt_google_sheet_configs','mkt_google_sheet_mappings','mkt_sync_logs','mkt_compliance_reviews','mkt_compliance_rules','mkt_product_approved_claims','mkt_product_banned_claims','mkt_compliance_draft','mkt_demo_username_aliases','mkt_demo_users_cloud'];
+const SYNC_KEYS = ['mkt_sale_koc_tiktok_snapshots','mkt_sale_koc_creator_links','mkt_sale_koc_decisions','mkt_sale_koc_rules',MKT_NOTIFICATIONS_KEY,'mkt_b2b_crm_data','mkt_b2b_cost_data','mkt_b2b_assignee_options','mkt_sale_campaigns','mkt_sale_orders','mkt_sale_ads_data','mkt_shop_tasks','mkt_employee_tasks','mkt_sale_koc_data','mkt_sale_koc_master','mkt_sale_koc_product_campaigns','mkt_sale_koc_prospects','mkt_sale_koc_collaborations','mkt_sale_koc_collab','mkt_sale_koc_ptlist','mkt_sale_koc_contracts','mkt_sale_inventory','mkt_sale_product_master','mkt_recruitment_campaign_data','mkt_recruitment_msg_data','mkt_data_sources','mkt_google_sheet_configs','mkt_google_sheet_mappings','mkt_sync_logs','mkt_compliance_reviews','mkt_compliance_rules','mkt_product_approved_claims','mkt_product_banned_claims','mkt_compliance_draft','mkt_demo_username_aliases','mkt_demo_users_cloud'];
 
 function isSyncKey(k){ return SYNC_KEYS.includes(k); }
 
@@ -3094,6 +3094,7 @@ const KOC_SUBTABS = [
   {id:'scripts',  l:'📝 Kịch bản'},
   {id:'prod',     l:'🤝 KOC hợp tác'},
   {id:'tiktok',   l:'🤖 AI TikTok'},
+  {id:'performance', l:'🏆 Đánh giá & Book lại'},
   {id:'contracts', l:'📄 Hợp đồng'},
   {id:'report',   l:'📈 Báo cáo'},
 ];
@@ -3816,7 +3817,7 @@ function _saleKocTab() {
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px;align-items:center">
       ${actions.join('')}
     </div>`;
-  const renderers = {overview:renderKocOverview,master:renderKocMaster,scripts:renderKocScripts,prod:renderKocProductCampaign,tiktok:renderKocTiktok,contracts:renderKocContracts,compliance:renderKocCompliance,report:renderKocReport};
+  const renderers = {overview:renderKocOverview,master:renderKocMaster,scripts:renderKocScripts,prod:renderKocProductCampaign,tiktok:renderKocTiktok,performance:()=>window.kocPerformanceV2?window.kocPerformanceV2.render():'<div class="empty-b">Đang tải phân tích KOC…</div>',contracts:renderKocContracts,compliance:renderKocCompliance,report:renderKocReport};
   const body = (renderers[kocSubTab] || renderKocOverview)();
   return nav + body;
 }
@@ -6463,6 +6464,7 @@ window.addEventListener('load', async () => {
   }
 })();
 </script>
+<script src="assets/koc-performance-v2.js?v=20261103-2"></script>
 </body>
 </html>
 
