@@ -469,6 +469,42 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .employee-task-report-grid{display:grid;grid-template-columns:minmax(320px,1fr) minmax(320px,1fr);gap:14px;margin-top:14px}.employee-task-report-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px;box-shadow:0 1px 3px rgba(15,23,42,.05)}.employee-task-report-card h3{font-size:15px;color:#0f172a;margin-bottom:9px}.employee-task-report-text{white-space:pre-line;font-size:12.5px;line-height:1.55;color:#334155;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:11px;min-height:145px}.employee-task-link{display:inline-block;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#2563eb;text-decoration:underline}
 @media(max-width:1150px){.employee-task-kpis{grid-template-columns:repeat(3,1fr)}.employee-task-report-grid{grid-template-columns:1fr}}@media(max-width:760px){.employee-task-kpis{grid-template-columns:1fr 1fr}.employee-task-filter{min-width:120px}}
 
+
+/* Refined Planning Department sidebar — approved multi-sàn layout */
+.sidebar{width:265px}
+.sb-nav>.sb-item,.sb-nav>#grp-sale>.sb-item{font-size:13px;font-weight:700;color:#f1f6ff}
+.nav-illustration{width:15px;height:15px;flex:0 0 15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;opacity:.92}
+.sb-item-icon .nav-illustration{width:17px;height:17px}
+#grp-sale>.sb-item{background:#354c70;min-height:38px;border-radius:8px}
+#grp-sale>.sb-item:hover{background:#415d82}
+#grp-sale>.sb-group-children{border-left:1px solid rgba(255,255,255,.12);margin:0 0 4px 10px;padding:5px 0 5px 8px}
+#grp-sale>.sb-group-children>.sb-sub-item{padding:9px 10px;font-size:12px;gap:9px;color:#c1d1e4}
+#grp-sale>.sb-group-children>.sb-sub-item .nav-illustration{color:#a9c8ea}
+#grp-sale>.sb-group-children>.sb-sub-item.active{color:#fff;background:#31548a}
+#grp-sale>.sb-group-children>.sb-sub-item .nav-koc{color:#ad89ff}
+#grp-sale .sb-platform-title{font-size:10px;font-weight:800;color:#9db5d2;letter-spacing:.8px;padding:12px 10px 5px}
+#grp-sale .sb-platform-list{border-left:1px solid rgba(255,255,255,.12);margin-left:9px;padding-left:9px}
+#grp-sale .sb-platform-group{margin:0 0 2px}
+#grp-sale .sb-platform-group>.sb-platform-head{padding:10px 9px;margin:5px 0 2px;border-radius:7px;background:#243a5a;color:#fff;font-size:12px;font-weight:700;gap:9px;min-height:37px}
+#grp-sale .sb-platform-group>.sb-platform-head:hover{background:#37547a}
+#grp-sale .sb-platform-group.open>.sb-platform-head{background:#32527f}
+#grp-sale .sb-platform-group>.sb-platform-head .sb-chevron{color:#d2e3fb}
+#grp-sale .sb-platform-head .nav-shopee{color:#ffab79}
+#grp-sale .sb-platform-head .nav-tiktok{color:#e8b3fb}
+#grp-sale .sb-platform-head .nav-facebook{color:#83b9ff}
+#grp-sale .sb-platform-group>.sb-group-children{border-left:1px solid #476080;margin:0 0 4px 10px;padding:5px 0 5px 8px}
+#grp-sale .sb-platform-group>.sb-group-children>.sb-sub-item{font-size:11px;padding:8px 9px;gap:8px;color:#c1d1e4}
+#grp-sale .sb-platform-group>.sb-group-children>.sb-sub-item:hover{background:#37547a;color:#fff}
+#grp-sale .sb-platform-group>.sb-group-children>.sb-sub-item.active{background:#31548a;color:#fff;font-weight:800}
+#grp-sale .sb-platform-group>.sb-group-children>.sb-sub-item .nav-illustration{width:14px;height:14px;flex-basis:14px;color:#aac4e8}
+#grp-sale .sb-platform-group>.sb-group-children>.sb-sub-item.sb-sub-sub{padding-left:17px;font-size:11px}
+#grp-sale .sb-platform-group .sb-platform-section{display:flex;align-items:center;gap:8px;padding:7px 9px 5px;color:#dceaff;font-weight:780;font-size:11px;cursor:pointer}
+#grp-sale .sb-platform-group .sb-platform-section .nav-koc{color:#c49fea}
+#grp-sale .sb-platform-group .sb-platform-section:hover{color:#fff}
+#grp-sale .sb-legacy-collapse{font-size:11px;color:#90a6c6!important;margin:10px 6px 4px!important}
+#grp-sale .sb-legacy-collapse>summary{font-size:10px!important;color:#90a6c6;padding:9px 6px!important}
+#grp-sale .sb-legacy-collapse[open]>summary{color:#eef4ff}
+.app-shell.sidebar-collapsed #grp-sale .sb-platform-list,.app-shell.sidebar-collapsed #grp-sale .sb-legacy-collapse{display:none!important}
 </style>
 </head>
 <body class="auth-boot app-shell">
@@ -548,42 +584,46 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <span class="sb-item-icon">🏠</span> <span class="sidebar-label">Tổng quan MKT</span></div>
     <div class="sb-section sidebar-section-title">Hoạt động Marketing</div>
     <div class="sb-item" id="nav-b2b" title="Business to Business" onclick="navTo('b2b',this)">
-      <span class="sb-item-icon">🤝</span> <span class="sidebar-label">Business to Business</span></div>
+      <span class="sb-item-icon"><svg class="nav-illustration" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M2 10 7 5l4 2 4-2 7 5-5 6-4-2-3 2-3-2z"/><path d="m7 14 2 3 3 1 2-1M2 10l-1 3 4 4M22 10l1 3-4 4"/></svg></span> <span class="sidebar-label">Business to Business</span></div>
     <div class="sb-group" id="grp-sale">
       <div class="sb-item" id="nav-sale" title="Sale Online" onclick="navSaleGroup(this)">
-        <span class="sb-item-icon">🛒</span>
+        <span class="sb-item-icon"><svg class="nav-illustration" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="20" r="1"/><circle cx="19" cy="20" r="1"/><path d="M2 3h2l3 13h14l2-9H5"/></svg></span>
         <span class="sidebar-label">Sale Online</span>
         <span class="sb-chevron sidebar-label">▶</span>
       </div>
       <div class="sb-group-children" id="sale-children">
-        <div class="sb-sub-item" data-sale-tab="overview" onclick="navSaleSub('overview')"><span class="sidebar-label">Tổng quan</span></div>
-        <div class="sb-sub-item" data-sale-tab="products" onclick="navSaleSub('products')"><span class="sidebar-label">Danh sách SP</span></div>
-        <div class="sb-sub-item" data-sale-tab="kocNew" onclick="kocNewOpen('shared','all')"><span class="sidebar-label">👥 Danh sách KOC chung</span></div>
-        <div class="sb-section sidebar-section-title" style="padding-left:22px">SÀN</div>
-        <div class="sb-group" id="grp-shopee">
-          <div class="sb-sub-item" onclick="document.getElementById('grp-shopee').classList.toggle('open')"><span class="sidebar-label">🟠 Shopee</span><span class="sb-chevron sidebar-label">▶</span></div>
-          <div class="sb-group-children">
-            <div class="sb-sub-item sb-sub-sub" onclick="kocNewOpen('analysis','shopee')">👥 KOC / Affiliate</div>
-            <div class="sb-sub-item sb-sub-sub" onclick="kocNewOpen('bookings','shopee')">📅 Quản lý booking</div>
-            <div class="sb-sub-item sb-sub-sub" onclick="kocNewOpen('analysis','shopee')">📈 Phân tích &amp; Book lại</div>
-          </div>
-        </div>
-        <div class="sb-group" id="grp-tiktok">
-          <div class="sb-sub-item" onclick="document.getElementById('grp-tiktok').classList.toggle('open')"><span class="sidebar-label">🎵 TikTok Shop</span><span class="sb-chevron sidebar-label">▶</span></div>
-          <div class="sb-group-children">
-            <div class="sb-sub-item sb-sub-sub" onclick="kocNewOpen('analysis','tiktok')">👥 KOC / Affiliate</div>
-            <div class="sb-sub-item sb-sub-sub" onclick="kocNewOpen('bookings','tiktok')">📅 Quản lý booking</div>
-            <div class="sb-sub-item sb-sub-sub" onclick="kocNewOpen('analysis','tiktok')">📈 Phân tích &amp; Book lại</div>
-            <div class="sb-sub-item sb-sub-sub" onclick="navKocSub('tiktok')">📥 Dữ liệu TikTok</div>
-          </div>
-        </div>
-        <div class="sb-group" id="grp-facebook">
-          <div class="sb-sub-item" onclick="document.getElementById('grp-facebook').classList.toggle('open')"><span class="sidebar-label">🔵 Facebook</span><span class="sb-chevron sidebar-label">▶</span></div>
-          <div class="sb-group-children">
-            <div class="sb-sub-item sb-sub-sub" onclick="navSaleSub('ads')">📣 Quảng cáo</div>
-            <div class="sb-sub-item sb-sub-sub" onclick="navSaleSub('orders')">📦 Đơn hàng</div>
-          </div>
-        </div>
+        <div class="sb-sub-item" data-sale-tab="overview" onclick="navSaleSub('overview')"><svg class="nav-illustration" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="m3 10 9-7 9 7v10H3V10Z"/><path d="M9 20v-7h6v7"/></svg><span class="sidebar-label">Tổng quan Sale Online</span></div>
+        <div class="sb-sub-item" data-sale-tab="products" onclick="navSaleSub('products')"><svg class="nav-illustration" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="M3 7v10l9 5 9-5V7M12 12v10"/></svg><span class="sidebar-label">Danh sách sản phẩm</span></div>
+        <div class="sb-sub-item" data-sale-tab="kocNew" onclick="kocNewOpen('shared','all')"><svg class="nav-illustration nav-koc" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2"/><path d="M16 5a3 3 0 0 1 0 6M19 20v-2a5 5 0 0 0-3-4.6"/></svg><span class="sidebar-label">Danh sách KOC chung</span></div>
+<div class="sb-section sidebar-section-title sb-platform-title">SÀN</div>
+<div class="sb-platform-list"><div class="sb-group sb-platform-group" id="grp-shopee">
+ <div class="sb-sub-item sb-platform-head" role="button" tabindex="0" aria-expanded="false" onclick="togglePlatformGroup('shopee')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();togglePlatformGroup('shopee')}"><svg class="nav-illustration nav-shopee" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="7" width="18" height="15" rx="2"/><path d="M8 9V6a4 4 0 0 1 8 0v3"/></svg><span class="sidebar-label">Shopee</span><span class="sb-chevron sidebar-label">▶</span></div>
+ <div class="sb-group-children">
+  <div class="sb-sub-item" data-koc-platform="shopee" data-koc-view="platformOverview" onclick="openPlatformSection('platformOverview','shopee')"><svg class="nav-illustration" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="m3 10 9-7 9 7v10H3V10Z"/><path d="M9 20v-7h6v7"/></svg><span class="sidebar-label">Tổng quan Shopee</span></div>
+  <div class="sb-platform-section" role="button" tabindex="0" onclick="openPlatformSection('analysis','shopee')" onkeydown="if(event.key==='Enter'){openPlatformSection('analysis','shopee')}"><svg class="nav-illustration nav-koc" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2"/><path d="M16 5a3 3 0 0 1 0 6M19 20v-2a5 5 0 0 0-3-4.6"/></svg><span class="sidebar-label">KOC / Affiliate</span></div>
+  <div class="sb-sub-item sb-sub-sub" data-koc-platform="shopee" data-koc-view="bookings" onclick="openPlatformSection('bookings','shopee')"><svg class="nav-illustration" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 11h18"/><path d="m9 16 2 2 4-4"/></svg><span class="sidebar-label">Quản lý booking</span></div>
+  <div class="sb-sub-item sb-sub-sub" data-koc-platform="shopee" data-koc-view="analysis" onclick="openPlatformSection('analysis','shopee')"><svg class="nav-illustration" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M3 19h18M6 15l5-5 4 3 6-7"/><path d="M16 6h5v5"/></svg><span class="sidebar-label">Phân tích &amp; Book lại</span></div>
+  <div class="sb-sub-item sb-sub-sub" data-koc-platform="shopee" data-koc-view="source" onclick="openPlatformSection('source','shopee')"><svg class="nav-illustration" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 2 18 2 18 0V5M3 12c0 3 18 3 18 0"/></svg><span class="sidebar-label">Kho dữ liệu Shopee</span></div>
+  <div class="sb-sub-item" onclick="navSaleSub('ads')"><svg class="nav-illustration" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M3 10v5h4l7 5V5l-7 5H3Z"/><path d="M17 8a5 5 0 0 1 0 9"/></svg><span class="sidebar-label">Ads &amp; đơn hàng</span></div>
+ </div>
+</div><div class="sb-group sb-platform-group open" id="grp-tiktok">
+ <div class="sb-sub-item sb-platform-head" role="button" tabindex="0" aria-expanded="true" onclick="togglePlatformGroup('tiktok')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();togglePlatformGroup('tiktok')}"><svg class="nav-illustration nav-tiktok" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M9 18V5l12-3v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="15" r="3"/></svg><span class="sidebar-label">TikTok Shop</span><span class="sb-chevron sidebar-label">▶</span></div>
+ <div class="sb-group-children">
+  <div class="sb-sub-item" data-koc-platform="tiktok" data-koc-view="platformOverview" onclick="openPlatformSection('platformOverview','tiktok')"><svg class="nav-illustration" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="m3 10 9-7 9 7v10H3V10Z"/><path d="M9 20v-7h6v7"/></svg><span class="sidebar-label">Tổng quan TikTok</span></div>
+  <div class="sb-platform-section" role="button" tabindex="0" onclick="openPlatformSection('analysis','tiktok')" onkeydown="if(event.key==='Enter'){openPlatformSection('analysis','tiktok')}"><svg class="nav-illustration nav-koc" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2"/><path d="M16 5a3 3 0 0 1 0 6M19 20v-2a5 5 0 0 0-3-4.6"/></svg><span class="sidebar-label">KOC / Affiliate</span></div>
+  <div class="sb-sub-item sb-sub-sub" data-koc-platform="tiktok" data-koc-view="bookings" onclick="openPlatformSection('bookings','tiktok')"><svg class="nav-illustration" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 11h18"/><path d="m9 16 2 2 4-4"/></svg><span class="sidebar-label">Quản lý booking</span></div>
+  <div class="sb-sub-item sb-sub-sub" data-koc-platform="tiktok" data-koc-view="analysis" onclick="openPlatformSection('analysis','tiktok')"><svg class="nav-illustration" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M3 19h18M6 15l5-5 4 3 6-7"/><path d="M16 6h5v5"/></svg><span class="sidebar-label">Phân tích &amp; Book lại</span></div>
+  <div class="sb-sub-item sb-sub-sub" data-koc-platform="tiktok" data-koc-view="source" onclick="openPlatformSection('source','tiktok')"><svg class="nav-illustration" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 2 18 2 18 0V5M3 12c0 3 18 3 18 0"/></svg><span class="sidebar-label">Kho dữ liệu TikTok</span></div>
+  <div class="sb-sub-item" onclick="navSaleSub('ads')"><svg class="nav-illustration" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M3 10v5h4l7 5V5l-7 5H3Z"/><path d="M17 8a5 5 0 0 1 0 9"/></svg><span class="sidebar-label">Ads &amp; đơn hàng</span></div>
+ </div>
+</div><div class="sb-group sb-platform-group" id="grp-facebook">
+ <div class="sb-sub-item sb-platform-head" role="button" tabindex="0" aria-expanded="false" onclick="togglePlatformGroup('facebook')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();togglePlatformGroup('facebook')}"><svg class="nav-illustration nav-facebook" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"/><path d="M15 7h-2a2 2 0 0 0-2 2v9M8 12h7"/></svg><span class="sidebar-label">Facebook</span><span class="sb-chevron sidebar-label">▶</span></div>
+ <div class="sb-group-children">
+  <div class="sb-sub-item" onclick="navSaleSub('overview')"><svg class="nav-illustration" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="m3 10 9-7 9 7v10H3V10Z"/><path d="M9 20v-7h6v7"/></svg><span class="sidebar-label">Tổng quan Facebook</span></div>
+  <div class="sb-sub-item" onclick="navSaleSub('ads')"><svg class="nav-illustration" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M3 10v5h4l7 5V5l-7 5H3Z"/><path d="M17 8a5 5 0 0 1 0 9"/></svg><span class="sidebar-label">Quảng cáo Meta</span></div>
+  <div class="sb-sub-item" onclick="navSaleSub('orders')"><svg class="nav-illustration" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M6 2h9l5 5v15H6Z"/><path d="M15 2v6h5M9 12h8M9 16h8"/></svg><span class="sidebar-label">Tin nhắn, đơn &amp; hoàn hàng</span></div>
+ </div>
+</div></div>
         <details class="sb-legacy-collapse" style="margin:9px 5px 4px;color:#9fb6d5"><summary style="cursor:pointer;padding:9px 8px;font-size:12px;list-style:none">▸ Chức năng khác (đang sử dụng)</summary><div style="margin-left:7px;border-left:1px solid #3a577b">
         <div class="sb-sub-item" data-sale-tab="koc" onclick="navSaleSub('koc')"><span class="sidebar-label">🗂️ KOC / Affiliate hiện có</span></div>
         <div class="sb-sub-item" data-sale-tab="compliance" onclick="navSaleSub('compliance')"><span class="sidebar-label">⚖️ Kiểm duyệt nội dung</span></div>
@@ -598,9 +638,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       </div>
     </div>
     <div class="sb-item" id="nav-hr" title="Tuyển dụng" onclick="navTo('hr',this)">
-      <span class="sb-item-icon">👥</span> <span class="sidebar-label">Tuyển dụng</span></div>
+      <span class="sb-item-icon"><svg class="nav-illustration" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M2 13h20"/></svg></span> <span class="sidebar-label">Tuyển dụng</span></div>
     <div class="sb-item" id="nav-employee-tasks" title="Theo dõi công việc" onclick="navTo('employeeTasks',this)">
-      <span class="sb-item-icon">✅</span> <span class="sidebar-label">KPI nhân viên</span></div>
+      <span class="sb-item-icon"><svg class="nav-illustration" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="4" width="14" height="18" rx="2"/><path d="M9 4V2h6v2M9 13l2 2 4-4"/></svg></span> <span class="sidebar-label">KPI nhân viên</span></div>
       <div class="sb-section sidebar-section-title" id="nav-admin-section">⚙️ Quản trị hệ thống</div>
     <div class="sb-item" id="nav-data-sources" title="Nguồn dữ liệu" onclick="navTo('dataSources',this)">
       <span class="sb-item-icon">🔗</span> <span class="sidebar-label">Nguồn dữ liệu</span></div>
@@ -2691,6 +2731,16 @@ function navSaleGroup(el) {
   grp.classList.add('open');
   _syncSaleSidebar();
 }
+function togglePlatformGroup(platform){
+ const g=document.getElementById('grp-'+platform);if(!g)return;
+ const opened=g.classList.toggle('open');
+ g.querySelector('.sb-platform-head')?.setAttribute('aria-expanded',String(opened));
+}
+function openPlatformSection(view,platform){
+ const g=document.getElementById('grp-'+platform);
+ if(g){g.classList.add('open');g.querySelector('.sb-platform-head')?.setAttribute('aria-expanded','true');}
+ if(typeof kocNewOpen==='function')kocNewOpen(view,platform);
+}
 function navKocGroup() {
   navSaleSub('koc');
 }
@@ -2714,6 +2764,10 @@ function navKocSub(sub) {
 function _syncSaleSidebar() {
   document.querySelectorAll('#sale-children [data-sale-tab]').forEach(x =>
     x.classList.toggle('active', x.dataset.saleTab === saleTab));
+  const kocState=window.MKTKOCNew&&typeof window.MKTKOCNew.getNavState==='function'?window.MKTKOCNew.getNavState():null;
+  document.querySelectorAll('#sale-children [data-koc-view]').forEach(x=>{
+    x.classList.toggle('active',saleTab==='kocNew'&&kocState?.view===x.dataset.kocView&&kocState?.platform===x.dataset.kocPlatform);
+  });
   const kocChildren = document.getElementById('koc-children');
   if (kocChildren) {
     kocChildren.querySelectorAll('[data-koc-sub]').forEach(x =>
