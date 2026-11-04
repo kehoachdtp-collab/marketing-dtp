@@ -584,6 +584,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
             <div class="sb-sub-item sb-sub-sub" onclick="navSaleSub('orders')">📦 Đơn hàng</div>
           </div>
         </div>
+        <details class="sb-legacy-collapse" style="margin:9px 5px 4px;color:#9fb6d5"><summary style="cursor:pointer;padding:9px 8px;font-size:12px;list-style:none">▸ Chức năng khác (đang sử dụng)</summary><div style="margin-left:7px;border-left:1px solid #3a577b">
         <div class="sb-sub-item" data-sale-tab="koc" onclick="navSaleSub('koc')"><span class="sidebar-label">🗂️ KOC / Affiliate hiện có</span></div>
         <div class="sb-sub-item" data-sale-tab="compliance" onclick="navSaleSub('compliance')"><span class="sidebar-label">⚖️ Kiểm duyệt nội dung</span></div>
         <div class="sb-sub-item" data-sale-tab="ads" onclick="navSaleSub('ads')"><span class="sidebar-label">Ads</span></div>
@@ -593,15 +594,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="sb-sub-item" data-sale-tab="inventory" onclick="navSaleSub('inventory')"><span class="sidebar-label">Kiểm kho</span></div>
         <div class="sb-sub-item" data-sale-tab="reviews" onclick="navSaleSub('reviews')"><span class="sidebar-label">Đánh giá KH</span></div>
         <div class="sb-sub-item" data-sale-tab="alerts" onclick="navSaleSub('alerts')"><span class="sidebar-label">Cảnh báo</span></div>
+</div></details>
       </div>
     </div>
     <div class="sb-item" id="nav-hr" title="Tuyển dụng" onclick="navTo('hr',this)">
       <span class="sb-item-icon">👥</span> <span class="sidebar-label">Tuyển dụng</span></div>
+    <div class="sb-item" id="nav-employee-tasks" title="Theo dõi công việc" onclick="navTo('employeeTasks',this)">
+      <span class="sb-item-icon">✅</span> <span class="sidebar-label">KPI nhân viên</span></div>
       <div class="sb-section sidebar-section-title" id="nav-admin-section">⚙️ Quản trị hệ thống</div>
     <div class="sb-item" id="nav-data-sources" title="Nguồn dữ liệu" onclick="navTo('dataSources',this)">
       <span class="sb-item-icon">🔗</span> <span class="sidebar-label">Nguồn dữ liệu</span></div>
-    <div class="sb-item" id="nav-employee-tasks" title="Theo dõi công việc" onclick="navTo('employeeTasks',this)">
-      <span class="sb-item-icon">✅</span> <span class="sidebar-label">KPI nhân viên · Công việc</span></div>
     <div class="sb-item" id="nav-users" title="Quản lý user" onclick="navTo('users',this)">
       <span class="sb-item-icon">👤</span> <span class="sidebar-label">Quản lý user</span></div>
     <div class="sb-item sb-logout-item" id="nav-logout" title="&#272;&#259;ng xu&#7845;t" onclick="demoLogout()">
@@ -6493,7 +6495,7 @@ window.addEventListener('load', async () => {
   }
 })();
 </script>
-<script src="assets/koc-shared-live.js?v=20261104-4"></script>
+<script src="assets/koc-shared-live.js?v=20261104-5"></script>
 </body>
 </html>
 
