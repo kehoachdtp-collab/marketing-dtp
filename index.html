@@ -506,6 +506,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 #grp-sale .sb-legacy-collapse[open]>summary{color:#eef4ff}
 .app-shell.sidebar-collapsed #grp-sale .sb-platform-list,.app-shell.sidebar-collapsed #grp-sale .sb-legacy-collapse{display:none!important}
 </style>
+<link rel="stylesheet" href="assets/tiktok-google-sheets-ui.css?v=20261104-1">
 </head>
 <body class="auth-boot app-shell">
 <!-- Universal Modal -->
@@ -614,6 +615,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="sb-sub-item sb-sub-sub" data-koc-platform="tiktok" data-koc-view="bookings" onclick="openPlatformSection('bookings','tiktok')"><svg class="nav-illustration" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 11h18"/><path d="m9 16 2 2 4-4"/></svg><span class="sidebar-label">Quản lý booking</span></div>
   <div class="sb-sub-item sb-sub-sub" data-koc-platform="tiktok" data-koc-view="analysis" onclick="openPlatformSection('analysis','tiktok')"><svg class="nav-illustration" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M3 19h18M6 15l5-5 4 3 6-7"/><path d="M16 6h5v5"/></svg><span class="sidebar-label">Phân tích &amp; Book lại</span></div>
   <div class="sb-sub-item sb-sub-sub" data-koc-platform="tiktok" data-koc-view="source" onclick="openPlatformSection('source','tiktok')"><svg class="nav-illustration" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 2 18 2 18 0V5M3 12c0 3 18 3 18 0"/></svg><span class="sidebar-label">Kho dữ liệu TikTok</span></div>
+  <div class="sb-sub-item sb-sub-sub" data-sale-tab="tiktokSheet" onclick="navSaleSub('tiktokSheet')"><svg class="nav-illustration" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 9v12M15 9v12"/></svg><span class="sidebar-label">Đồng bộ Google Sheets</span></div>
   <div class="sb-sub-item" onclick="navSaleSub('ads')"><svg class="nav-illustration" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M3 10v5h4l7 5V5l-7 5H3Z"/><path d="M17 8a5 5 0 0 1 0 9"/></svg><span class="sidebar-label">Ads &amp; đơn hàng</span></div>
  </div>
 </div><div class="sb-group sb-platform-group" id="grp-facebook">
@@ -909,7 +911,7 @@ const MKT_SYNC_MIN_PULL_GAP_MS = 25000;
 const MKT_BACKUP_MIN_INTERVAL_MS = 120000;
 const MKT_BACKUP_MAX_ITEMS = 14;
 const MKT_BACKUP_MAX_TOTAL_BYTES = 2500000;
-const SYNC_KEYS = ['mkt_sale_koc_tiktok_snapshots','mkt_sale_koc_platform_links_live','mkt_sale_koc_video_assignments_live','mkt_sale_koc_direct_bookings',MKT_NOTIFICATIONS_KEY,'mkt_b2b_crm_data','mkt_b2b_cost_data','mkt_b2b_assignee_options','mkt_sale_campaigns','mkt_sale_orders','mkt_sale_ads_data','mkt_shop_tasks','mkt_employee_tasks','mkt_sale_koc_data','mkt_sale_koc_master','mkt_sale_koc_product_campaigns','mkt_sale_koc_prospects','mkt_sale_koc_collaborations','mkt_sale_koc_collab','mkt_sale_koc_ptlist','mkt_sale_koc_contracts','mkt_sale_inventory','mkt_sale_product_master','mkt_recruitment_campaign_data','mkt_recruitment_msg_data','mkt_data_sources','mkt_google_sheet_configs','mkt_google_sheet_mappings','mkt_sync_logs','mkt_compliance_reviews','mkt_compliance_rules','mkt_product_approved_claims','mkt_product_banned_claims','mkt_compliance_draft','mkt_demo_username_aliases','mkt_demo_users_cloud'];
+const SYNC_KEYS = ['mkt_sale_tiktok_sheet_config','mkt_sale_koc_tiktok_snapshots','mkt_sale_koc_platform_links_live','mkt_sale_koc_video_assignments_live','mkt_sale_koc_direct_bookings',MKT_NOTIFICATIONS_KEY,'mkt_b2b_crm_data','mkt_b2b_cost_data','mkt_b2b_assignee_options','mkt_sale_campaigns','mkt_sale_orders','mkt_sale_ads_data','mkt_shop_tasks','mkt_employee_tasks','mkt_sale_koc_data','mkt_sale_koc_master','mkt_sale_koc_product_campaigns','mkt_sale_koc_prospects','mkt_sale_koc_collaborations','mkt_sale_koc_collab','mkt_sale_koc_ptlist','mkt_sale_koc_contracts','mkt_sale_inventory','mkt_sale_product_master','mkt_recruitment_campaign_data','mkt_recruitment_msg_data','mkt_data_sources','mkt_google_sheet_configs','mkt_google_sheet_mappings','mkt_sync_logs','mkt_compliance_reviews','mkt_compliance_rules','mkt_product_approved_claims','mkt_product_banned_claims','mkt_compliance_draft','mkt_demo_username_aliases','mkt_demo_users_cloud'];
 
 function isSyncKey(k){ return SYNC_KEYS.includes(k); }
 
@@ -2688,6 +2690,9 @@ function updateTopbarNav(){
       tabs.innerHTML = '<button type="button" class="topbar-tab" onclick="kocNewOpen(\'shared\',\'all\')">Danh sách KOC chung</button>'+
         '<button type="button" class="topbar-tab" onclick="kocNewOpen(\'bookings\',\'all\')">Quản lý booking</button>'+
         '<button type="button" class="topbar-tab" onclick="kocNewOpen(\'analysis\',\'all\')">Phân tích &amp; Book lại</button>';
+    } else if (saleTab === 'tiktokSheet') {
+      title.innerHTML = '<span>🛒 Sale Online</span><span class="topbar-sep">›</span><strong>TikTok Shop · Google Sheets</strong>';
+      tabs.innerHTML = '';
     } else if (saleTab === 'koc') {
       title.innerHTML = '<span>🛒 Sale Online</span><span class="topbar-sep">›</span><strong>KOC / Affiliate</strong>';
       tabs.innerHTML = _topbarTabHtml(KOC_SUBTABS, kocSubTab, 'switchKocTab');
@@ -3815,7 +3820,8 @@ function renderSale() {
   updateTopbarNav();
   const body = ({
     overview:_saleOverview, products:_saleProdMst, campaigns:_saleCampTab,
-    koc:_saleKocTab, kocNew:()=>window.MKTKOCNew?window.MKTKOCNew.render():'<div class="empty-b">Đang tải giao diện KOC chung…</div>', compliance:()=>renderCompliancePage('sale'), ads:_saleAdsTab, shopTasks:_saleShopTasksTab, orders:_saleOrdTab,
+    koc:_saleKocTab, kocNew:()=>window.MKTKOCNew?window.MKTKOCNew.render():'<div class="empty-b">Đang tải giao diện KOC chung…</div>',
+    tiktokSheet:()=>window.TiktokSheetsUI?window.TiktokSheetsUI.render():'<div class="empty-b">Không tải được màn Google Sheets. Hãy làm mới trang.</div>', compliance:()=>renderCompliancePage('sale'), ads:_saleAdsTab, shopTasks:_saleShopTasksTab, orders:_saleOrdTab,
     profit:_saleProfitTab, inventory:_saleInvTab,
     reviews:()=>_ph('⭐','Tab Đánh giá KH — bước tiếp theo.'),
     alerts:_saleAlertsTab,
@@ -6550,6 +6556,7 @@ window.addEventListener('load', async () => {
 })();
 </script>
 <script src="assets/koc-shared-live.js?v=20261104-6"></script>
+<script src="assets/tiktok-google-sheets-ui.js?v=20261104-1"></script>
 </body>
 </html>
 
