@@ -148,6 +148,87 @@
   });
   document.addEventListener('submit',handleSubmit);
   document.head.insertAdjacentHTML('beforeend', '<style>.knd-root{font-size:13px}.knd-head{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:center;margin-bottom:18px}.knd-head h2{margin:0 0 5px;color:#1e2e4a;font-size:21px}.knd-head p{font-size:12px;color:#64748b;margin:0}.knd-stats{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:12px;margin-bottom:16px}.knd-tiny{background:#fff;border:1px solid #e2e8f0;border-radius:11px;padding:12px}.knd-tiny small{display:block;font-size:11px;color:#64748b}.knd-tiny b{display:block;font-size:20px;margin-top:6px;color:#1e2e4a}.knd-box{border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;background:#fff;margin-bottom:14px}.knd-toolbar{padding:13px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}.knd-toolbar input,.knd-toolbar select{padding:10px;border:1px solid #cbd5e1;border-radius:8px;min-width:190px}.knd-scroll{overflow:auto}.knd-table{width:100%;border-collapse:collapse;min-width:940px;font-size:12px}.knd-table th{text-align:left;background:#f4f7fb;color:#64748b;font-size:10px;letter-spacing:.35px;white-space:nowrap}.knd-table th,.knd-table td{border-bottom:1px solid #edf1f5;padding:12px 11px;vertical-align:middle}.knd-table td b{color:#253958}.knd-muted{font-size:11px;color:#94a3b8;margin-top:5px}.knd-pill{border-radius:999px;background:#eef2f7;color:#64748b;padding:5px 8px;white-space:nowrap;font-size:10px;font-weight:750;display:inline-block}.knd-pill.ok{background:#e8f7ef;color:#167c50}.knd-note{font-size:12px;color:#7d5c20;border:1px solid #f4d7a9;background:#fff9ed;border-radius:9px;padding:12px;margin:12px 0;line-height:1.6}.knd-more{padding:12px}.knd-empty{text-align:center;color:#8494ab;padding:25px!important}.knd-detail{background:#f8fafc;padding:14px}.knd-detail>.knd-stats{margin-top:12px}.knd-overlay{position:fixed;inset:0;background:#0f20399c;z-index:1000;display:grid;place-items:center;padding:12px}.knd-modal{background:#fff;border-radius:14px;width:min(770px,100%);max-height:94vh;overflow:auto;box-shadow:0 18px 60px #13243a4d}.knd-modal-top{padding:17px 20px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between}.knd-modal h3{margin:0 0 5px;font-size:17px;color:#1e2e4a}.knd-modal small{color:#8a9ab1}.knd-modal form{padding:18px}.knd-formgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.knd-formgrid label{font-weight:700;font-size:12px;color:#475569}.knd-formgrid input,.knd-formgrid select{display:block;margin-top:6px;padding:10px;border:1px solid #cbd5e1;border-radius:8px;width:100%;font-size:13px;background:#fff}.knd-paid{background:#f8fafc;border:1px solid #e2e8f0;padding:13px;margin-top:15px;border-radius:10px}.knd-paid[hidden]{display:none}.knd-form-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}.knd-root .btn-sm{font-size:11px;padding:6px 9px}.knd-head .btn-primary{background:#1e2e4a;color:#fff}.knd-head .btn-primary:hover{color:#fff}@media(max-width:1020px){.knd-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:600px){.knd-formgrid{grid-template-columns:1fr}} </style>');
-  window.MKTKOCNew={render,open};
+
+  const BOOK_KEY="mkt_sale_koc_direct_bookings";
+  const LINK_KEY="mkt_sale_koc_platform_links_live";
+  const ASSIGN_KEY="mkt_sale_koc_video_assignments_live";
+  const VIDEO_KEY="mkt_sale_koc_tiktok_snapshots";
+  const safeArr=(x)=>Array.isArray(x)?x:[];
+  const safeObj=(x)=>x&&typeof x==='object'&&!Array.isArray(x)?x:{};
+  const normalName=(v)=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/đ/g,'d').replace(/[^\p{L}\p{N}]/gu,'');
+  function getVideoData(){
+    const snaps=safeArr(getStore(VIDEO_KEY,[]));
+    if(!snaps.length)return [];
+    const mostRecent=snaps.slice().sort((a,b)=>String(b.end||'').localeCompare(String(a.end||'')))[0];
+    return safeArr(mostRecent.rows).filter(x=>x.creator&&x.id).map(r=>({
+      id:String(r.id),creator:String(r.creator),content:String(r.content||''),
+      air:String(r.posted||r.air||''),ads:Number(r.spent||r.ads)||0,
+      orders:Number(r.orders)||0,gmv:Number(r.gmv)||0,impressions:Number(r.impressions)||0
+    }));
+  }
+  function portalSnapshot(){
+    return {
+      masters:masters().map(m=>({maKoc:m.maKoc,ten:m.ten,lienHe:m.lienHe||'',
+        tiktokChannelName:m.tiktokChannelName||'',tiktokChannelId:m.tiktokChannelId||'',
+        shopeeChannelName:m.shopeeChannelName||'',shopeeChannelId:m.shopeeChannelId||'',socialLink:m.socialLink||''})),
+      videos:getVideoData(),bookings:safeArr(getStore(BOOK_KEY,[])),
+      platformLinks:safeObj(getStore(LINK_KEY,{})),
+      links:safeObj(getStore(LINK_KEY,{})),
+      videoAssignments:safeObj(getStore(ASSIGN_KEY,{}))
+    };
+  }
+  function portalSaveState(input){
+    if(!can())throw Error("Bạn không có quyền cập nhật KOC");
+    const curr=safeArr(getStore(BOOK_KEY,[])),existingIds=new Set(curr.map(b=>String(b.id)));
+    const pending=safeArr(input?.newBookings).filter(b=>b&&!existingIds.has(String(b.id)));
+    const updated=[...curr];
+    for(const b of pending){
+      const creator=V(b.creator),platform=V(b.platform),start=V(b.start);
+      const channel=V(b.channel||b.channelName),cid=V(b.channelId),url=V(b.url||b.channelUrl),phone=V(b.phone);
+      const cast=V(b.cast),fee=Number(b.castFee)||0,videos=Number(b.videos||b.videoCount)||0;
+      if(!creator||!phone||!channel||!cid||!url||!start||!['tiktok','shopee'].includes(platform)||!['yes','no'].includes(cast))throw Error('Thiếu thông tin hợp tác bắt buộc');
+      if(!url.match(/^https:\/\//i))throw Error('Link kênh cần dùng HTTPS');
+      if(!Number.isInteger(videos)||videos<1)throw Error('Số video cam kết không hợp lệ');
+      if(cast==='yes'&&(!(fee>0)||!b.cccdProvided))throw Error('Có cast phải chọn CCCD, phí và số video');
+      const matches=masters().filter(m=>normalName(m.ten)===normalName(creator));
+      if(matches.length>1)throw Error('Tên KOC trùng trong hồ sơ master, cần xác minh mã KOC trước khi lưu');
+      let m=matches[0];
+      if(!m){m={id:Date.now()+Math.random(),maKoc:_kocNextMa(),ten:creator};kocMstRows.push(m);}
+      m.lienHe=phone;
+      if(platform==='tiktok'){m.tiktokChannelName=channel;m.tiktokChannelId=cid;m.tiktokLink=url;if(!m.socialLink)m.socialLink=url;}
+      if(platform==='shopee'){m.shopeeChannelName=channel;m.shopeeChannelId=cid;m.shopeeLink=url;}
+      updated.push({id:String(b.id||('bk_'+Date.now())),maKoc:m.maKoc,creator,platform,phone,
+        channelName:channel,channelId:cid,channelUrl:url,channel:channel,url:url,
+        start,due:add20(start),cast,castFee:cast==='yes'?fee:0,
+        videoCount:videos,videos,product:V(b.product),campaign:V(b.campaign),owner:V(b.owner),
+        status:cast==='yes'?'Chờ xác minh CCCD':'Đã ghi nhận',contractStatus:cast==='yes'?'Chưa hoàn tất OCR':'Không yêu cầu',
+        cccdFileStored:false,createdAt:new Date().toISOString()});
+    }
+    const links=safeObj(input?.platformLinks),ids=new Set(),revised={};
+    for(const [key,link] of Object.entries(links)){
+      const shopeeId=V(link.shopeeId);
+      if(!shopeeId)continue;
+      const unique=normalName(shopeeId);
+      if(ids.has(unique))throw Error("Trùng ID Shopee trong danh sách liên kết");
+      ids.add(unique);
+      revised[key]={creator:V(link.creator),shopeeChannel:V(link.shopeeChannel),
+        shopeeId,shopeeUrl:V(link.shopeeUrl),confirmed:link.confirmed===true,updatedAt:new Date().toISOString()};
+      const matches=masters().filter(m=>normalName(m.ten)===normalName(link.creator));
+      if(matches.length===1){const m=matches[0];m.shopeeChannelName=V(link.shopeeChannel);m.shopeeChannelId=shopeeId;m.shopeeLink=V(link.shopeeUrl);}
+    }
+    if(pending.length){setStore(BOOK_KEY,updated);}
+    if(input?.platformLinks){setStore(LINK_KEY,revised);}
+    if(input?.videoAssignments){setStore(ASSIGN_KEY,safeObj(input.videoAssignments));}
+    if(pending.length||input?.platformLinks){_kocSaveAll();}
+    return true;
+  }
+  window.KOC_PORTAL_BRIDGE={snapshot:portalSnapshot,saveState:portalSaveState};
+  function portalRender(){
+    const params=new URLSearchParams({view:ui.view,platform:ui.platform});
+    return '<iframe title="Quản lý KOC Shopee TikTok" src="assets/koc-portal.html?v=20261104-4&'+params.toString()+
+      '" style="display:block;width:100%;min-height:calc(100vh - 185px);height:calc(100vh - 145px);background:#f3f6fa;border:0;border-radius:12px"></iframe>';
+  }
+
+  window.MKTKOCNew={render:portalRender,open};
   window.kocNewOpen=open;
 })();
