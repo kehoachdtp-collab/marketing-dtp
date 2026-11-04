@@ -88,64 +88,62 @@ Nút mở Google Flow chuyển tới tài khoản Google được chọn trong t
 
 ## Supabase và cú pháp reset mật khẩu
 
-Mở **Supabase Dashboard → SQL Editor → New query**. Chỉ người có quyền quản trị dự án Supabase mới có thể chạy SQL trực tiếp. Trước khi cập nhật, chạy SELECT để xác định username và bản ghi cần tác động.
+Mở **Supabase Dashboard → dự án marketing-dtp → SQL Editor → New query**. Chỉ người có quyền quản trị dự án Supabase mới thực hiện thao tác này.
 
-### Tra cứu user
+**Lưu ý quan trọng:** Tài khoản hiện tại có username chính xác là `admin`, **không phải** `<admin>`. Không được sao chép các dấu `< >` của ví dụ placeholder cũ. Tuyệt đối không ghi mật khẩu thật vào README, GitHub hoặc tin nhắn; mật khẩu từng lộ trong ảnh cần thay bằng mật khẩu mới khác hoàn toàn.
 
-Thay `<USERNAME>` bằng username chính xác. Dạng placeholder này không phải cú pháp SQL để chạy nguyên văn.
+### Bước 1 — Kiểm tra tài khoản admin
+
+Chạy trước đoạn sau:
 
 ```sql
-select id, username, display_name, role, status
-from public.app_users
-where username = '<USERNAME>';
+SELECT username, role, status
+FROM public.app_users
+WHERE username = 'admin';
 ```
 
-### Reset trực tiếp bằng SQL Editor
+Kết quả mong đợi: **1 dòng** với `username = admin`, `role = admin` và `status = active`. Nếu không có dòng nào, không chạy bước đổi mật khẩu và cần kiểm tra đúng dự án Supabase.
 
-Thay `<USERNAME>` và `<NEW_PASSWORD>` bằng giá trị cần dùng. Đảm bảo SELECT trả đúng một user trước khi chạy UPDATE. Mật khẩu là chuỗi phân biệt chữ hoa/thường.
+### Bước 2 — Đặt mật khẩu mới
+
+Trong đoạn SQL dưới đây, **chỉ thay lần xuất hiện đầu tiên** của `NHAP_MAT_KHAU_MOI_TAI_DAY` ở phần `SELECT` bằng mật khẩu mạnh mới (tối thiểu 12 ký tự). **Giữ nguyên** lần xuất hiện thứ hai trong điều kiện `p.value <> ...` để tránh vô tình lưu mật khẩu placeholder. Không thêm dấu ngoặc nhọn.
 
 ```sql
-begin;
-
-update public.app_users
-set password_hash = extensions.crypt('<NEW_PASSWORD>', extensions.gen_salt('bf')),
+-- RESET MẬT KHẨU TÀI KHOẢN admin
+WITH new_password AS (
+    SELECT 'NHAP_MAT_KHAU_MOI_TAI_DAY'::text AS value
+)
+UPDATE public.app_users AS u
+SET
+    password_hash = extensions.crypt(
+        p.value,
+        extensions.gen_salt('bf')
+    ),
     updated_at = now()
-where username = '<USERNAME>';
-
-select id, username, display_name, role, status
-from public.app_users
-where username = '<USERNAME>';
-
-commit;
+FROM new_password AS p
+WHERE u.username = 'admin'
+  AND p.value <> 'NHAP_MAT_KHAU_MOI_TAI_DAY'
+  AND length(p.value) >= 12
+RETURNING
+    u.username,
+    u.role,
+    u.status,
+    u.updated_at;
 ```
 
-Kiểm tra thông báo số dòng được cập nhật. Nếu 0 dòng, username không tồn tại trong `app_users`. Sau khi reset, đăng nhập bằng username đó và mật khẩu mới, rồi đổi sang mật khẩu mạnh riêng biệt.
+**Chạy và kiểm tra:** Kết quả phải có **1 dòng** cho `admin`. Nếu là `Success. No rows returned` thì **chưa có gì được cập nhật** — thường do quên thay mật khẩu mẫu, nhập dưới 12 ký tự, hoặc chọn sai username.
 
-### Reset qua RPC khi có tài khoản Admin đang hoạt động
+Mật khẩu phân biệt chữ hoa/chữ thường. Nếu mật khẩu chứa dấu nháy đơn `'`, phải viết thành `''` bên trong chuỗi SQL. Đừng gửi mật khẩu vào cuộc trò chuyện. Sau khi chạy, nên đóng hoặc xóa câu SQL chứa mật khẩu thật khỏi lịch sử truy vấn lưu trên Supabase nếu có thể.
 
-Tra UUID của admin và user trước:
+### Bước 3 — Kiểm tra đăng nhập
 
-```sql
-select id, username, role, status
-from public.app_users
-where username in ('<ADMIN_USERNAME>', '<TARGET_USERNAME>');
-```
+Mở https://kehoachdtp-collab.github.io/marketing-dtp/ rồi nhập username **`admin`** và mật khẩu vừa đặt.
 
-Sau khi xác minh admin đang active và có role admin, gọi:
+Nếu vẫn báo sai: kiểm tra dự án Supabase đang chọn, kết quả UPDATE có trả về 1 dòng không, và trạng thái `active`. Website đang sử dụng hàm `public.verify_password` để kiểm tra hash bcrypt.
 
-```sql
-select public.reset_password(
-  '<ADMIN_UUID>'::uuid,
-  '<TARGET_USER_UUID>'::uuid,
-  '<NEW_PASSWORD>'
-);
-```
+### Đổi mật khẩu tài khoản nhân viên
 
-Hàm `reset_password` chỉ cho Admin reset người khác; user thường chỉ reset được tài khoản của chính mình. Không đoán UUID. Nếu quên mật khẩu Admin, dùng phương thức cập nhật hash trực tiếp trong SQL Editor.
-
-### Mật khẩu mặc định
-
-Một số seed/demo cũ có thể khởi tạo mật khẩu mẫu. Không giả định mật khẩu mẫu còn hiệu lực trên tài khoản đang dùng. Không dùng mật khẩu ngắn làm mật khẩu lâu dài.
+Khi đã đăng nhập bằng tài khoản Admin, nên đổi mật khẩu cho nhân viên qua **Quản trị hệ thống → Quản lý user** thay vì chạy SQL trực tiếp. Chỉ dùng SQL Editor khi cần khôi phục tài khoản Admin và có quyền quản trị Supabase. Không đoán UUID hoặc lấy mật khẩu mẫu từ bản seed/demo cũ.
 
 ## Sao lưu, phát hành và xử lý lỗi
 
