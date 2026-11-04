@@ -104,29 +104,40 @@ WHERE username = 'admin';
 
 Kết quả mong đợi: **1 dòng** với `username = admin`, `role = admin` và `status = active`. Nếu không có dòng nào, không chạy bước đổi mật khẩu và cần kiểm tra đúng dự án Supabase.
 
-### Bước 2 — Đặt mật khẩu mới (chỉ thay 1 vị trí)
+### Bước 2 — Đặt mật khẩu mới (chỉ thay một vị trí)
 
-Thay **duy nhất** chuỗi `DOI_O_DAY` ở dòng `SELECT` bằng mật khẩu mới mạnh, **tối thiểu 12 ký tự**. Chuỗi mẫu chỉ 9 ký tự, vì vậy nếu quên thay thì câu lệnh sẽ **không** đổi mật khẩu. **Không có điều kiện so sánh với mật khẩu lần thứ hai.**
+**Chú ý:** Supabase SQL Editor có thể **chỉ thực thi đoạn đang bôi đen**. Nếu bôi đen riêng dòng `AND LENGTH(...)` rồi nhấn Run, sẽ gặp lỗi `42601: syntax error at or near "AND"`. Bạn phải chạy **toàn bộ câu lệnh**, không chạy riêng bất kỳ dòng nào.
+
+1. Xóa nội dung SQL cũ trong ô soạn thảo.
+2. Sao chép **toàn bộ** câu lệnh dưới đây vào SQL Editor.
+3. Thay **duy nhất** `DOI_O_DAY` tại dòng `SELECT` bằng mật khẩu mới, mạnh, dài **ít nhất 12 ký tự**. Không dùng lại mật khẩu đã xuất hiện trong ảnh.
+4. Nhấp vào trong ô SQL, nhấn **Ctrl+A** để chọn **toàn bộ câu lệnh từ `WITH` đến dấu `;`**, rồi nhấn **Run**. **Không chỉ bôi đen dòng `AND`.**
 
 ```sql
--- ĐỔI MẬT KHẨU CHO USERNAME admin
+-- RESET MAT KHAU CHO TAI KHOAN admin
 WITH input_password AS (
     SELECT 'DOI_O_DAY'::text AS new_password
 )
 UPDATE public.app_users AS u
-SET password_hash = extensions.crypt(
-        p.new_password, extensions.gen_salt('bf')
+SET
+    password_hash = extensions.crypt(
+        p.new_password,
+        extensions.gen_salt('bf')
     ),
     updated_at = NOW()
 FROM input_password AS p
 WHERE u.username = 'admin'
-  AND LENGTH(p.new_password) >= 5
-RETURNING u.username, u.role, u.status, u.updated_at;
+  AND LENGTH(p.new_password) >= 12
+RETURNING
+    u.username,
+    u.role,
+    u.status,
+    u.updated_at;
 ```
 
-**Cách nhận biết thành công:** phần Results phải hiển thị **1 dòng** có `username = admin` và `status = active`. Nếu hiện `Success. No rows returned`, mật khẩu **chưa được thay đổi**. Kiểm tra lại mật khẩu đã thay `DOI_O_DAY` hay chưa, có ít nhất 12 ký tự không và username có đúng là `admin` không.
+**Kết quả mong đợi:** phần **Results** trả về **1 dòng** có `username = admin`, `role = admin`, `status = active`. Nếu hiện `Success. No rows returned`, mật khẩu **chưa được đổi**. Nếu hiện lỗi cú pháp tại `AND`, hãy kiểm tra lại vùng bôi đen trước khi Run.
 
-Không dùng mật khẩu đã lộ trong ảnh hay cuộc trò chuyện. Cẩn thận nếu mật khẩu có dấu nháy đơn (`'`), trong SQL cần viết thành `''`. Không chụp ảnh hoặc gửi đoạn truy vấn chứa mật khẩu thật; SQL Editor có thể lưu lịch sử truy vấn nên nên xóa bản có mật khẩu sau khi hoàn tất.
+**Bảo mật:** Không gửi ảnh chứa mật khẩu mới. SQL Editor có thể giữ lịch sử truy vấn; không lưu truy vấn đã chứa mật khẩu thật và xóa bản nháp chứa mật khẩu sau khi chạy. Mật khẩu có dấu nháy đơn (`'`) phải viết thành hai dấu nháy đơn (`''`) trong chuỗi SQL.
 
 ### Bước 3 — Kiểm tra đăng nhập
 
