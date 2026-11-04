@@ -114,7 +114,6 @@ Kết quả mong đợi: **1 dòng** với `username = admin`, `role = admin` v�
 4. Nhấp vào trong ô SQL, nhấn **Ctrl+A** để chọn **toàn bộ câu lệnh từ `WITH` đến dấu `;`**, rồi nhấn **Run**. **Không chỉ bôi đen dòng `AND`.**
 
 ```sql
--- RESET MAT KHAU CHO TAI KHOAN admin
 WITH input_password AS (
     SELECT 'DOI_O_DAY'::text AS new_password
 )
