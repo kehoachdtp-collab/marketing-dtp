@@ -223,12 +223,35 @@
     return true;
   }
   window.KOC_PORTAL_BRIDGE={snapshot:portalSnapshot,saveState:portalSaveState};
+
+  function portalOverview(){
+    const p=ui.platform==='shopee'?'shopee':'tiktok',name=p==='shopee'?'Shopee':'TikTok Shop',rows=p==='tiktok'?getVideoData():[];
+    const booked=safeArr(getStore(BOOK_KEY,[])).filter(b=>b.platform===p);
+    const creators=new Set(rows.map(x=>String(x.creator).toLocaleLowerCase('vi')));
+    const sum=k=>rows.reduce((acc,x)=>acc+Number(x[k]||0),0);
+    const nF=v=>Number(v||0).toLocaleString('vi-VN');
+    const mini=(title,value,help)=>'<div style="background:#fff;border:1px solid #e2e8f0;padding:17px;border-radius:12px"><div style="font-size:12px;color:#64748b">'+title+'</div><div style="font-weight:800;font-size:24px;color:#1e2e4a;margin:8px 0">'+value+'</div><div style="font-size:11px;color:#94a3b8">'+help+'</div></div>';
+    return '<div style="padding:14px 16px 26px"><h2 style="margin:0 0 7px;font-size:23px;color:#1e2e4a">Tổng quan '+name+'</h2>'+
+      '<p style="font-size:12px;color:#71829c;margin:0 0 16px">Số liệu được phân loại theo sàn, không sử dụng kết quả mẫu để tính lãi/lỗ.</p>'+
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:15px">'+
+      mini('Booking KOC đã nhập',nF(booked.length),'Theo hồ sơ hợp tác đã lưu')+
+      mini('KOC có dữ liệu video',p==='tiktok'?nF(creators.size):'Chưa có','Từ báo cáo video theo sàn')+
+      mini('Số video',p==='tiktok'?nF(rows.length):'Chưa có','Theo file Creative Data hiện có')+
+      mini('Doanh thu ghi nhận từ video',p==='tiktok'?nF(sum('gmv'))+' đ':'Chưa có','Chỉ là dữ liệu sản phẩm trong báo cáo, không phải tổng doanh thu sàn')+'</div>'+
+      '<div style="background:#eff6ff;border:1px solid #c7dcf5;border-radius:11px;padding:15px;color:#42638a;font-size:12px;line-height:1.65">'+
+      (p==='tiktok'?'TikTok: dữ liệu video từ báo cáo Creative Data ngày 27/10–03/11/2026. Doanh thu trong báo cáo không đại diện toàn bộ TikTok Shop.':'Shopee: chưa có file báo cáo hiệu quả thực tế; không tự điền ROAS hay doanh thu.')+
+      '</div><div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">'+
+      '<button type="button" class="btn" onclick="openPlatformSection(\'bookings\',\''+p+'\')">Quản lý booking</button>'+
+      '<button type="button" class="btn btn-primary" onclick="openPlatformSection(\'analysis\',\''+p+'\')">Phân tích &amp; Book lại</button></div></div>';
+  }
   function portalRender(){
-    const params=new URLSearchParams({view:ui.view,platform:ui.platform});
-    return '<iframe title="Quản lý KOC Shopee TikTok" src="assets/koc-portal.html?v=20261104-5&'+params.toString()+
+    if(ui.view==='platformOverview')return portalOverview();
+    const view=ui.view==='bookings'?'booking':ui.view;
+    const params=new URLSearchParams({view,platform:ui.platform});
+    return '<iframe title="Quản lý KOC Shopee TikTok" src="assets/koc-portal.html?v=20261104-6&'+params.toString()+
       '" style="display:block;width:100%;min-height:calc(100vh - 185px);height:calc(100vh - 145px);background:#f3f6fa;border:0;border-radius:12px"></iframe>';
   }
 
-  window.MKTKOCNew={render:portalRender,open};
+  window.MKTKOCNew={render:portalRender,open,getNavState:()=>({view:ui.view,platform:ui.platform})};
   window.kocNewOpen=open;
 })();
