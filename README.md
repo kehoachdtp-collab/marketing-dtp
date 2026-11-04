@@ -104,36 +104,29 @@ WHERE username = 'admin';
 
 Kết quả mong đợi: **1 dòng** với `username = admin`, `role = admin` và `status = active`. Nếu không có dòng nào, không chạy bước đổi mật khẩu và cần kiểm tra đúng dự án Supabase.
 
-### Bước 2 — Đặt mật khẩu mới
+### Bước 2 — Đặt mật khẩu mới (chỉ thay 1 vị trí)
 
-Trong đoạn SQL dưới đây, **chỉ thay lần xuất hiện đầu tiên** của `NHAP_MAT_KHAU_MOI_TAI_DAY` ở phần `SELECT` bằng mật khẩu mạnh mới (tối thiểu 12 ký tự). **Giữ nguyên** lần xuất hiện thứ hai trong điều kiện `p.value <> ...` để tránh vô tình lưu mật khẩu placeholder. Không thêm dấu ngoặc nhọn.
+Thay **duy nhất** chuỗi `DOI_O_DAY` ở dòng `SELECT` bằng mật khẩu mới mạnh, **tối thiểu 12 ký tự**. Chuỗi mẫu chỉ 9 ký tự, vì vậy nếu quên thay thì câu lệnh sẽ **không** đổi mật khẩu. **Không có điều kiện so sánh với mật khẩu lần thứ hai.**
 
 ```sql
--- RESET MẬT KHẨU TÀI KHOẢN admin
-WITH new_password AS (
-    SELECT 'NHAP_MAT_KHAU_MOI_TAI_DAY'::text AS value
+-- ĐỔI MẬT KHẨU CHO USERNAME admin
+WITH input_password AS (
+    SELECT 'DOI_O_DAY'::text AS new_password
 )
 UPDATE public.app_users AS u
-SET
-    password_hash = extensions.crypt(
-        p.value,
-        extensions.gen_salt('bf')
+SET password_hash = extensions.crypt(
+        p.new_password, extensions.gen_salt('bf')
     ),
-    updated_at = now()
-FROM new_password AS p
+    updated_at = NOW()
+FROM input_password AS p
 WHERE u.username = 'admin'
-  AND p.value <> 'NHAP_MAT_KHAU_MOI_TAI_DAY'
-  AND length(p.value) >= 5
-RETURNING
-    u.username,
-    u.role,
-    u.status,
-    u.updated_at;
+  AND LENGTH(p.new_password) >= 12
+RETURNING u.username, u.role, u.status, u.updated_at;
 ```
 
-**Chạy và kiểm tra:** Kết quả phải có **1 dòng** cho `admin`. Nếu là `Success. No rows returned` thì **chưa có gì được cập nhật** — thường do quên thay mật khẩu mẫu, nhập dưới 12 ký tự, hoặc chọn sai username.
+**Cách nhận biết thành công:** phần Results phải hiển thị **1 dòng** có `username = admin` và `status = active`. Nếu hiện `Success. No rows returned`, mật khẩu **chưa được thay đổi**. Kiểm tra lại mật khẩu đã thay `DOI_O_DAY` hay chưa, có ít nhất 12 ký tự không và username có đúng là `admin` không.
 
-Mật khẩu phân biệt chữ hoa/chữ thường. Nếu mật khẩu chứa dấu nháy đơn `'`, phải viết thành `''` bên trong chuỗi SQL. Đừng gửi mật khẩu vào cuộc trò chuyện. Sau khi chạy, nên đóng hoặc xóa câu SQL chứa mật khẩu thật khỏi lịch sử truy vấn lưu trên Supabase nếu có thể.
+Không dùng mật khẩu đã lộ trong ảnh hay cuộc trò chuyện. Cẩn thận nếu mật khẩu có dấu nháy đơn (`'`), trong SQL cần viết thành `''`. Không chụp ảnh hoặc gửi đoạn truy vấn chứa mật khẩu thật; SQL Editor có thể lưu lịch sử truy vấn nên nên xóa bản có mật khẩu sau khi hoàn tất.
 
 ### Bước 3 — Kiểm tra đăng nhập
 
