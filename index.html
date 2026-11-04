@@ -558,8 +558,33 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="sb-group-children" id="sale-children">
         <div class="sb-sub-item" data-sale-tab="overview" onclick="navSaleSub('overview')"><span class="sidebar-label">Tổng quan</span></div>
         <div class="sb-sub-item" data-sale-tab="products" onclick="navSaleSub('products')"><span class="sidebar-label">Danh sách SP</span></div>
-        <div class="sb-sub-item" data-sale-tab="campaigns" onclick="navSaleSub('campaigns')"><span class="sidebar-label">Chiến dịch</span></div>
-        <div class="sb-sub-item" data-sale-tab="koc" onclick="navSaleSub('koc')"><span class="sidebar-label">KOC / Affiliate</span></div>
+        <div class="sb-sub-item" data-sale-tab="kocNew" onclick="kocNewOpen('shared','all')"><span class="sidebar-label">👥 Danh sách KOC chung</span></div>
+        <div class="sb-section sidebar-section-title" style="padding-left:22px">SÀN</div>
+        <div class="sb-group" id="grp-shopee">
+          <div class="sb-sub-item" onclick="document.getElementById('grp-shopee').classList.toggle('open')"><span class="sidebar-label">🟠 Shopee</span><span class="sb-chevron sidebar-label">▶</span></div>
+          <div class="sb-group-children">
+            <div class="sb-sub-item sb-sub-sub" onclick="kocNewOpen('analysis','shopee')">👥 KOC / Affiliate</div>
+            <div class="sb-sub-item sb-sub-sub" onclick="kocNewOpen('bookings','shopee')">📅 Quản lý booking</div>
+            <div class="sb-sub-item sb-sub-sub" onclick="kocNewOpen('analysis','shopee')">📈 Phân tích &amp; Book lại</div>
+          </div>
+        </div>
+        <div class="sb-group" id="grp-tiktok">
+          <div class="sb-sub-item" onclick="document.getElementById('grp-tiktok').classList.toggle('open')"><span class="sidebar-label">🎵 TikTok Shop</span><span class="sb-chevron sidebar-label">▶</span></div>
+          <div class="sb-group-children">
+            <div class="sb-sub-item sb-sub-sub" onclick="kocNewOpen('analysis','tiktok')">👥 KOC / Affiliate</div>
+            <div class="sb-sub-item sb-sub-sub" onclick="kocNewOpen('bookings','tiktok')">📅 Quản lý booking</div>
+            <div class="sb-sub-item sb-sub-sub" onclick="kocNewOpen('analysis','tiktok')">📈 Phân tích &amp; Book lại</div>
+            <div class="sb-sub-item sb-sub-sub" onclick="navKocSub('tiktok')">📥 Dữ liệu TikTok</div>
+          </div>
+        </div>
+        <div class="sb-group" id="grp-facebook">
+          <div class="sb-sub-item" onclick="document.getElementById('grp-facebook').classList.toggle('open')"><span class="sidebar-label">🔵 Facebook</span><span class="sb-chevron sidebar-label">▶</span></div>
+          <div class="sb-group-children">
+            <div class="sb-sub-item sb-sub-sub" onclick="navSaleSub('ads')">📣 Quảng cáo</div>
+            <div class="sb-sub-item sb-sub-sub" onclick="navSaleSub('orders')">📦 Đơn hàng</div>
+          </div>
+        </div>
+        <div class="sb-sub-item" data-sale-tab="koc" onclick="navSaleSub('koc')"><span class="sidebar-label">🗂️ KOC / Affiliate hiện có</span></div>
         <div class="sb-sub-item" data-sale-tab="compliance" onclick="navSaleSub('compliance')"><span class="sidebar-label">⚖️ Kiểm duyệt nội dung</span></div>
         <div class="sb-sub-item" data-sale-tab="ads" onclick="navSaleSub('ads')"><span class="sidebar-label">Ads</span></div>
         <div class="sb-sub-item" data-sale-tab="shopTasks" onclick="navSaleSub('shopTasks')"><span class="sidebar-label">Nhiệm vụ Shop</span></div>
@@ -576,7 +601,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="sb-item" id="nav-data-sources" title="Nguồn dữ liệu" onclick="navTo('dataSources',this)">
       <span class="sb-item-icon">🔗</span> <span class="sidebar-label">Nguồn dữ liệu</span></div>
     <div class="sb-item" id="nav-employee-tasks" title="Theo dõi công việc" onclick="navTo('employeeTasks',this)">
-      <span class="sb-item-icon">✅</span> <span class="sidebar-label">Theo dõi công việc</span></div>
+      <span class="sb-item-icon">✅</span> <span class="sidebar-label">KPI nhân viên · Công việc</span></div>
     <div class="sb-item" id="nav-users" title="Quản lý user" onclick="navTo('users',this)">
       <span class="sb-item-icon">👤</span> <span class="sidebar-label">Quản lý user</span></div>
     <div class="sb-item sb-logout-item" id="nav-logout" title="&#272;&#259;ng xu&#7845;t" onclick="demoLogout()">
@@ -842,7 +867,7 @@ const MKT_SYNC_MIN_PULL_GAP_MS = 25000;
 const MKT_BACKUP_MIN_INTERVAL_MS = 120000;
 const MKT_BACKUP_MAX_ITEMS = 14;
 const MKT_BACKUP_MAX_TOTAL_BYTES = 2500000;
-const SYNC_KEYS = [MKT_NOTIFICATIONS_KEY,'mkt_b2b_crm_data','mkt_b2b_cost_data','mkt_b2b_assignee_options','mkt_sale_campaigns','mkt_sale_orders','mkt_sale_ads_data','mkt_shop_tasks','mkt_employee_tasks','mkt_sale_koc_data','mkt_sale_koc_master','mkt_sale_koc_product_campaigns','mkt_sale_koc_prospects','mkt_sale_koc_collaborations','mkt_sale_koc_collab','mkt_sale_koc_ptlist','mkt_sale_koc_contracts','mkt_sale_inventory','mkt_sale_product_master','mkt_recruitment_campaign_data','mkt_recruitment_msg_data','mkt_data_sources','mkt_google_sheet_configs','mkt_google_sheet_mappings','mkt_sync_logs','mkt_compliance_reviews','mkt_compliance_rules','mkt_product_approved_claims','mkt_product_banned_claims','mkt_compliance_draft','mkt_demo_username_aliases','mkt_demo_users_cloud'];
+const SYNC_KEYS = ['mkt_sale_koc_direct_bookings',MKT_NOTIFICATIONS_KEY,'mkt_b2b_crm_data','mkt_b2b_cost_data','mkt_b2b_assignee_options','mkt_sale_campaigns','mkt_sale_orders','mkt_sale_ads_data','mkt_shop_tasks','mkt_employee_tasks','mkt_sale_koc_data','mkt_sale_koc_master','mkt_sale_koc_product_campaigns','mkt_sale_koc_prospects','mkt_sale_koc_collaborations','mkt_sale_koc_collab','mkt_sale_koc_ptlist','mkt_sale_koc_contracts','mkt_sale_inventory','mkt_sale_product_master','mkt_recruitment_campaign_data','mkt_recruitment_msg_data','mkt_data_sources','mkt_google_sheet_configs','mkt_google_sheet_mappings','mkt_sync_logs','mkt_compliance_reviews','mkt_compliance_rules','mkt_product_approved_claims','mkt_product_banned_claims','mkt_compliance_draft','mkt_demo_username_aliases','mkt_demo_users_cloud'];
 
 function isSyncKey(k){ return SYNC_KEYS.includes(k); }
 
@@ -2585,7 +2610,7 @@ const MOD_TITLE = {
 const SALE_TOP_TABS = [
   {id:'overview',  l:'Tổng quan'},
   {id:'products',  l:'Danh sách SP', adminOnly:true},
-  {id:'campaigns', l:'Chiến dịch'},
+  {id:'kocNew', l:'KOC chung · 2 sàn'},
   {id:'koc',       l:'KOC / Affiliate'},
   {id:'compliance',l:'Kiểm duyệt nội dung'},
   {id:'ads',       l:'Ads'},
@@ -2616,7 +2641,12 @@ function updateTopbarNav(){
   title.className = 'topbar-title';
   tabs.innerHTML = '';
   if (curMod === 'sale') {
-    if (saleTab === 'koc') {
+    if (saleTab === 'kocNew') {
+      title.innerHTML = '<span>🛒 Sale Online</span><span class="topbar-sep">›</span><strong>KOC chung · Shopee / TikTok</strong>';
+      tabs.innerHTML = '<button type="button" class="topbar-tab" onclick="kocNewOpen(\'shared\',\'all\')">Danh sách KOC chung</button>'+
+        '<button type="button" class="topbar-tab" onclick="kocNewOpen(\'bookings\',\'all\')">Quản lý booking</button>'+
+        '<button type="button" class="topbar-tab" onclick="kocNewOpen(\'analysis\',\'all\')">Phân tích &amp; Book lại</button>';
+    } else if (saleTab === 'koc') {
       title.innerHTML = '<span>🛒 Sale Online</span><span class="topbar-sep">›</span><strong>KOC / Affiliate</strong>';
       tabs.innerHTML = _topbarTabHtml(KOC_SUBTABS, kocSubTab, 'switchKocTab');
     } else {
@@ -3729,7 +3759,7 @@ function renderSale() {
   updateTopbarNav();
   const body = ({
     overview:_saleOverview, products:_saleProdMst, campaigns:_saleCampTab,
-    koc:_saleKocTab, compliance:()=>renderCompliancePage('sale'), ads:_saleAdsTab, shopTasks:_saleShopTasksTab, orders:_saleOrdTab,
+    koc:_saleKocTab, kocNew:()=>window.MKTKOCNew?window.MKTKOCNew.render():'<div class="empty-b">Đang tải giao diện KOC chung…</div>', compliance:()=>renderCompliancePage('sale'), ads:_saleAdsTab, shopTasks:_saleShopTasksTab, orders:_saleOrdTab,
     profit:_saleProfitTab, inventory:_saleInvTab,
     reviews:()=>_ph('⭐','Tab Đánh giá KH — bước tiếp theo.'),
     alerts:_saleAlertsTab,
@@ -6463,6 +6493,7 @@ window.addEventListener('load', async () => {
   }
 })();
 </script>
+<script src="assets/koc-shared-live.js?v=20261104-1"></script>
 </body>
 </html>
 
