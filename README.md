@@ -120,7 +120,7 @@ SET password_hash = extensions.crypt(
     updated_at = NOW()
 FROM input_password AS p
 WHERE u.username = 'admin'
-  AND LENGTH(p.new_password) >= 12
+  AND LENGTH(p.new_password) >= 5
 RETURNING u.username, u.role, u.status, u.updated_at;
 ```
 
