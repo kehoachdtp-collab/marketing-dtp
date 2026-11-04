@@ -123,7 +123,7 @@ SET
 FROM new_password AS p
 WHERE u.username = 'admin'
   AND p.value <> 'NHAP_MAT_KHAU_MOI_TAI_DAY'
-  AND length(p.value) >= 12
+  AND length(p.value) >= 5
 RETURNING
     u.username,
     u.role,
