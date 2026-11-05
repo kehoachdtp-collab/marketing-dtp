@@ -1447,25 +1447,30 @@ function demoCloudTime(payload){
   const t = Date.parse(payload?.updatedAt || '');
   return Number.isFinite(t) ? t : 0;
 }
+let _cloudUsersSource = 'local';
 async function demoLoadCloudUsers(){
   const local = demoGetCloudUsersLocal();
+  _cloudUsersSource = 'local';
   try {
     const cloud = await mktApi.kvGet(DEMO_CLOUD_USERS_KEY);
     if (cloud) {
       const clean = demoCleanCloudUsers(cloud);
-      const chosen = demoCloudTime(local) > demoCloudTime(clean) ? local : clean;
-      demoSetCloudUsersLocal(chosen);
-      return chosen;
+      // Supabase is authoritative whenever reachable. A newer timestamp on
+      // partial browser cache must NEVER hide users present in the cloud.
+      _cloudUsersSource = 'supabase';
+      demoSetCloudUsersLocal(clean);
+      return clean;
     }
-  } catch(e) { console.warn('[users] cloud user load failed', e); }
+  } catch(e) { console.warn('[users] cloud user load failed; using offline cache', e); }
   return local;
 }
 async function demoSaveCloudUsers(payload, callerId){
   const clean = demoCleanCloudUsers(payload);
   clean.updatedAt = new Date().toISOString();
   clean.users = clean.users.map(u => ({...u, updatedAt: u.updatedAt || clean.updatedAt}));
-  demoSetCloudUsersLocal(clean);
+  // Do not claim success locally if cloud write fails.
   await mktApi.kvSet(DEMO_CLOUD_USERS_KEY, clean, callerId || null);
+  demoSetCloudUsersLocal(clean);
   return clean;
 }
 function demoCloudToDemoUser(record){
@@ -1598,6 +1603,7 @@ async function demoLocalLoginFallback(username, password){
 
 /* Cache user list cục bộ — tránh fetch mỗi lần check quyền */
 let _cachedUsers = null;
+let _usersListSource = 'local';
 function demoGetUsers(){
   if (_cachedUsers) return _cachedUsers;
   try {
@@ -1611,22 +1617,30 @@ function demoSetUsers(users){
   _cachedUsers = users;
   try { localStorage.setItem(DEMO_USERS_KEY, JSON.stringify(users)); } catch(_) {}
 }
+async function demoReloadUsersView(){
+  await demoRefreshUsers();
+  if (curMod === 'users') render();
+  if (_usersListSource === 'offline') toast('Không kết nối được Supabase; đang hiển thị bản lưu tạm.');
+  else toast('Đã cập nhật danh sách người dùng từ Supabase.');
+}
 async function demoRefreshUsers(){
   const u = demoCurrentUser();
   if (!u || !u.id) return [];
   try {
     const cloud = await demoLoadCloudUsers();
-    if (cloud.users.length) {
+    if (cloud.users.length && _cloudUsersSource === 'supabase') {
       const users = cloud.users.map(demoCloudToDemoUser);
       demoSetUsers(users);
+      _usersListSource = 'supabase';
       return users;
     }
     const raw = await mktApi.listUsers(u.id);
     const cloudAliases = await mktApi.kvGet(DEMO_USERNAME_ALIASES_KEY).catch(()=>null);
     if (cloudAliases) demoSetUsernameAliases(cloudAliases);
     const users = demoApplyUsernameAliases(raw.map(_supaToDemoUser));
-    await demoBootstrapCloudUsers(users, u.id);
+    if (!cloud.users.length) await demoBootstrapCloudUsers(users, u.id);
     demoSetUsers(users);
+    _usersListSource = 'app_users';
     return users;
   } catch(e) {
     console.warn('[users] refresh failed', e);
@@ -1634,8 +1648,10 @@ async function demoRefreshUsers(){
     if (cloud.users.length) {
       const users = cloud.users.map(demoCloudToDemoUser);
       demoSetUsers(users);
+      _usersListSource = 'offline';
       return users;
     }
+    _usersListSource = 'offline';
     return demoGetUsers();
   }
 }
@@ -2332,8 +2348,8 @@ function renderDataSourcesPage(){
   }).join('');
   return `<div class="user-admin-card">
     <div class="user-admin-head">
-      <div><div class="user-admin-title">Quản lý user</div><div class="user-admin-sub">Dữ liệu lưu trên <strong>Supabase</strong> — mọi máy nhìn cùng danh sách. Thêm/sửa/xoá đồng bộ realtime.</div></div>
-      <button class="btn btn-primary" onclick="demoCreateUserPrompt()" ${!canManage?'disabled':''}>＋ Thêm user</button>
+      <div><div class="user-admin-title">Quản lý user</div><div class="user-admin-sub">Tổng <strong>${users.length} tài khoản</strong> · ${_usersListSource === 'supabase' ? 'Đã tải từ Supabase' : _usersListSource === 'app_users' ? 'Đã tải từ bảng app_users' : 'Đang hiển thị bản lưu tạm, cần kiểm tra kết nối'}. Làm mới để lấy danh sách mới nhất.</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="demoReloadUsersView()">↻ Làm mới danh sách</button><button class="btn btn-primary" onclick="demoCreateUserPrompt()" ${!canManage?'disabled':''}>＋ Thêm user</button></div>
     </div>
     <div class="tbl-wrap"><table class="user-mgmt-table">
       <thead><tr><th>User</th><th>Tên hiển thị</th><th>Đổi mật khẩu tạm</th><th>Dashboard</th><th>B2B</th><th>Sale Online</th><th>Tuyển dụng</th><th>User/Admin</th><th>Thao tác</th></tr></thead>
@@ -2727,6 +2743,11 @@ function navTo(mod, el) {
     const k = document.getElementById('grp-koc');  if (k) k.classList.remove('open');
   }
   render();
+  if (mod === 'users') {
+    // Refresh on every visit, not only on login or on a manual dashboard refresh.
+    demoRefreshUsers().then(() => { if (curMod === 'users') render(); })
+      .catch(e => console.warn('[users] view refresh failed', e));
+  }
 }
 /* ── Hierarchical Sale → KOC nav (sidebar-driven) ── */
 function navSaleGroup(el) {
