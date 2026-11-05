@@ -1726,36 +1726,44 @@ function demoShowApp(){
   initNotifications();
 }
 async function demoChangePwPrompt(){
-  const usernameInput = document.getElementById('demo-username');
-  const currentUser = demoNormalizeUsername(usernameInput?.value || prompt('Username can doi mat khau:') || '');
-  if (!currentUser) { demoShowLogin('Vui long nhap username truoc khi doi mat khau.'); usernameInput?.focus(); return; }
-  const oldPassword = prompt('Nhap mat khau hien tai cua ' + currentUser + ':');
-  if (oldPassword == null) return;
-  const newPassword = prompt('Nhap mat khau moi:');
-  if (newPassword == null) return;
-  if (String(newPassword).length < 6) { demoShowLogin('Mat khau moi toi thieu 6 ky tu.'); return; }
-  const confirmPassword = prompt('Nhap lai mat khau moi:');
-  if (confirmPassword == null) return;
-  if (newPassword !== confirmPassword) { demoShowLogin('Mat khau moi nhap lai chua khop.'); return; }
-  try {
-    const supaUser = await mktApi.login(currentUser, oldPassword);
-    if (!supaUser) { demoShowLogin('Username hoac mat khau hien tai khong dung.'); return; }
-    const user = _supaToDemoUser(supaUser);
-    await demoSaveUserToCloud(user, {
-      username:user.username,
-      displayName:user.displayName,
-      role:user.role,
-      status:user.status,
-      presets:user.presets,
-      password:newPassword,
-    }, user.id);
-    mktApi.resetPassword(user.id, user.id, newPassword).catch(e => console.warn('[changePassword] legacy reset skipped', e));
-    const passInput = document.getElementById('demo-password');
-    if (passInput) passInput.value = '';
-    demoShowLogin('Da doi mat khau. Vui long dang nhap bang mat khau moi.', true);
-  } catch(e) {
-    console.error('[changePassword]', e);
-    demoShowLogin('Khong doi duoc mat khau: ' + (e.message || e));
+  const usernameInput=document.getElementById('demo-username');
+  const currentUser=demoNormalizeUsername(usernameInput?.value||prompt('Username cần đổi mật khẩu:')||'');
+  if(!currentUser){demoShowLogin('Vui lòng nhập tên đăng nhập.');return;}
+  const oldPassword=prompt('Nhập mật khẩu hiện tại:');
+  if(oldPassword==null)return;
+  const newPassword=prompt('Nhập mật khẩu mới (ít nhất 8 ký tự):');
+  if(newPassword==null)return;
+  if(newPassword.length<8||newPassword==='123456'){
+    demoShowLogin('Mật khẩu mới cần ít nhất 8 ký tự và không được là 123456.');return;
+  }
+  const confirmPassword=prompt('Nhập lại mật khẩu mới:');
+  if(confirmPassword==null)return;
+  if(newPassword!==confirmPassword){demoShowLogin('Mật khẩu nhập lại không khớp.');return;}
+  let stage='xác minh mật khẩu cũ';
+  try{
+    const supaUser=await mktApi.login(currentUser,oldPassword);
+    if(!supaUser){demoShowLogin('Tên đăng nhập hoặc mật khẩu cũ không đúng.');return;}
+    const user=_supaToDemoUser(supaUser);
+    stage='cập nhật mật khẩu app_users';
+    await mktApi.resetPassword(user.id,user.id,newPassword);
+    stage='đồng bộ mật khẩu hồ sơ website';
+    await demoSaveUserToCloud(user,{
+      username:user.username,displayName:user.displayName,role:user.role,
+      status:user.status,presets:user.presets,password:newPassword
+    },user.id);
+    stage='kiểm tra mật khẩu app_users';
+    const realUsername=user.legacyUsername||user.realUsername||user.username;
+    const {data,error}=await supaRpc('verify_password',{p_username:realUsername,p_password:newPassword});
+    if(error)throw error;
+    if(!Array.isArray(data)||!data.some(x=>x.id===user.id))
+      throw new Error('Mật khẩu mới chưa được xác nhận trong app_users');
+    const passInput=document.getElementById('demo-password');
+    if(passInput)passInput.value='';
+    demoShowLogin('Đã đổi mật khẩu và kiểm tra ở Supabase. Hãy đăng nhập bằng mật khẩu mới.',true);
+  }catch(e){
+    console.error('[changePassword]',stage,e);
+    demoShowLogin('Chưa thể xác nhận đổi mật khẩu hoàn tất ('+stage+'): '+(e.message||e)+
+      '. Nếu mật khẩu mới không hoạt động, vui lòng liên hệ quản trị viên để đối soát.');
   }
 }
 async function demoLogin(ev){
@@ -1952,8 +1960,9 @@ async function demoSaveUser(oldUsername){
     if(usernameChanged){
       stage='liên kết tên đăng nhập';
       const oldDbUsername = u.legacyUsername || u.realUsername || u.username;
-      const aliasResult=await demoSaveUsernameAlias(u.id,oldDbUsername,
-        result?.aliasFallback ? newUsername : newUsername,caller.id);
+      const canonicalDbUsername = result?.usernameUpdated ? newUsername : oldDbUsername;
+      const aliasResult=await demoSaveUsernameAlias(u.id,canonicalDbUsername,
+        newUsername,caller.id);
       if(!aliasResult.cloudSaved) throw new Error('Không ghi được ánh xạ tên đăng nhập vào Supabase');
     }
     stage='xác minh sau ghi';
