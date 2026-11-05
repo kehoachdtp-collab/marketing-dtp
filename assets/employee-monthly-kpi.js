@@ -154,7 +154,7 @@ function renderMonthly(){
   });
  }
  const m=getMonth();
- if(!m)return '<div class="ek-app"><div class="ek-header"><div><h1>KPI tháng '+esc(state.month)+'</h1><p>Tháng này chưa được thiết lập chỉ tiêu.</p></div>'+
+ if(!m)return '<div id="ek-app" class="ek-app"><div class="ek-header"><div><h1>KPI tháng '+esc(state.month)+'</h1><p>Tháng này chưa được thiết lập chỉ tiêu.</p></div>'+
  (admin()?'<button class="ek-btn ek-primary" data-ek-action="copy">Sao chép KPI tháng trước</button>':'')+'</div><div class="ek-empty">Chọn tháng 11/2026 để xem các mục tiêu đã thiết lập; có thể sao chép bộ mục tiêu sang tháng mới.</div></div>';
  if(!m.people?.some(p=>p.id===state.person))state.person=m.people?.[0]?.id||'ha';
  if(!state.date.startsWith(state.month))state.date=state.month+'-01';
