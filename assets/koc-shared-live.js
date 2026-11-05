@@ -177,31 +177,48 @@
       videoAssignments:safeObj(getStore(ASSIGN_KEY,{}))
     };
   }
-  function portalSaveState(input){
+  async function portalSaveState(input){
     if(!can())throw Error("Bạn không có quyền cập nhật KOC");
-    const curr=safeArr(getStore(BOOK_KEY,[])),existingIds=new Set(curr.map(b=>String(b.id)));
+    const caller=demoCurrentUser();
+    if(!caller?.id)throw Error("Chưa đăng nhập hoặc phiên đăng nhập không hợp lệ");
+    const remoteBookings=await mktApi.kvGet(BOOK_KEY);
+    const curr=Array.isArray(remoteBookings)?remoteBookings:safeArr(getStore(BOOK_KEY,[]));
+    const existingIds=new Set(curr.map(b=>String(b.id)));
     const pending=safeArr(input?.newBookings).filter(b=>b&&!existingIds.has(String(b.id)));
     const updated=[...curr];
+    const remoteMaster=await mktApi.kvGet(K.kocMst);
+    const masterDraft=JSON.parse(JSON.stringify(Array.isArray(remoteMaster)?remoteMaster:masters()));
+    let masterChanged=false;
+    const findMaster=name=>masterDraft.filter(m=>normalName(m.ten)===normalName(name));
+    const nextMa=()=>{
+      const used=new Set(masterDraft.map(m=>m.maKoc));
+      let n=1;while(used.has('KOC'+String(n).padStart(3,'0')))n++;
+      return 'KOC'+String(n).padStart(3,'0');
+    };
     for(const b of pending){
       const creator=V(b.creator),platform=V(b.platform),start=V(b.start);
       const channel=V(b.channel||b.channelName),cid=V(b.channelId),url=V(b.url||b.channelUrl),phone=V(b.phone);
       const cast=V(b.cast),fee=Number(b.castFee)||0,videos=Number(b.videos||b.videoCount)||0;
-      if(!creator||!phone||!channel||!cid||!url||!start||!['tiktok','shopee'].includes(platform)||!['yes','no'].includes(cast))throw Error('Thiếu thông tin hợp tác bắt buộc');
+      if(!creator||!phone||!channel||!cid||!url||!start||!['tiktok','shopee'].includes(platform)||!['yes','no'].includes(cast))
+        throw Error('Thiếu thông tin hợp tác bắt buộc');
       if(!url.match(/^https:\/\//i))throw Error('Link kênh cần dùng HTTPS');
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(start)||!add20(start))throw Error('Ngày hợp tác không hợp lệ');
       if(!Number.isInteger(videos)||videos<1)throw Error('Số video cam kết không hợp lệ');
       if(cast==='yes'&&(!(fee>0)||!b.cccdProvided))throw Error('Có cast phải chọn CCCD, phí và số video');
-      const matches=masters().filter(m=>normalName(m.ten)===normalName(creator));
-      if(matches.length>1)throw Error('Tên KOC trùng trong hồ sơ master, cần xác minh mã KOC trước khi lưu');
+      const matches=findMaster(creator);
+      if(matches.length>1)throw Error('Tên KOC trùng nhiều hồ sơ master, cần chọn đúng mã KOC trước khi lưu');
       let m=matches[0];
-      if(!m){m={id:Date.now()+Math.random(),maKoc:_kocNextMa(),ten:creator};kocMstRows.push(m);}
+      if(!m){m={id:Date.now()+Math.random(),maKoc:nextMa(),ten:creator};masterDraft.push(m);}
       m.lienHe=phone;
       if(platform==='tiktok'){m.tiktokChannelName=channel;m.tiktokChannelId=cid;m.tiktokLink=url;if(!m.socialLink)m.socialLink=url;}
-      if(platform==='shopee'){m.shopeeChannelName=channel;m.shopeeChannelId=cid;m.shopeeLink=url;}
-      updated.push({id:String(b.id||('bk_'+Date.now())),maKoc:m.maKoc,creator,platform,phone,
-        channelName:channel,channelId:cid,channelUrl:url,channel:channel,url:url,
+      else {m.shopeeChannelName=channel;m.shopeeChannelId=cid;m.shopeeLink=url;}
+      masterChanged=true;
+      updated.push({id:String(b.id),maKoc:m.maKoc,creator,platform,phone,
+        channelName:channel,channelId:cid,channelUrl:url,channel,url,
         start,due:add20(start),cast,castFee:cast==='yes'?fee:0,
         videoCount:videos,videos,product:V(b.product),campaign:V(b.campaign),owner:V(b.owner),
-        status:cast==='yes'?'Chờ xác minh CCCD':'Đã ghi nhận',contractStatus:cast==='yes'?'Chưa hoàn tất OCR':'Không yêu cầu',
+        status:cast==='yes'?'Chờ xác minh CCCD':'Đã ghi nhận',
+        contractStatus:cast==='yes'?'Chưa hoàn tất OCR':'Không yêu cầu',
         cccdFileStored:false,createdAt:new Date().toISOString()});
     }
     const links=safeObj(input?.platformLinks),ids=new Set(),revised={};
@@ -209,17 +226,49 @@
       const shopeeId=V(link.shopeeId);
       if(!shopeeId)continue;
       const unique=normalName(shopeeId);
-      if(ids.has(unique))throw Error("Trùng ID Shopee trong danh sách liên kết");
+      if(ids.has(unique))throw Error('Trùng ID Shopee trong danh sách liên kết');
       ids.add(unique);
-      revised[key]={creator:V(link.creator),shopeeChannel:V(link.shopeeChannel),
-        shopeeId,shopeeUrl:V(link.shopeeUrl),confirmed:link.confirmed===true,updatedAt:new Date().toISOString()};
-      const matches=masters().filter(m=>normalName(m.ten)===normalName(link.creator));
-      if(matches.length===1){const m=matches[0];m.shopeeChannelName=V(link.shopeeChannel);m.shopeeChannelId=shopeeId;m.shopeeLink=V(link.shopeeUrl);}
+      revised[key]={creator:V(link.creator),shopeeChannel:V(link.shopeeChannel),shopeeId,
+        shopeeUrl:V(link.shopeeUrl),confirmed:link.confirmed===true,updatedAt:V(link.updatedAt)||new Date().toISOString()};
+      const matches=findMaster(link.creator);
+      if(matches.length===1){
+        const m=matches[0];
+        if(m.shopeeChannelId!==shopeeId||m.shopeeChannelName!==V(link.shopeeChannel)||m.shopeeLink!==V(link.shopeeUrl)){
+          m.shopeeChannelName=V(link.shopeeChannel);m.shopeeChannelId=shopeeId;m.shopeeLink=V(link.shopeeUrl);masterChanged=true;
+        }
+      }
     }
-    if(pending.length){setStore(BOOK_KEY,updated);}
-    if(input?.platformLinks){setStore(LINK_KEY,revised);}
-    if(input?.videoAssignments){setStore(ASSIGN_KEY,safeObj(input.videoAssignments));}
-    if(pending.length||input?.platformLinks){_kocSaveAll();}
+    const currentLinks=safeObj(getStore(LINK_KEY,{}));
+    const linksChanged=input?.platformLinks&&JSON.stringify(revised)!==JSON.stringify(currentLinks);
+    const assigned=safeObj(input?.videoAssignments);
+    const assignmentsChanged=input?.videoAssignments&&JSON.stringify(assigned)!==JSON.stringify(safeObj(getStore(ASSIGN_KEY,{})));
+    const verifyKey=async (key,value,condition,label)=>{
+      await mktApi.kvSet(key,value,caller.id);
+      const returned=await mktApi.kvGet(key);
+      if(!condition(returned))throw Error('Supabase chưa xác nhận lưu '+label+'. Vui lòng kiểm tra kết nối.');
+    };
+    // Persist first, update the browser cache only after each Supabase write is verified.
+    // A partial failure is reported; retry checks remote booking IDs and will not insert duplicates.
+    if(masterChanged){
+      await verifyKey(K.kocMst,masterDraft,
+        x=>Array.isArray(x)&&masterDraft.every(m=>x.some(y=>y.maKoc===m.maKoc&&y.ten===m.ten)),
+        'hồ sơ KOC chung');
+    }
+    if(pending.length){
+      await verifyKey(BOOK_KEY,updated,
+        x=>Array.isArray(x)&&pending.every(b=>x.some(y=>String(y.id)===String(b.id))),
+        'booking KOC');
+    }
+    if(linksChanged){
+      await verifyKey(LINK_KEY,revised,x=>JSON.stringify(x)===JSON.stringify(revised),'liên kết hai sàn');
+    }
+    if(assignmentsChanged){
+      await verifyKey(ASSIGN_KEY,assigned,x=>JSON.stringify(x)===JSON.stringify(assigned),'liên kết video');
+    }
+    if(masterChanged){kocMstRows=masterDraft;setStore(K.kocMst,masterDraft);clearPendingSync(K.kocMst);}
+    if(pending.length||Array.isArray(remoteBookings)){setStore(BOOK_KEY,updated);clearPendingSync(BOOK_KEY);}
+    if(linksChanged){setStore(LINK_KEY,revised);clearPendingSync(LINK_KEY);}
+    if(assignmentsChanged){setStore(ASSIGN_KEY,assigned);clearPendingSync(ASSIGN_KEY);}
     return true;
   }
   window.KOC_PORTAL_BRIDGE={snapshot:portalSnapshot,saveState:portalSaveState};
