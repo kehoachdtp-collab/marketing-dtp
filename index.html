@@ -507,6 +507,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .app-shell.sidebar-collapsed #grp-sale .sb-platform-list,.app-shell.sidebar-collapsed #grp-sale .sb-legacy-collapse{display:none!important}
 </style>
 <link rel="stylesheet" href="assets/tiktok-google-sheets-ui.css?v=20261104-1">
+<link rel="stylesheet" href="assets/employee-monthly-kpi.css?v=20261105-1">
 </head>
 <body class="auth-boot app-shell">
 <!-- Universal Modal -->
@@ -917,7 +918,7 @@ const MKT_SYNC_MIN_PULL_GAP_MS = 25000;
 const MKT_BACKUP_MIN_INTERVAL_MS = 120000;
 const MKT_BACKUP_MAX_ITEMS = 14;
 const MKT_BACKUP_MAX_TOTAL_BYTES = 2500000;
-const SYNC_KEYS = ['mkt_sale_tiktok_sheet_config','mkt_sale_koc_tiktok_snapshots','mkt_sale_koc_platform_links_live','mkt_sale_koc_video_assignments_live','mkt_sale_koc_direct_bookings',MKT_NOTIFICATIONS_KEY,'mkt_b2b_crm_data','mkt_b2b_cost_data','mkt_b2b_assignee_options','mkt_sale_campaigns','mkt_sale_orders','mkt_sale_ads_data','mkt_shop_tasks','mkt_employee_tasks','mkt_sale_koc_data','mkt_sale_koc_master','mkt_sale_koc_product_campaigns','mkt_sale_koc_prospects','mkt_sale_koc_collaborations','mkt_sale_koc_collab','mkt_sale_koc_ptlist','mkt_sale_koc_contracts','mkt_sale_inventory','mkt_sale_product_master','mkt_recruitment_campaign_data','mkt_recruitment_msg_data','mkt_data_sources','mkt_google_sheet_configs','mkt_google_sheet_mappings','mkt_sync_logs','mkt_compliance_reviews','mkt_compliance_rules','mkt_product_approved_claims','mkt_product_banned_claims','mkt_compliance_draft','mkt_demo_username_aliases','mkt_demo_users_cloud'];
+const SYNC_KEYS = ['mkt_sale_tiktok_sheet_config','mkt_sale_koc_tiktok_snapshots','mkt_sale_koc_platform_links_live','mkt_sale_koc_video_assignments_live','mkt_sale_koc_direct_bookings',MKT_NOTIFICATIONS_KEY,'mkt_b2b_crm_data','mkt_b2b_cost_data','mkt_b2b_assignee_options','mkt_sale_campaigns','mkt_sale_orders','mkt_sale_ads_data','mkt_shop_tasks','mkt_employee_tasks','mkt_employee_kpi_monthly_v1','mkt_sale_koc_data','mkt_sale_koc_master','mkt_sale_koc_product_campaigns','mkt_sale_koc_prospects','mkt_sale_koc_collaborations','mkt_sale_koc_collab','mkt_sale_koc_ptlist','mkt_sale_koc_contracts','mkt_sale_inventory','mkt_sale_product_master','mkt_recruitment_campaign_data','mkt_recruitment_msg_data','mkt_data_sources','mkt_google_sheet_configs','mkt_google_sheet_mappings','mkt_sync_logs','mkt_compliance_reviews','mkt_compliance_rules','mkt_product_approved_claims','mkt_product_banned_claims','mkt_compliance_draft','mkt_demo_username_aliases','mkt_demo_users_cloud'];
 
 function isSyncKey(k){ return SYNC_KEYS.includes(k); }
 
@@ -1121,7 +1122,7 @@ function mktKeysForCurrentView(){
   if (curMod === 'b2b') return mktUniqueSyncKeys([K.b2bCrm,K.b2bCost,K.b2bAsgn]);
   if (curMod === 'hr') return mktUniqueSyncKeys([K.rcCamp,K.rcMsg]);
   if (curMod === 'dataSources') return mktUniqueSyncKeys(['mkt_data_sources','mkt_google_sheet_configs','mkt_google_sheet_mappings','mkt_sync_logs']);
-  if (curMod === 'employeeTasks') return mktUniqueSyncKeys([K.employeeTasks]);
+  if (curMod === 'employeeTasks') return mktUniqueSyncKeys([K.employeeTasks,'mkt_employee_kpi_monthly_v1']);
   if (curMod === 'users') return mktUniqueSyncKeys([DEMO_USERNAME_ALIASES_KEY,DEMO_CLOUD_USERS_KEY]);
   if (curMod !== 'sale') return [];
   if (saleTab === 'products') return mktUniqueSyncKeys([K.saleMst]);
@@ -2267,7 +2268,7 @@ function employeeTaskRowHtml(row, idx){
     <td><button class="del-btn" onclick="employeeTaskDelete('${row.id}')" ${canEditMod('employeeTasks')?'':'disabled'}>✕</button></td>
   </tr>`;
 }
-function renderEmployeeTasksPage(){
+function renderEmployeeTaskListPage(){
   if (!canViewMod('employeeTasks')) return demoAccessDeniedHtml();
   employeeTasksLoad();
   const canEdit = canEditMod('employeeTasks');
@@ -2295,6 +2296,21 @@ function renderEmployeeTasksPage(){
     <div class="tbl-wrap" style="max-height:calc(100vh - 430px)"><table class="tbl employee-task-table"><thead><tr><th>#</th><th>Ngày giao</th><th>Nhân viên</th><th>Module</th><th>Công việc</th><th>Mô tả/KPI</th><th>Ưu tiên</th><th>Deadline</th><th>Trạng thái</th><th>Tiến độ</th><th>Cảnh báo</th><th>Link/tài liệu</th><th>Ngày HT</th><th>Người giao</th><th>Ghi chú</th><th></th></tr></thead><tbody>${rows.length?rows.map(employeeTaskRowHtml).join(''):`<tr><td colspan="16" style="text-align:center;color:#94a3b8;padding:22px">Chưa có công việc. Nhấn <strong>＋ Thêm công việc</strong> để bắt đầu.</td></tr>`}</tbody></table></div>
     <div class="employee-task-report-grid"><section class="employee-task-report-card"><h3>Báo cáo text</h3><div class="employee-task-report-text">${esc(report)}</div></section><section class="employee-task-report-card"><h3>Báo cáo 1 trang</h3><div class="employee-task-report-text">${esc(report.split('\n\n').slice(0,3).join('\n\n'))}</div></section></div>
     ${canEdit?'':'<div class="login-note" style="margin-top:12px">Bạn chỉ có quyền xem, không được thêm/sửa/xóa công việc.</div>'}`;
+}
+let employeeDashboardTab='monthly';
+function employeeDashboardOpenTab(tab){
+  employeeDashboardTab=(tab==='tasks'?'tasks':'monthly');
+  render();
+}
+function renderEmployeeTasksPage(){
+  if(!canViewMod('employeeTasks'))return demoAccessDeniedHtml();
+  const tabs='<div class="ek-tabs" role="tablist">'+
+    '<button type="button" role="tab" aria-selected="'+(employeeDashboardTab==='monthly')+'" class="'+(employeeDashboardTab==='monthly'?'active':'')+'" onclick="employeeDashboardOpenTab(\'monthly\')">📊 KPI tháng &amp; báo cáo ngày</button>'+
+    '<button type="button" role="tab" aria-selected="'+(employeeDashboardTab==='tasks')+'" class="'+(employeeDashboardTab==='tasks'?'active':'')+'" onclick="employeeDashboardOpenTab(\'tasks\')">✅ Công việc phát sinh</button>'+
+    '</div>';
+  return tabs+(employeeDashboardTab==='monthly'?
+    (window.EmployeeMonthlyKPI?window.EmployeeMonthlyKPI.render():'<div class="ek-empty">Đang tải giao diện KPI tháng...</div>'):
+    renderEmployeeTaskListPage());
 }
 /* DATA_SOURCES_DEMO_VERSION 1 - Google Sheet config UI only.
    Phase sau có thể đọc Google Sheet qua Apps Script Web App hoặc Google Sheets API.
@@ -2845,7 +2861,7 @@ const MOD_TITLE = {
   b2b : '🤝 Business to Business',
   sale: '🛒 Sale Online',
   hr  : '👥 Tuyển dụng',
-  employeeTasks: '✅ Theo dõi công việc',
+  employeeTasks: '📊 KPI nhân viên',
 };
 const SALE_TOP_TABS = [
   {id:'overview',  l:'Tổng quan'},
@@ -6758,6 +6774,7 @@ window.addEventListener('load', async () => {
 </script>
 <script src="assets/koc-shared-live.js?v=20261104-6"></script>
 <script src="assets/tiktok-google-sheets-ui.js?v=20261104-1"></script>
+<script src="assets/employee-monthly-kpi.js?v=20261105-1"></script>
 </body>
 </html>
 
