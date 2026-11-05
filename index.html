@@ -1547,12 +1547,19 @@ async function demoSaveUserToCloud(baseUser, changes, callerId){
   await demoSaveCloudUsers(cloud, callerId);
   return record;
 }
-async function demoCreateCloudUser(username, password, displayName, role, presets, callerId){
+async function demoCreateCloudUser(username, displayName, role, presets, callerId, databaseId){
+  // New users must use the UUID and bcrypt credentials from app_users.
+  // Never generate an unrelated cloud ID or a second password hash.
+  if (!databaseId) throw new Error('Thiếu mã tài khoản được Supabase xác nhận');
   const cloud = await demoLoadCloudUsers();
+  if (_cloudUsersSource !== 'supabase') throw new Error('Chưa thể kết nối kho tài khoản Supabase');
   const normalized = demoNormalizeUsername(username);
-  if (cloud.users.some(u => u.username === normalized)) throw new Error('username_exists');
-  let record = demoNormalizeCloudUser({id:demoId(), username:normalized, legacyUsername:normalized, displayName, role, presets, status:'active'});
-  await demoSetCloudPassword(record, password || '123456');
+  if (cloud.users.some(u => u.id === databaseId || u.username === normalized))
+    throw new Error('Tài khoản đã tồn tại trong kho người dùng');
+  const record = demoNormalizeCloudUser({
+    id:databaseId, username:normalized, legacyUsername:normalized,
+    displayName,role,presets,status:'active',
+  });
   cloud.users.push(record);
   await demoSaveCloudUsers(cloud, callerId);
   return record;
@@ -1976,29 +1983,47 @@ async function demoSaveUser(oldUsername){
 }
 
 async function demoCreateUserPrompt(){
-  if (!canManageDemoUsers()) { toast('Can quyen quan ly user.'); return; }
-  const caller = demoCurrentUser();
-  const username = prompt('Username moi (chi chu thuong, so, . - _):');
-  if (!username) return;
-  const normalized = demoNormalizeUsername(username);
-  if (!demoUsernameIsValid(normalized)) { toast('Username khong hop le.'); return; }
-  const display = prompt('Ten hien thi:') || normalized;
-  const password = prompt('Mat khau tam:') || '123456';
-  const role = prompt('Role (admin/editor/b2b/sale_online/recruitment/viewer):', 'viewer') || 'viewer';
-  const presets = {dashboard:'view'};
-  try {
-    await demoCreateCloudUser(normalized, password, display, role, presets, caller.id);
-    mktApi.createUser(caller.id, normalized, password, display, role, presets).catch(e => console.warn('[users] legacy create skipped', e));
+  if(!canManageDemoUsers()){toast('Cần quyền quản lý user.');return;}
+  const caller=demoCurrentUser();
+  if(!caller?.id){toast('Phiên đăng nhập không hợp lệ.');return;}
+  const username=prompt('Username mới (chữ thường, số, . - _):');
+  if(username==null)return;
+  const normalized=demoNormalizeUsername(username);
+  if(!demoUsernameIsValid(normalized)){toast('Username không hợp lệ.');return;}
+  const display=prompt('Tên hiển thị:')?.trim()||normalized;
+  const password=prompt('Mật khẩu tạm (ít nhất 8 ký tự, không dùng 123456):');
+  if(password==null)return;
+  if(password.length<8||password==='123456'){toast('Mật khẩu tạm cần ít nhất 8 ký tự và không được là 123456.');return;}
+  const role=prompt('Role (admin/editor/b2b/sale_online/recruitment/viewer):','viewer')||'viewer';
+  if(!['admin','editor','b2b','sale_online','recruitment','viewer'].includes(role)){
+    toast('Role không hợp lệ.');return;
+  }
+  const presets={dashboard:'view'};
+  let stage='kiểm tra trùng tài khoản';
+  try{
+    const cloud=await demoLoadCloudUsers();
+    if(_cloudUsersSource!=='supabase')throw new Error('Không thể thêm user khi ngoại tuyến');
+    const existing=await mktApi.listUsers(caller.id);
+    if(cloud.users.some(u=>u.username===normalized)||existing.some(u=>u.username===normalized))
+      throw new Error('Username đã tồn tại');
+    stage='tạo user trong app_users';
+    const id=await mktApi.createUser(caller.id,normalized,password,display,role,presets);
+    stage='đồng bộ hồ sơ người dùng';
+    await demoCreateCloudUser(normalized,display,role,presets,caller.id,id);
+    stage='xác minh kết quả';
+    await demoVerifyUserWrite(caller.id,id,{username:normalized,displayName:display,presets});
     await demoRefreshUsers();
-    pushDashboardNotification({module:'users',title:(notificationActor().name + ' vua tao user moi'),message:'Da tao user ' + normalized + ' trong Quan ly user.'});
-    toast('Da tao user va dong bo cloud: ' + normalized);
+    pushDashboardNotification({module:'users',title:notificationActor().name+' vừa tạo tài khoản',
+      message:'Tạo và xác minh '+normalized+' ở app_users và kho user Supabase.'});
+    toast('Đã tạo và xác minh tài khoản trên cả hai kho Supabase.');
     render();
-  } catch(e) {
-    console.error('[createUser]', e);
-    toast('Loi tao user: ' + (e.message || e));
+  }catch(e){
+    console.error('[createUser]',stage,e);
+    toast('Chưa xác nhận tạo user hoàn tất ('+stage+'): '+(e.message||e)+'. Kiểm tra kho Supabase trước khi bấm thêm lần nữa.');
+    await demoRefreshUsers().catch(()=>{});
+    if(curMod==='users')render();
   }
 }
-
 async function demoDeleteUser(username){
   if (!canManageDemoUsers()) { toast('Can quyen quan ly user.'); return; }
   if (!confirm('Xoa user ' + username + ' khoi he thong?')) return;
