@@ -2025,21 +2025,61 @@ async function demoCreateUserPrompt(){
   }
 }
 async function demoDeleteUser(username){
-  if (!canManageDemoUsers()) { toast('Can quyen quan ly user.'); return; }
-  if (!confirm('Xoa user ' + username + ' khoi he thong?')) return;
-  const caller = demoCurrentUser();
-  const u = demoGetUsers().find(x => x.username === username);
-  if (!u || !u.id) return;
-  try {
-    await demoDeleteCloudUser(u, caller.id);
-    mktApi.deleteUser(caller.id, u.id).catch(e => console.warn('[users] legacy delete skipped', e));
+  if(!canManageDemoUsers()){toast('Cần quyền quản lý user.');return;}
+  const caller=demoCurrentUser();
+  const u=demoGetUsers().find(x=>x.username===username);
+  if(!caller?.id||!u?.id){toast('Không xác định được tài khoản cần xóa.');return;}
+  if(u.role==='admin'||caller.id===u.id){toast('Không cho phép xóa tài khoản quản trị hoặc tài khoản đang đăng nhập.');return;}
+  if(!confirm('Xóa user '+username+' khỏi cả app_users và kho người dùng Supabase?'))return;
+  let stage='kiểm tra tài khoản',staged=false,oldStatus='active';
+  try{
+    const cloud=await demoLoadCloudUsers();
+    if(_cloudUsersSource!=='supabase')throw new Error('Không được xóa user khi ngoại tuyến');
+    const record=cloud.users.find(x=>x.id===u.id);
+    if(!record)throw new Error('Không tìm thấy hồ sơ user trong kho đồng bộ');
+    oldStatus=record.status||'active';
+    const dbUsers=await mktApi.listUsers(caller.id);
+    const inDb=dbUsers.some(x=>x.id===u.id);
+    if(inDb){
+      // First block any cloud-only login during a partially completed deletion.
+      stage='vô hiệu hóa user trong kho đồng bộ';
+      record.status='inactive';
+      await demoSaveCloudUsers(cloud,caller.id);
+      staged=true;
+      try{
+        stage='xóa tài khoản trong app_users';
+        await mktApi.deleteUser(caller.id,u.id);
+      }catch(e){
+        // DB deletion failed: roll the cloud status back before leaving.
+        record.status=oldStatus;
+        try{await demoSaveCloudUsers(cloud,caller.id);staged=false;}
+        catch(re){console.error('[deleteUser] rollback cloud status failed',re);}
+        throw e;
+      }
+    }else if(record.status!=='inactive'){
+      // Recover safely from an earlier partial delete; do not leave an
+      // active cloud-only login after its app_users row has disappeared.
+      stage='vô hiệu hóa hồ sơ còn sót';
+      record.status='inactive';
+      await demoSaveCloudUsers(cloud,caller.id);
+      staged=true;
+    }
+    stage='xóa hồ sơ khỏi kho đồng bộ';
+    await demoDeleteCloudUser(u,caller.id);
+    stage='xác minh xóa';
+    await demoVerifyUserWrite(caller.id,u.id,null,{deleted:true});
     await demoRefreshUsers();
-    pushDashboardNotification({module:'users',title:(notificationActor().name + ' vua xoa user'),message:'Da xoa user ' + username + ' khoi Quan ly user.'});
-    toast('Da xoa user va dong bo cloud: ' + username);
+    pushDashboardNotification({module:'users',title:notificationActor().name+' vừa xóa tài khoản',
+      message:'Đã xóa và đối soát '+username+' ở hai kho Supabase.'});
+    toast('Đã xóa user ở cả hai kho Supabase.');
     render();
-  } catch(e) {
-    console.error('[deleteUser]', e);
-    toast('Loi xoa user: ' + (e.message || e));
+  }catch(e){
+    console.error('[deleteUser]',stage,e);
+    toast('Chưa xác nhận xóa hoàn tất ('+stage+'): '+(e.message||e)+
+      (staged?' Hồ sơ đã được khóa trong kho đồng bộ.':'' )+
+      ' Vui lòng kiểm tra trước khi thao tác lại.');
+    await demoRefreshUsers().catch(()=>{});
+    if(curMod==='users')render();
   }
 }
 /* EMPLOYEE_TASKS_DEMO_VERSION 1 - theo dõi công việc nhân viên, lưu mkt_employee_tasks và sync cloud. */
