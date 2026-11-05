@@ -38,7 +38,8 @@
 
 .menu-svg{width:15px;height:15px;flex:0 0 15px;stroke-width:1.8;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;opacity:.91}.menu-svg.main-svg{width:17px;height:17px;flex-basis:17px}.navitem .menu-svg{color:#9bc6ff}.navtiny .menu-svg{color:#aac4e8}.platformhead .menu-svg{color:#f6c9a2}.navmain.sale{justify-content:flex-start}.sale-chevron{margin-left:auto}.menu-svg.platform-tiktok{color:#e8b3fb}.menu-svg.platform-facebook{color:#83b9ff}.menu-svg.platform-shopee{color:#ffab79}.navsubheading{display:flex;align-items:center;gap:8px}.platformhead .chev{margin-left:auto}
 .registry-dual{display:inline-flex;align-items:center;gap:4px;background:#e7f8f1;border:1px solid #c1eddb;color:#0d8060;font-weight:750;border-radius:7px;padding:5px 7px;font-size:10px}.registry-dual.pending{background:#fff5e6;color:#a77724;border-color:#f6ddad}.registry-dual.missing{background:#eff3f8;color:#6f8196;border-color:#e4eaf1}.account-info{color:#7890aa;font-size:10px;display:block;margin-top:4px}.reg-unverified .btn{margin:2px 0}
-.registry-grid{grid-template-columns:repeat(4,minmax(0,1fr))}@media(max-width:1050px){.registry-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:550px){.registry-grid{grid-template-columns:1fr}}@media(min-width:0px){html.koc-embedded .sidebar,html.koc-embedded .topbar{display:none!important}html.koc-embedded .body{width:100%;min-width:0}html.koc-embedded .main{padding:12px 16px 30px;max-width:none}html.koc-embedded .layout{display:block}html.koc-embedded .page{min-width:0}}</style></head><body>
+.registry-grid{grid-template-columns:repeat(4,minmax(0,1fr))}@media(max-width:1050px){.registry-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:550px){.registry-grid{grid-template-columns:1fr}}@media(min-width:0px){html.koc-embedded .sidebar,html.koc-embedded .topbar{display:none!important}html.koc-embedded .body{width:100%;min-width:0}html.koc-embedded .main{padding:12px 16px 30px;max-width:none}html.koc-embedded .layout{display:block}html.koc-embedded .page{min-width:0}}.registry-save-error{margin:10px 16px;padding:12px 14px;border:1px solid #f1a0a5;background:#fff1f2;border-radius:9px;color:#9f2432;font-size:12px;line-height:1.6}.registry-save-error[hidden]{display:none}
+</style></head><body>
 <div class="layout"><aside class="sidebar"><div class="brand"><div class="brand-icon">📊</div><div><h3>Planning Department</h3><small>Dashboard hiệu quả Marketing</small></div></div><div class="demo-banner">● KOC MULTI-CHANNEL · PLANNING DEPARTMENT</div>
 <div class="side-scroll"><div class="menu-label">HOẠT ĐỘNG MARKETING</div>
 <button class="navmain" data-major="b2b">🤝 &nbsp; Business to Business</button>
@@ -111,7 +112,7 @@
 </div>
 <div id="majorPage" class="page"><div class="heading"><div><div class="eyebrow">PLANNING DEPARTMENT</div><h1 id="majorTitle"></h1><p>Vị trí phân hệ trong cấu trúc 4 mục lớn.</p></div></div><div class="card" style="padding:24px"><p id="majorText"></p><div style="margin:15px 0"><button class="btn primary" id="backKoc">Về KOC / Affiliate TikTok</button></div></div></div>
 </main></div></div>
-<div class="modalback" id="modalBack"><div class="modal"><div class="modalhead"><div><div class="eyebrow">DANH SÁCH KOC CHUNG</div><h2>Nhập hợp tác KOC</h2><div class="smalltext">Một hồ sơ dùng chung, mỗi booking thuộc một sàn</div></div><button class="btn small" id="closeModal">✕</button></div><form id="bookingForm" class="modalbody"><div class="formgrid"><div class="formsec">01 · Thông tin hợp tác KOC (bắt buộc)</div>
+<div class="modalback" id="modalBack"><div class="modal"><div class="modalhead"><div><div class="eyebrow">DANH SÁCH KOC CHUNG</div><h2>Nhập hợp tác KOC</h2><div class="smalltext">Một hồ sơ dùng chung, mỗi booking thuộc một sàn</div></div><button type="button" class="btn small" id="closeModal">✕</button></div><form id="bookingForm" class="modalbody"><div class="formgrid"><div class="formsec">01 · Thông tin hợp tác KOC (bắt buộc)</div>
 <div class="field full"><label>Tên KOC *</label><input name="creator" list="creatorList" required placeholder="Nhập tên KOC / chọn hồ sơ có sẵn"><datalist id="creatorList"></datalist></div>
 <div class="field"><label>Số điện thoại *</label><input name="phone" type="tel" required pattern="[0-9+ ]{9,15}" placeholder="09xxxxxxxx"></div>
 <div class="field"><label>Tên kênh *</label><input name="channel" required placeholder="Tên kênh / tên hiển thị"></div>
@@ -125,7 +126,7 @@
 <div class="field"><label>Số video / nội dung cam kết *</label><input name="videos" type="number" min="1" step="1" required placeholder="VD: 2"></div>
 <div class="castinfo hidden" id="castFields"><div class="field"><label>Số tiền cast (VNĐ) *</label><input name="castFee" type="number" min="1" step="1" placeholder="500000"></div><div class="field"><label>Ảnh CCCD *</label><input name="cccd" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"></div><div class="registry-modal-hint"><b>Quy trình hợp đồng:</b> Khi có cast, bắt buộc tải CCCD và nhập số cast, số video. Bản thử nghiệm tạo hợp đồng <b>nháp</b> từ thông tin booking; OCR đọc CCCD sẽ được bổ sung ở bản kết nối bảo mật. Ảnh CCCD không lưu trong HTML hoặc bộ nhớ trình duyệt.</div></div>
 <div class="registry-modal-hint" id="noCastHint" hidden>Không cast: <b>không yêu cầu CCCD</b>, không sinh hợp đồng trả phí. Nhập đủ thông tin bắt buộc rồi bấm Lưu hợp tác.</div>
-<div class="field full"><details><summary class="smalltext" style="cursor:pointer;color:#28588b;font-weight:750">＋ Thông tin bổ sung (không bắt buộc): sản phẩm, chiến dịch, người phụ trách</summary><div class="formgrid" style="margin-top:12px"><div class="field"><label>Sản phẩm</label><input name="product" placeholder="Tên sản phẩm"></div><div class="field"><label>Chiến dịch</label><input name="campaign" placeholder="Chiến dịch hoặc lần hợp tác"></div><div class="field full"><label>Người phụ trách</label><input name="ownerFree" placeholder="Tên nhân viên phụ trách"></div></div></details></div></div><div class="formactions"><span class="smalltext">Lưu vào dữ liệu Planning Department</span><button type="button" class="btn" id="cancelBooking">Huỷ</button><button type="submit" class="btn primary">Lưu hợp tác KOC</button></div></form></div></div>
+<div class="field full"><details><summary class="smalltext" style="cursor:pointer;color:#28588b;font-weight:750">＋ Thông tin bổ sung (không bắt buộc): sản phẩm, chiến dịch, người phụ trách</summary><div class="formgrid" style="margin-top:12px"><div class="field"><label>Sản phẩm</label><input name="product" placeholder="Tên sản phẩm"></div><div class="field"><label>Chiến dịch</label><input name="campaign" placeholder="Chiến dịch hoặc lần hợp tác"></div><div class="field full"><label>Người phụ trách</label><input name="ownerFree" placeholder="Tên nhân viên phụ trách"></div></div></details></div></div><div class="formactions"><span class="smalltext">Lưu vào dữ liệu Planning Department</span><button type="button" class="btn" id="cancelBooking">Huỷ</button><button type="submit" class="btn primary">Lưu hợp tác KOC</button></div><div id="bookingSaveError" role="alert" aria-live="polite" class="registry-save-error" hidden></div></form></div></div>
 
 
 <div id="platformLinkBack" class="modalback"><div class="modal" style="max-width:700px">
@@ -156,7 +157,12 @@ const sample=[];
 const state={scope:'all',view:'shared',major:'',expand:new Set(),videoExpand:new Set(),limit:28,search:'',filter:'all',sort:'tk_gmv',newBookings:[],videoAssignments:{},platformLinks:{}};
 try{const saved=BRIDGE?{newBookings:HOST.bookings,videoAssignments:HOST.videoAssignments,platformLinks:HOST.links}:JSON.parse(localStorage.getItem(KEY)||'{}');
 state.newBookings=Array.isArray(saved.newBookings)?saved.newBookings.map(b=>({...b,channel:b.channel||b.channelName||'',url:b.url||b.channelUrl||'',videos:b.videos||b.videoCount||0})):[];state.videoAssignments=saved.videoAssignments&&typeof saved.videoAssignments==='object'?saved.videoAssignments:{};state.platformLinks=saved.platformLinks&&typeof saved.platformLinks==='object'&&!Array.isArray(saved.platformLinks)?saved.platformLinks:{}}catch(e){console.error(e)}
-function persist(){try{const stateData={newBookings:state.newBookings,videoAssignments:state.videoAssignments,platformLinks:state.platformLinks};if(BRIDGE){BRIDGE.saveState(stateData)}else{localStorage.setItem(KEY,JSON.stringify(stateData));}}catch(e){toast('Lỗi đồng bộ: '+(e.message||e));throw e}}
+async function persist(){
+ const stateData={newBookings:state.newBookings,videoAssignments:state.videoAssignments,platformLinks:state.platformLinks};
+ if(BRIDGE){await BRIDGE.saveState(stateData)}
+ else{localStorage.setItem(KEY,JSON.stringify(stateData));}
+ return true;
+}
 const allBookings=()=>[...sample,...state.newBookings];
 const esc=x=>String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=v=>Math.round(Number(v)||0).toLocaleString('vi-VN');const cash=v=>fmt(v)+' ₫';const roas=(gmv,ads)=>ads>0?(gmv/ads).toLocaleString('vi-VN',{minimumFractionDigits:2,maximumFractionDigits:2})+'×':'—';
@@ -206,12 +212,21 @@ function platformAccountStatus(name){const l=getPlatformLink(name);if(!l||!l.sho
  return '<span class="registry-dual'+(l.confirmed?'':' pending')+'">'+(l.confirmed?'✓ 2 sàn đã đối chiếu':'2 sàn · Chờ xác minh')+'</span><span class="account-info">Shopee: '+esc(l.shopeeChannel||l.shopeeId)+'</span>';}
 function openPlatformLink(name){const f=document.getElementById('platformLinkForm');f.reset();f.creator.value=name;const l=getPlatformLink(name);if(l){f.shopeeChannel.value=l.shopeeChannel||'';f.shopeeId.value=l.shopeeId||'';f.shopeeUrl.value=l.shopeeUrl||'';f.confirmed.checked=!!l.confirmed;}document.getElementById('platformLinkBack').classList.add('show');}
 function closePlatformLink(){document.getElementById('platformLinkBack').classList.remove('show');}
-function savePlatformLink(e){e.preventDefault();const f=e.target;if(!f.reportValidity())return;const creator=f.creator.value.trim(),key=linkKey(creator),id=f.shopeeId.value.trim();
+async function savePlatformLink(e){
+ e.preventDefault();const f=e.target;if(!f.reportValidity())return;
+ const creator=f.creator.value.trim(),key=linkKey(creator),id=f.shopeeId.value.trim();
  if(!creator||!id)return toast('Cần chọn KOC và nhập ID kênh Shopee.');
  const conflicts=Object.entries(state.platformLinks).filter(([k,v])=>k!==key&&String(v.shopeeId||'').trim().toLocaleLowerCase('vi')===id.toLocaleLowerCase('vi'));
  if(conflicts.length)return toast('ID Shopee này đã được gắn KOC khác. Kiểm tra trước khi lưu.');
- state.platformLinks[key]={creator,shopeeChannel:f.shopeeChannel.value.trim(),shopeeId:id,shopeeUrl:f.shopeeUrl.value.trim(),confirmed:!!f.confirmed.checked,updatedAt:new Date().toISOString(),source:'Nhập trực tiếp trên demo'};
- persist();closePlatformLink();renderRegistry();toast(f.confirmed.checked?'Đã ghép hồ sơ hai sàn; chưa xác nhận booking':'Đã lưu kênh Shopee, chờ xác minh');}
+ const old=state.platformLinks[key],btn=f.querySelector('[type="submit"]');
+ state.platformLinks[key]={creator,shopeeChannel:f.shopeeChannel.value.trim(),shopeeId:id,shopeeUrl:f.shopeeUrl.value.trim(),confirmed:!!f.confirmed.checked,updatedAt:new Date().toISOString()};
+ if(btn)btn.disabled=true;
+ try{await persist();closePlatformLink();renderRegistry();toast(f.confirmed.checked?'Đã ghép hồ sơ hai sàn; chưa xác nhận booking':'Đã lưu kênh Shopee, chờ xác minh');}
+ catch(err){
+   if(old)state.platformLinks[key]=old;else delete state.platformLinks[key];
+   toast('Lưu liên kết thất bại: '+(err.message||err)+'. Biểu mẫu vẫn được giữ lại.');
+ }finally{if(btn)btn.disabled=false;}
+}
 function renderRegistry(){
  const creators=registryRecords();
  const search=String(document.getElementById('regSearch')?.value||'').trim().toLocaleLowerCase('vi');
@@ -321,12 +336,47 @@ function openBooking(name='',platform=''){const form=document.getElementById('bo
  const prior=[...state.newBookings].reverse().find(x=>x.creator===name);if(prior){['phone','channel','channelId','url'].forEach(k=>{form[k].value=prior[k]||'';});}
  document.getElementById('creatorList').innerHTML=group().map(x=>'<option value="'+esc(x.creator)+'"></option>').join('');updateCastFields();document.getElementById('modalBack').classList.add('show');}
 function closeBooking(){document.getElementById('modalBack').classList.remove('show');}
-function submitBooking(e){e.preventDefault();const f=e.target;if(!f.reportValidity())return;const cast=f.cast.value;
+let bookingSaving=false;
+async function submitBooking(e){
+ e.preventDefault();
+ if(bookingSaving)return;
+ const f=e.target,errorBox=document.getElementById('bookingSaveError');
+ if(errorBox){errorBox.hidden=true;errorBox.textContent='';}
+ if(!f.reportValidity())return;
+ const cast=f.cast.value;
  if(!['yes','no'].includes(cast))return toast('Vui lòng chọn Có cast hoặc Không cast.');
- if(cast==='yes'&&(!f.cccd.files.length||!(Number(f.castFee.value)>0)))return toast('Có cast: bắt buộc có ảnh CCCD và số tiền cast lớn hơn 0.');
- const o={id:'new_'+Date.now(),creator:f.creator.value.trim(),platform:f.platform.value,phone:f.phone.value.trim(),channel:f.channel.value.trim(),channelId:f.channelId.value.trim(),url:f.url.value.trim(),product:f.product.value.trim(),campaign:f.campaign.value.trim(),start:f.start.value,due:nplus20(f.start.value),cast,castFee:cast==='yes'?Number(f.castFee.value):0,videos:Number(f.videos.value),owner:f.ownerFree.value.trim(),gmv:0,ads:0,orders:0,air:'',status:cast==='yes'?'Chờ xác minh CCCD':'Đã ghi nhận',sample:false,cccdProvided:cast==='yes'};
- if(!o.creator||!o.phone||!o.channel||!o.channelId||!o.url||!o.start||!o.due||!o.videos||!o.platform)return toast('Vui lòng điền đầy đủ thông tin KOC bắt buộc.');
- state.newBookings.unshift(o);persist();closeBooking();renderRegistry();toast('Đã lưu thông tin hợp tác; hạn N+20: '+datevn(o.due));if(cast==='yes')openContract(o.id);
+ if(cast==='yes'&&(!f.cccd.files.length||!(Number(f.castFee.value)>0)))
+   return toast('Có cast: bắt buộc có ảnh CCCD và số tiền cast lớn hơn 0.');
+ const o={id:'new_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),creator:f.creator.value.trim(),
+   platform:f.platform.value,phone:f.phone.value.trim(),channel:f.channel.value.trim(),
+   channelId:f.channelId.value.trim(),url:f.url.value.trim(),product:f.product.value.trim(),
+   campaign:f.campaign.value.trim(),start:f.start.value,due:nplus20(f.start.value),
+   cast,castFee:cast==='yes'?Number(f.castFee.value):0,videos:Number(f.videos.value),
+   owner:f.ownerFree.value.trim(),gmv:0,ads:0,orders:0,air:'',
+   status:cast==='yes'?'Chờ xác minh CCCD':'Đã ghi nhận',sample:false,cccdProvided:cast==='yes'};
+ if(!o.creator||!o.phone||!o.channel||!o.channelId||!o.url||!o.start||!o.due||!o.videos||!o.platform)
+   return toast('Vui lòng điền đầy đủ thông tin KOC bắt buộc.');
+ bookingSaving=true;
+ const saveBtn=f.querySelector('[type="submit"]'),oldText=saveBtn?.textContent;
+ if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='Đang lưu và kiểm tra Supabase…';}
+ state.newBookings.unshift(o);
+ try{
+   await persist();
+   closeBooking();
+   renderRegistry();
+   toast(BRIDGE?'Đã lưu và xác nhận booking trên Supabase; hạn N+20: '+datevn(o.due):
+     'Đã lưu trên trình duyệt; hạn N+20: '+datevn(o.due));
+   if(cast==='yes')openContract(o.id);
+ }catch(err){
+   state.newBookings=state.newBookings.filter(b=>b.id!==o.id);
+   const message='Chưa lưu được hợp tác: '+(err.message||err)+'. Thông tin bạn đã nhập vẫn được giữ nguyên để thử lại.';
+   if(errorBox){errorBox.hidden=false;errorBox.textContent=message;}
+   toast(message);
+   console.error('[koc booking] save failed',err);
+ }finally{
+   bookingSaving=false;
+   if(saveBtn){saveBtn.disabled=false;saveBtn.textContent=oldText;}
+ }
 }
 function openProfile(name){const a=group().find(x=>x.creator===name);if(!a)return;document.getElementById('drawerTitle').textContent=name;document.getElementById('drawerContent').innerHTML='<div class="comparegrid">'+['tiktok','shopee'].map(p=>'<div class="comparecard"><h4>'+ (p==='tiktok'?'🎵 TikTok':'🟠 Shopee')+'</h4>'+showBookStatus(a,p)+'<div style="margin-top:8px">'+(p==='tiktok'?cash(a.gmv):cash(a.shoGmv))+'</div><small class="muted">GMV '+(p==='shopee'?'mẫu':'trong kỳ TikTok')+'</small></div>').join('')+'</div>'+expanded(a,true)+'<button class="btn primary" style="margin-top:12px" data-create="'+encodeURIComponent(name)+'">＋ Tạo hợp tác với KOC này</button>';document.getElementById('drawerBack').classList.add('show');document.getElementById('drawer').classList.add('show')}
 function closeProfile(){document.getElementById('drawerBack').classList.remove('show');document.getElementById('drawer').classList.remove('show')}
@@ -394,9 +444,16 @@ document.getElementById('search').addEventListener('input',e=>{state.search=e.ta
 document.getElementById('closeContract').onclick=document.getElementById('closeContractBottom').onclick=closeContract;document.getElementById('contractBack').addEventListener('click',e=>{if(e.target.id==='contractBack')closeContract();});
 document.getElementById('bookingForm').start.addEventListener('change',e=>document.getElementById('bookingForm').due.value=nplus20(e.target.value));
 document.getElementById('bookingForm').cast.addEventListener('change',updateCastFields);
+document.getElementById('bookingForm').addEventListener('keydown',e=>{
+ // Enter in a text field must not auto-submit a partially completed KOC form.
+ // Use Tab to move fields and the explicit Save button to submit.
+ if(e.key==='Enter'&&!e.isComposing&&e.target.matches('input:not([type="submit"]):not([type="button"]):not([type="file"])')){
+   e.preventDefault();e.stopPropagation();
+ }
+});
 document.getElementById('bookingForm').addEventListener('submit',submitBooking);document.getElementById('closeModal').onclick=document.getElementById('cancelBooking').onclick=closeBooking;document.getElementById('modalBack').addEventListener('click',e=>{if(e.target.id==='modalBack')closeBooking()});
 document.getElementById('exportBtn').onclick=exportData;document.getElementById('closeDrawer').onclick=document.getElementById('drawerBack').onclick=closeProfile;document.getElementById('backKoc').onclick=()=>showSharedRegistry();
-document.addEventListener('change',e=>{const sel=e.target.closest('[data-video]');if(!sel)return;const key=decodeURIComponent(sel.dataset.video);if(sel.value)state.videoAssignments[key]=sel.value;else delete state.videoAssignments[key];persist();state.expand.add(key.split('|')[0]);renderKoc();toast('Đã gắn video vào chiến dịch trong bản demo')});
+document.addEventListener('change',e=>{const sel=e.target.closest('[data-video]');if(!sel)return;const key=decodeURIComponent(sel.dataset.video);if(sel.value)state.videoAssignments[key]=sel.value;else delete state.videoAssignments[key];persist().then(()=>toast('Đã lưu liên kết video')).catch(err=>toast('Không lưu được liên kết video: '+(err.message||err)));state.expand.add(key.split('|')[0]);renderKoc()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeProfile();closeBooking();closeContract();closePlatformLink()}});
 document.getElementById('platformLinkForm').addEventListener('submit',savePlatformLink);
 document.getElementById('closePlatformLink').onclick=document.getElementById('cancelPlatformLink').onclick=closePlatformLink;
