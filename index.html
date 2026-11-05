@@ -1632,6 +1632,46 @@ function demoSetUsers(users){
   _cachedUsers = users;
   try { localStorage.setItem(DEMO_USERS_KEY, JSON.stringify(users)); } catch(_) {}
 }
+let _usersAuditSummary='';
+async function demoCheckUsersConsistency(){
+  if(!canManageDemoUsers()){toast('Cần quyền quản lý user để kiểm tra.');return;}
+  const caller=demoCurrentUser();
+  if(!caller?.id){toast('Phiên đăng nhập không hợp lệ.');return;}
+  try{
+    const [db,raw]=await Promise.all([
+      mktApi.listUsers(caller.id),mktApi.kvGet(DEMO_CLOUD_USERS_KEY)
+    ]);
+    if(!Array.isArray(raw?.users))throw new Error('Kho đồng bộ không trả về danh sách user');
+    const dbMap=new Map(db.map(x=>[x.id,x]));
+    const cloudMap=new Map(raw.users.map(x=>[x.id,x]));
+    const issues=[];
+    for(const d of db){
+      const u=cloudMap.get(d.id);
+      if(!u){issues.push('Thiếu hồ sơ: '+d.username);continue;}
+      if(u.displayName!==d.display_name||u.role!==d.role||u.status!==d.status)
+        issues.push('Khác thông tin: '+d.username);
+      if(u.username!==d.username&&u.legacyUsername!==d.username)
+        issues.push('Sai liên kết tên đăng nhập: '+d.username);
+      for(const key of ['dashboard','b2b','sale','hr','users']){
+        if((u.presets?.[key]||'none')!==(d.permissions?.[key]||'none')){
+          issues.push('Khác quyền '+key+': '+d.username);break;
+        }
+      }
+    }
+    for(const u of raw.users){
+      if(!dbMap.has(u.id))issues.push('Hồ sơ không có ở app_users: '+u.username);
+    }
+    _usersAuditSummary=issues.length?
+      'Cần đối soát '+issues.length+' khác biệt. '+issues.slice(0,3).join('; '):
+      'Đã đối soát: '+db.length+' user khớp giữa app_users và kho đồng bộ.';
+    if(curMod==='users')render();
+    toast(_usersAuditSummary);
+  }catch(e){
+    _usersAuditSummary='Không kiểm tra được: '+(e.message||e);
+    if(curMod==='users')render();
+    toast(_usersAuditSummary);
+  }
+}
 async function demoReloadUsersView(){
   await demoRefreshUsers();
   if (curMod === 'users') render();
@@ -2483,8 +2523,8 @@ function renderDataSourcesPage(){
   }).join('');
   return `<div class="user-admin-card">
     <div class="user-admin-head">
-      <div><div class="user-admin-title">Quản lý user</div><div class="user-admin-sub">Tổng <strong>${users.length} tài khoản</strong> · ${_usersListSource === 'supabase' ? 'Đã tải từ Supabase' : _usersListSource === 'app_users' ? 'Đã tải từ bảng app_users' : 'Đang hiển thị bản lưu tạm, cần kiểm tra kết nối'}. Làm mới để lấy danh sách mới nhất.</div></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="demoReloadUsersView()">↻ Làm mới danh sách</button><button class="btn btn-primary" onclick="demoCreateUserPrompt()" ${!canManage?'disabled':''}>＋ Thêm user</button></div>
+      <div><div class="user-admin-title">Quản lý user</div><div class="user-admin-sub">Tổng <strong>${users.length} tài khoản</strong> · ${_usersListSource === 'supabase' ? 'Đã tải từ Supabase' : _usersListSource === 'app_users' ? 'Đã tải từ bảng app_users' : 'Đang hiển thị bản lưu tạm, cần kiểm tra kết nối'}. ${_usersAuditSummary ? '<span style="display:block;margin-top:5px">'+demoEsc(_usersAuditSummary)+'</span>' : ''}</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="demoReloadUsersView()">↻ Làm mới danh sách</button><button class="btn" onclick="demoCheckUsersConsistency()" ${!canManage?'disabled':''}>✓ Kiểm tra đồng bộ</button><button class="btn btn-primary" onclick="demoCreateUserPrompt()" ${!canManage?'disabled':''}>＋ Thêm user</button></div>
     </div>
     <div class="tbl-wrap"><table class="user-mgmt-table">
       <thead><tr><th>User</th><th>Tên hiển thị</th><th>Đổi mật khẩu tạm</th><th>Dashboard</th><th>B2B</th><th>Sale Online</th><th>Tuyển dụng</th><th>User/Admin</th><th>Thao tác</th></tr></thead>
