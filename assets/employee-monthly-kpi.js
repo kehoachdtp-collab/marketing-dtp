@@ -104,7 +104,7 @@ function progressPanel(m){
 function dayEntry(m){
  const p=person(),can=admin(),logs=rowLogs(p,m),today=rangeToday(state.date);
  return '<section class="ek-panel"><div class="ek-panel-head"><div><h2>Nhập kết quả ngày</h2><p>Nhập số thực tế phát sinh, không phải số lũy kế. Cùng ngày và chỉ tiêu sẽ được cập nhật, không cộng trùng.</p></div>'+tag('Ngày '+state.date,'blue')+'</div>'+
- '<div class="ek-day-body"><form id="ek-daily-form"><label class="ek-field-date">Ngày báo cáo<input name="date" id="ek-date" type="date" min="'+esc(state.month+'-01')+'" max="'+esc(state.month+'-31')+'" value="'+esc(state.date)+'" required></label>'+
+ '<div class="ek-day-body"><form id="ek-daily-form"><label class="ek-field-date">Ngày báo cáo<input name="date" id="ek-date" type="date" min="'+esc(state.month+'-01')+'" max="'+esc(state.month+'-'+String(new Date(Number(state.month.slice(0,4)),Number(state.month.slice(5,7)),0).getDate()))+'" value="'+esc(state.date)+'" required></label>'+
  '<div class="ek-daily-grid">'+activeMetrics(p).map(metric=>{
    const value=logs.find(x=>x.date===today.a&&x.metricId===metric.id);
    return '<label><span>'+esc(metric.label)+' <em>('+esc(unit(metric))+')</em></span><input name="'+esc(metric.id)+'" data-ek-actual="'+esc(metric.id)+'" type="number" step="1" min="0" placeholder="Chưa cập nhật" value="'+(value?esc(value.actual):'')+'" '+(can?'':'disabled')+'></label>';
@@ -141,7 +141,7 @@ function accountLink(m){
  return '<div class="ek-account"><span>Hồ sơ nhân viên: <b>'+esc(p.name)+'</b> · '+(match?esc(match.displayName||match.username):'Chưa liên kết tài khoản')+'</span>'+
  (can?'<button class="ek-btn" data-ek-action="link">Liên kết tài khoản</button>':'')+'</div>';
 }
-function render(){
+function renderMonthly(){
  if(!viewAllowed())return '<div class="ek-empty">Không có quyền truy cập KPI nhân viên.</div>';
  if(!state.loaded&&!state.loading&&typeof demoCurrentUser==='function'&&demoCurrentUser()?.id){
   state.loading=true;
@@ -277,5 +277,5 @@ document.addEventListener('submit',async e=>{
   renderDashboardSafe();
  }catch(err){toast('Không lưu được: '+(err.message||err));if(b)b.disabled=false;}
 });
-window.EmployeeMonthlyKPI={render};
+window.EmployeeMonthlyKPI={render:renderMonthly};
 })();
