@@ -44,20 +44,40 @@ function rangeWeek(date){
 function rangeMonth(){return {a:state.month+'-01',b:state.month+'-31'};}
 function sumMetric(logs,id,range){return logs.filter(x=>x.metricId===id&&x.date>=range.a&&x.date<=range.b).reduce((s,x)=>s+N(x.actual),0);}
 function hasMetric(logs,id,range){return logs.some(x=>x.metricId===id&&x.date>=range.a&&x.date<=range.b);}
+function monthlyImported(m,p,id){return (m?.monthlyActuals||[]).find(x=>x.personId===p?.id&&x.metricId===id)||null;}
+function monthValue(m,p,logs,id){const imported=monthlyImported(m,p,id);
+  return imported?{value:N(imported.actual),has:true,imported:true,source:imported.source||''}:
+  {value:sumMetric(logs,id,rangeMonth()),has:hasMetric(logs,id,rangeMonth()),imported:false,source:''};}
+function hasImportedMonth(m){return Array.isArray(m?.monthlyActuals)&&m.monthlyActuals.length>0;}
 function tag(label,c='neutral'){return '<span class="ek-badge '+c+'">'+esc(label)+'</span>';}
 function stat(label,value,detail){return '<div class="ek-stat"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong><small>'+esc(detail)+'</small></div>';}
 function topHeader(m){
  const p=person(),all=(m?.people||[]),monthLabel=state.month.split('-').reverse().join('/');
  return '<div class="ek-header"><div><div class="ek-kicker">PLANNING DEPARTMENT / KPI</div><h1>KPI nhân viên · Tháng '+esc(monthLabel)+'</h1><p>Chỉ tiêu cố định theo tháng • Kết quả nhập hằng ngày • Tự tổng hợp tuần và lũy kế.</p></div>'+
  '<div class="ek-header-controls"><label>Tháng <input id="ek-month" type="month" value="'+esc(state.month)+'"></label>'+
+ (state.month!=='2026-10'?'<button class="ek-btn" data-ek-action="oct">Xem thực tế T10/2026</button>':'')+
  (admin()?'<button class="ek-btn" data-ek-action="copy">Sao chép KPI sang tháng khác</button>':'')+'</div></div>'+
  '<div class="ek-person-list">'+all.map(x=>'<button data-ek-person="'+esc(x.id)+'" class="ek-person '+(p?.id===x.id?'selected':'')+'"><span class="ek-avatar">'+esc(x.name.slice(0,1))+'</span><span><b>'+esc(x.name)+'</b><small>'+activeMetrics(x).length+' chỉ tiêu tháng</small></span></button>').join('')+'</div>';
 }
 function compact(m){
  const p=person(),logs=rowLogs(p,m),monthRange=rangeMonth();
+ if(hasImportedMonth(m)){
+  const metrics=activeMetrics(p);
+  const imported=metrics.filter(x=>monthlyImported(m,p,x.id));
+  const sales=metrics.filter(x=>x.kind==='revenue'&&monthlyImported(m,p,x.id));
+  const costs=metrics.filter(x=>x.kind==='cost'&&monthlyImported(m,p,x.id));
+  const rev=sales.reduce((t,x)=>t+N(monthlyImported(m,p,x.id).actual),0);
+  const cost=costs.reduce((t,x)=>t+N(monthlyImported(m,p,x.id).actual),0);
+  return '<div class="ek-stats">'+
+   stat('Doanh thu thực tế',sales.length?money(rev):'—','Tổng theo các kênh được giao')+
+   stat('Chi phí thực tế',costs.length?money(cost):'—','Không cộng lại ngân sách TKQC')+
+   stat('Dòng được đối soát',String(imported.length),'Số liệu báo cáo tháng')+
+   stat('KPI có mục tiêu',String(metrics.filter(x=>x.kind==='revenue'&&typeof x.target==='number').length),'Không tính mục tiêu không hợp lệ')+
+   '</div>';
+ }
  const targeted=activeMetrics(p).filter(x=>x.kind!=='cost'&&typeof x.target==='number');
- const meet=targeted.filter(x=>hasMetric(logs,x.id,monthRange)&&sumMetric(logs,x.id,monthRange)>=x.target).length;
- const unreported=targeted.filter(x=>!hasMetric(logs,x.id,monthRange)).length;
+ const meet=targeted.filter(x=>monthValue(m,p,logs,x.id).has&&monthValue(m,p,logs,x.id).value>=x.target).length;
+ const unreported=targeted.filter(x=>!monthValue(m,p,logs,x.id).has).length;
  const days=new Set(logs.filter(x=>x.date>=monthRange.a&&x.date<=monthRange.b).map(x=>x.date));
  return '<div class="ek-stats">'+
  stat('Số chỉ tiêu tháng',String(activeMetrics(p).length),targeted.length+' mục có mức hoàn thành')+
@@ -69,8 +89,9 @@ function compact(m){
 function targetRows(m){
  const p=person(),logs=rowLogs(p,m),month=rangeMonth(),today=rangeToday(state.date),week=rangeWeek(state.date),can=admin();
  return activeMetrics(p).map(metric=>{
-  const actual=sumMetric(logs,metric.id,month),daily=sumMetric(logs,metric.id,today),weekly=sumMetric(logs,metric.id,week);
-  const monthInput=hasMetric(logs,metric.id,month),dayInput=hasMetric(logs,metric.id,today),weekInput=hasMetric(logs,metric.id,week);
+  const total=monthValue(m,p,logs,metric.id);
+  const actual=total.value,daily=sumMetric(logs,metric.id,today),weekly=sumMetric(logs,metric.id,week);
+  const monthInput=total.has,dayInput=hasMetric(logs,metric.id,today),weekInput=hasMetric(logs,metric.id,week);
   const target=metric.target,hasTarget=typeof target==='number'&&Number.isFinite(target);
   const achievement=hasTarget&&target>0&&metric.kind!=='cost'&&monthInput?pct(actual,target):null;
   const progress=achievement!==null?'<div class="ek-bar"><i style="width:'+Math.min(achievement,100)+'%"></i></div>':'';
@@ -79,14 +100,15 @@ function targetRows(m){
   const labelClass=metric.kind==='cost'?'ek-cost-label':'';
   const stateText=metric.kind==='cost'?
      tag('Theo dõi chi phí','blue'):
-     !hasTarget?tag('Chưa đặt mức','neutral'):
+     !hasTarget?(monthInput?tag('Có thực tế · chưa đặt mục tiêu','blue'):tag('Chưa đặt mức','neutral')):
      !monthInput?tag('Chưa cập nhật','neutral'):
      achievement>=100?tag('Đạt','green'):
      tag('Đang thực hiện','amber');
   return '<tr><td><b class="'+labelClass+'">'+esc(metric.label)+'</b><small>'+esc(metric.kind==='cost'?'Chi phí thực tế, không chấm đạt khi chưa có ngân sách':'KPI tháng')+'</small></td>'+
    '<td>'+targetView+'</td><td>'+ (dayInput?formatted(metric,daily):'<span class="ek-muted">—</span>')+'</td>'+
    '<td>'+(weekInput?formatted(metric,weekly):'<span class="ek-muted">—</span>')+'</td>'+
-   '<td><b>'+ (monthInput?formatted(metric,actual):'<span class="ek-muted">Chưa cập nhật</span>')+'</b>'+progress+'</td>'+
+   '<td><b>'+ (monthInput?formatted(metric,actual):'<span class="ek-muted">Chưa cập nhật</span>')+'</b>'+
+   (total.imported?'<small class="ek-aggregate-note">Tổng tháng · báo cáo đối soát</small>':'')+progress+'</td>'+
    '<td>'+(achievement===null?'—':num(achievement)+'%')+'</td><td>'+stateText+'</td></tr>';
  }).join('');
 }
@@ -94,6 +116,7 @@ function progressPanel(m){
  const p=person(),can=admin();
  return '<section class="ek-panel"><div class="ek-panel-head"><div><h2>Tiến độ thực hiện KPI</h2><p>Ngày '+esc(state.date.split('-').reverse().join('/'))+' • Tuần theo thứ Hai–Chủ nhật • Lũy kế tháng '+esc(state.month)+'</p></div>'+
  (can?'<button class="ek-btn" data-ek-action="editTargets">'+(state.editingTargets?'Hủy sửa mục tiêu':'Chỉnh mục tiêu tháng')+'</button>':'')+'</div>'+
+ (hasImportedMonth(m)?'<div class="ek-caution">Số thực tế tháng 10 được nhập từ báo cáo tổng tháng. Không phân bổ vào từng ngày hoặc tuần; các ô ngày/tuần để trống khi chưa có báo cáo chi tiết. Chi phí từng kênh lấy từ báo cáo CP T10, không cộng ngân sách tài khoản lần nữa.</div>':'')+
  '<div class="ek-scroll"><table class="ek-table"><thead><tr><th>Hạng mục công việc</th><th>Mục tiêu tháng</th><th>Hôm nay</th><th>Trong tuần</th><th>Lũy kế tháng</th><th>% đạt</th><th>Tình trạng</th></tr></thead><tbody>'+
  (targetRows(m)||'<tr><td colspan="7">Tháng này chưa có chỉ tiêu.</td></tr>')+'</tbody></table></div>'+
  (state.editingTargets&&can?'<div class="ek-panel-actions">'+
@@ -102,6 +125,8 @@ function progressPanel(m){
  '</section>';
 }
 function dayEntry(m){
+ if(hasImportedMonth(m))return '<section class="ek-panel"><div class="ek-panel-head"><div><h2>Dữ liệu thực tế tổng tháng</h2><p>Số liệu được chốt từ báo cáo, không ghi đè bằng kết quả ngày.</p></div></div>'+
+ '<div class="ek-empty">Báo cáo tháng 10 chỉ cung cấp tổng doanh thu/chi phí theo kênh; chưa có dữ liệu phân bổ theo từng ngày. Bạn có thể xem chi tiết trong lịch sử đối soát bên dưới.</div></section>';
  const p=person(),can=admin(),logs=rowLogs(p,m),today=rangeToday(state.date);
  return '<section class="ek-panel"><div class="ek-panel-head"><div><h2>Nhập kết quả ngày</h2><p>Nhập số thực tế phát sinh, không phải số lũy kế. Cùng ngày và chỉ tiêu sẽ được cập nhật, không cộng trùng.</p></div>'+tag('Ngày '+state.date,'blue')+'</div>'+
  '<div class="ek-day-body"><form id="ek-daily-form"><label class="ek-field-date">Ngày báo cáo<input name="date" id="ek-date" type="date" min="'+esc(state.month+'-01')+'" max="'+esc(state.month+'-'+String(new Date(Number(state.month.slice(0,4)),Number(state.month.slice(5,7)),0).getDate()))+'" value="'+esc(state.date)+'" required></label>'+
@@ -115,18 +140,25 @@ function dayEntry(m){
 }
 function chart(m){
  const p=person(),logs=rowLogs(p,m),period=rangeMonth();
- const rev=activeMetrics(p).filter(x=>x.kind==='revenue').map(x=>({x,v:sumMetric(logs,x.id,period)}));
+ const rev=activeMetrics(p).filter(x=>x.kind==='revenue').map(x=>({x,v:monthValue(m,p,logs,x.id).value}));
  const total=rev.reduce((s,x)=>s+x.v,0);
  const sales=rev.map(x=>'<div class="ek-chart-line"><span>'+esc(x.x.label.replace(/^Doanh số /,''))+'</span><div class="ek-chart-track"><i style="width:'+Math.max(0,Math.min(100,total>0?x.v/Math.max(total,1)*100:0))+'%"></i></div><b>'+money(x.v)+'</b></div>').join('');
  return '<section class="ek-panel"><div class="ek-panel-head"><div><h2>Tổng quan hiệu quả tháng</h2><p>Biểu đồ doanh số theo từng kênh (nếu đã có dữ liệu).</p></div></div><div class="ek-chart">'+
- (rev.length?(logs.length?sales:'<div class="ek-empty">Chưa có doanh số thực tế được nhập trong tháng.</div>'):'<div class="ek-empty">Nhân viên này không có KPI doanh thu.</div>')+
+ (rev.length?(logs.length||hasImportedMonth(m)?sales:'<div class="ek-empty">Chưa có doanh số thực tế được nhập trong tháng.</div>'):'<div class="ek-empty">Nhân viên này không có KPI doanh thu.</div>')+
  '</div></section>';
 }
 function history(m){
  const p=person(),entries=(m.logs||[]).filter(x=>x.personId===p.id).sort((a,b)=>b.date.localeCompare(a.date)),all=activeMetrics(p);
- return '<section class="ek-panel"><div class="ek-panel-head"><div><h2>Lịch sử cập nhật</h2><p>Lưu theo ngày, theo người và theo chỉ tiêu.</p></div></div>'+
- '<div class="ek-scroll"><table class="ek-table ek-hist"><thead><tr><th>Ngày</th><th>Chỉ tiêu</th><th>Thực tế</th><th>Ghi chú</th></tr></thead><tbody>'+
- (entries.length?entries.slice(0,50).map(x=>{const metric=all.find(y=>y.id===x.metricId);return '<tr><td>'+esc(x.date)+'</td><td>'+esc(metric?.label||x.metricId)+'</td><td><b>'+ (metric?formatted(metric,x.actual):num(x.actual))+'</b></td><td>'+esc(x.dailyNote||'')+'</td></tr>'}).join(''):'<tr><td colspan="4" class="ek-empty">Chưa có kết quả ngày nào được ghi nhận.</td></tr>')+
+ const imports=(m.monthlyActuals||[]).filter(x=>x.personId===p.id);
+ const importHtml=imports.map(x=>{const metric=all.find(y=>y.id===x.metricId);
+   return '<tr><td><b>Tổng '+esc(state.month)+'</b></td><td>'+esc(metric?.label||x.metricId)+'</td><td><b>'+
+   (metric?formatted(metric,x.actual):num(x.actual))+'</b></td><td>'+esc(x.source||'Báo cáo tổng tháng')+'</td></tr>';}).join('');
+ const dailyHtml=entries.slice(0,50).map(x=>{const metric=all.find(y=>y.id===x.metricId);
+   return '<tr><td>'+esc(x.date)+'</td><td>'+esc(metric?.label||x.metricId)+'</td><td><b>'+
+   (metric?formatted(metric,x.actual):num(x.actual))+'</b></td><td>'+esc(x.dailyNote||'')+'</td></tr>';}).join('');
+ return '<section class="ek-panel"><div class="ek-panel-head"><div><h2>Lịch sử & nguồn đối soát</h2><p>Phân biệt báo cáo tổng tháng và kết quả nhập theo ngày.</p></div></div>'+
+ '<div class="ek-scroll"><table class="ek-table ek-hist"><thead><tr><th>Kỳ</th><th>Chỉ tiêu</th><th>Thực tế</th><th>Nguồn / ghi chú</th></tr></thead><tbody>'+
+ (importHtml+dailyHtml||'<tr><td colspan="4" class="ek-empty">Chưa có kết quả được ghi nhận.</td></tr>')+
  '</tbody></table></div></section>';
 }
 function workNotice(m){
@@ -251,6 +283,7 @@ document.addEventListener('click',async e=>{
  if(b.dataset.ekPerson){state.person=b.dataset.ekPerson;state.editingTargets=false;renderDashboardSafe();return;}
  const action=b.dataset.ekAction;
  if(action==='tasks'){employeeDashboardTab='tasks';renderDashboardSafe();return;}
+ if(action==='oct'){state.month='2026-10';state.date='2026-10-31';state.editingTargets=false;renderDashboardSafe();return;}
  if(action==='editTargets'){state.editingTargets=!state.editingTargets;renderDashboardSafe();return;}
  try{
    b.disabled=true;
