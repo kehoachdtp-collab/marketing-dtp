@@ -1861,6 +1861,40 @@ function demoReadSession(){
   catch(_) { return null; }
 }
 function demoWriteSession(session){ localStorage.setItem(DEMO_SESSION_KEY, JSON.stringify(session)); }
+
+/* Verify both Supabase stores after each user mutation; an RPC returning no
+   error is not sufficient proof that a particular user was changed. */
+async function demoVerifyUserWrite(callerId, userId, expected, opts={}){
+  const [dbUsers, cloudRaw] = await Promise.all([
+    mktApi.listUsers(callerId), mktApi.kvGet(DEMO_CLOUD_USERS_KEY)
+  ]);
+  const db = (dbUsers||[]).find(x => String(x.id)===String(userId));
+  const cu = (cloudRaw?.users||[]).find(x => String(x.id)===String(userId));
+  if(opts.deleted){
+    if(db||cu) throw new Error('Chưa xóa hết hồ sơ người dùng ở cả hai kho Supabase');
+    return true;
+  }
+  if(!db||!cu) throw new Error('Dữ liệu người dùng chưa xuất hiện đầy đủ ở app_users và kv_stores');
+  if(expected){
+    const name=String(expected.displayName||'');
+    if(name && (db.display_name!==name || cu.displayName!==name))
+      throw new Error('Tên hiển thị chưa đồng bộ ở hai kho Supabase');
+    const wanted=expected.presets||{};
+    for(const key of ['dashboard','b2b','sale','hr','users']){
+      if(wanted[key] && (db.permissions?.[key]!==wanted[key] || cu.presets?.[key]!==wanted[key]))
+        throw new Error('Phân quyền '+key+' chưa đồng bộ ở hai kho Supabase');
+    }
+    if(expected.username && cu.username!==expected.username)
+      throw new Error('Tên đăng nhập trên hồ sơ web chưa đồng bộ');
+    // Existing update_user RPC does not accept p_username. Preserve the
+    // canonical database login as the cloud record's legacyUsername alias.
+    if(opts.aliasFallback && cu.legacyUsername!==db.username)
+      throw new Error('Liên kết tên đăng nhập với app_users chưa chính xác');
+    if(!opts.aliasFallback && expected.username && db.username!==expected.username)
+      throw new Error('Tên đăng nhập ở app_users chưa được xác nhận');
+  }
+  return true;
+}
 async function demoSaveUser(oldUsername){
   if (!canManageDemoUsers() && !canResetDemoPasswords()) { toast('Ban khong co quyen quan ly user.'); return; }
   const caller = demoCurrentUser();
@@ -1890,35 +1924,54 @@ async function demoSaveUser(oldUsername){
   }
 
   const usernameChanged = newUsername !== u.username;
+  if (pass && pass.length < 8) { toast('Mật khẩu mới cần ít nhất 8 ký tự.'); return; }
+  let stage='chuẩn bị';
   try {
-    await demoSaveUserToCloud(u, { username:newUsername, displayName:newDisplay, role:u.role, status:u.status, presets:newPresets, password:pass }, caller.id);
-
+    if (_usersListSource === 'offline') throw new Error('Đang ngoại tuyến. Không được sửa user trên bản lưu cục bộ.');
+    stage='cập nhật app_users';
+    let result={usernameUpdated:!usernameChanged,aliasFallback:false};
     if (canManageDemoUsers()) {
-      mktApi.updateUser(caller.id, u.id, newUsername, newDisplay, u.role, newPresets, null, usernameChanged)
-        .then(async result => {
-          if (usernameChanged) {
-            const realUsername = u.legacyUsername || u.realUsername || u.username;
-            if (result?.aliasFallback) await demoSaveUsernameAlias(u.id, realUsername, newUsername, caller.id);
-            else await demoSaveUsernameAlias(u.id, realUsername, realUsername, caller.id);
-          }
-        })
-        .catch(e => console.warn('[users] legacy update skipped', e));
+      result=await mktApi.updateUser(caller.id,u.id,newUsername,newDisplay,u.role,newPresets,null,usernameChanged);
     }
     if (pass && canResetDemoPasswords()) {
-      mktApi.resetPassword(caller.id, u.id, pass).catch(e => console.warn('[users] legacy password reset skipped', e));
+      stage='đổi mật khẩu app_users';
+      await mktApi.resetPassword(caller.id,u.id,pass);
     }
-
+    stage='cập nhật hồ sơ Supabase';
+    await demoSaveUserToCloud(u,{
+      username:newUsername,displayName:newDisplay,role:u.role,status:u.status,
+      presets:newPresets,password:pass
+    },caller.id);
+    if(usernameChanged){
+      stage='liên kết tên đăng nhập';
+      const oldDbUsername = u.legacyUsername || u.realUsername || u.username;
+      const aliasResult=await demoSaveUsernameAlias(u.id,oldDbUsername,
+        result?.aliasFallback ? newUsername : newUsername,caller.id);
+      if(!aliasResult.cloudSaved) throw new Error('Không ghi được ánh xạ tên đăng nhập vào Supabase');
+    }
+    stage='xác minh sau ghi';
+    await demoVerifyUserWrite(caller.id,u.id,{
+      username:newUsername,displayName:newDisplay,presets:newPresets
+    },{aliasFallback:!!result?.aliasFallback});
     await demoRefreshUsers();
-    if (caller.id === u.id) {
-      const fresh = demoGetUsers().find(x => x.id === u.id);
-      if (fresh) demoWriteSession({ user: fresh, loginAt: Date.now() });
+    if(caller.id===u.id){
+      const fresh=demoGetUsers().find(x=>x.id===u.id);
+      if(fresh)demoWriteSession({user:fresh,loginAt:Date.now()});
     }
-    pushDashboardNotification({module:'users',title:(notificationActor().name + ' vua cap nhat Quan ly user'),message:'Da luu thay doi tai khoan/quyen cho user ' + newUsername + '. May khac bam Cap nhat hoac cho tu dong dong bo de thay.'});
-    toast('Da luu user va dong bo cloud. May khac F5 se thay ngay.');
+    pushDashboardNotification({module:'users',
+      title:notificationActor().name+' vừa cập nhật tài khoản',
+      message:'Đã lưu và xác minh hồ sơ '+newUsername+' ở Supabase.'});
+    if(result?.aliasFallback){
+      toast('Đã lưu vào Supabase. Tên đăng nhập mới đang là bí danh trên web; app_users vẫn giữ tên đăng nhập gốc.');
+    } else {
+      toast('Đã lưu và xác minh user trên cả hai kho Supabase.');
+    }
     render();
   } catch(e) {
-    console.error('[saveUser]', e);
-    toast('Loi dong bo user: ' + (e.message || e));
+    console.error('[saveUser]',stage,e);
+    toast('Chưa thể xác nhận đồng bộ đầy đủ ('+stage+'): '+(e.message||e)+'. Không lặp lại thao tác cho đến khi đối soát trạng thái.');
+    await demoRefreshUsers().catch(()=>{});
+    if(curMod==='users')render();
   }
 }
 
