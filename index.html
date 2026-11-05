@@ -1467,6 +1467,9 @@ async function demoLoadCloudUsers(){
       demoSetCloudUsersLocal(clean);
       return clean;
     }
+    // An empty but reachable Supabase store is not an offline cache.
+    _cloudUsersSource='supabase_empty';
+    return demoCleanCloudUsers(null);
   } catch(e) { console.warn('[users] cloud user load failed; using offline cache', e); }
   return local;
 }
@@ -1514,6 +1517,8 @@ async function demoBootstrapCloudUsers(users, callerId){
 }
 async function demoCloudLogin(username, password, tryLegacyLogin){
   const cloud = await demoLoadCloudUsers();
+  // Do not authenticate with browser-cached password hashes without Supabase.
+  if(_cloudUsersSource==='local')throw new Error('network_unavailable: authentication requires Supabase');
   const record = cloud.users.find(u => u.username === username);
   if (!record) return {found:false, user:null};
   if (record.status && record.status !== 'active') return {found:true, user:null};
