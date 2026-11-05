@@ -787,10 +787,8 @@ const mktApi = {
       }
       return user;
     } catch(e) {
-      if (demoIsNetworkAuthError(e)) {
-        console.warn('[login] Supabase unavailable, trying local fallback', e);
-        return await demoLocalLoginFallback(normalized, password);
-      }
+      // Login cannot be trusted while Supabase is unavailable. Do not accept
+      // locally cached/default administrator credentials as an offline substitute.
       throw e;
     }
   },
@@ -802,6 +800,7 @@ const mktApi = {
   async createUser(callerId, username, password, displayName, role, permissions) {
     const { data, error } = await supaRpc('create_user', { p_caller_id: callerId, p_username: username, p_password: password, p_display_name: displayName, p_role: role, p_permissions: permissions });
     if (error) throw error;
+    if (typeof data !== 'string' || !/^[0-9a-f-]{36}$/i.test(data)) throw new Error('Supabase chưa xác nhận tạo tài khoản trong app_users');
     return data;
   },
   async updateUser(callerId, id, username, displayName, role, permissions, status, usernameChanged) {
@@ -809,6 +808,7 @@ const mktApi = {
     if (!usernameChanged) {
       const oldRes = await supaRpc('update_user', oldParams);
       if (oldRes.error) throw oldRes.error;
+      if (oldRes.data !== true) throw new Error('app_users không tìm thấy user cần cập nhật');
       return { usernameUpdated: false };
     }
     const nextUsername = demoNormalizeUsername(username);
@@ -820,20 +820,26 @@ const mktApi = {
       if (missingV2) {
         const oldRes = await supaRpc('update_user', oldParams);
         if (oldRes.error) throw oldRes.error;
+        if (oldRes.data !== true) throw new Error('app_users không tìm thấy user cần cập nhật');
         return { usernameUpdated: false, aliasFallback: true };
       }
       throw res.error;
     }
+    if (res.data !== true) throw new Error('app_users không xác nhận đổi tên đăng nhập');
     return { usernameUpdated: true };
   },
 
   async resetPassword(callerId, id, newPassword) {
-    const { error } = await supaRpc('reset_password', { p_caller_id: callerId, p_id: id, p_new_password: newPassword });
+    const { data, error } = await supaRpc('reset_password', { p_caller_id: callerId, p_id: id, p_new_password: newPassword });
     if (error) throw error;
+    if (data !== true) throw new Error('app_users không tìm thấy tài khoản để đổi mật khẩu');
+    return true;
   },
   async deleteUser(callerId, id) {
-    const { error } = await supaRpc('delete_user', { p_caller_id: callerId, p_id: id });
+    const { data, error } = await supaRpc('delete_user', { p_caller_id: callerId, p_id: id });
     if (error) throw error;
+    if (data !== true) throw new Error('app_users chưa xác nhận xóa tài khoản');
+    return true;
   },
   async kvGetAll() {
     const { data, error } = await supaRpc('kv_get_all');
@@ -1470,8 +1476,10 @@ async function demoSaveCloudUsers(payload, callerId){
   clean.users = clean.users.map(u => ({...u, updatedAt: u.updatedAt || clean.updatedAt}));
   // Do not claim success locally if cloud write fails.
   await mktApi.kvSet(DEMO_CLOUD_USERS_KEY, clean, callerId || null);
-  demoSetCloudUsersLocal(clean);
-  return clean;
+  const verified = await mktApi.kvGet(DEMO_CLOUD_USERS_KEY);
+  if (!verified || verified.updatedAt !== clean.updatedAt) throw new Error('Không xác minh được bản ghi user vừa lưu trên Supabase');
+  demoSetCloudUsersLocal(verified);
+  return verified;
 }
 function demoCloudToDemoUser(record){
   const u = demoNormalizeCloudUser(record);
