@@ -297,7 +297,7 @@
     if(ui.view==='platformOverview')return portalOverview();
     const view=ui.view==='bookings'?'booking':ui.view;
     const params=new URLSearchParams({view,platform:ui.platform});
-    return '<iframe title="Quản lý KOC Shopee TikTok" src="assets/koc-portal.html?v=20261104-6&'+params.toString()+
+    return '<iframe title="Quản lý KOC Shopee TikTok" src="assets/koc-portal.html?v=20261105-enterfix1&'+params.toString()+
       '" style="display:block;width:100%;min-height:calc(100vh - 185px);height:calc(100vh - 145px);background:#f3f6fa;border:0;border-radius:12px"></iframe>';
   }
 
