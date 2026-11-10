@@ -490,6 +490,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 #grp-sale .sb-legacy-collapse[open]>summary{color:#eef4ff}
 .app-shell.sidebar-collapsed #grp-sale .sb-platform-list,.app-shell.sidebar-collapsed #grp-sale .sb-legacy-collapse{display:none!important}
 
+
+/* B2B advanced filters and Excel report */
+.b2b-advanced{background:#f8fbfc;border:1px solid #dce8ee;border-radius:12px;padding:12px 13px;margin:0 0 13px}.b2b-advanced-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.b2b-advanced-title{font-size:12px;font-weight:900;color:#173653}.b2b-advanced-sub{font-size:11px;color:#718699;margin-top:2px}.b2b-filter-grid{display:grid;grid-template-columns:minmax(220px,1.5fr) repeat(4,minmax(130px,1fr));gap:8px;align-items:end}.b2b-filter-field{display:flex;flex-direction:column;gap:4px}.b2b-filter-field label{font-size:10px;font-weight:850;color:#668093;text-transform:uppercase;letter-spacing:.35px}.b2b-filter-field input,.b2b-filter-field select{min-width:0;border:1px solid #d5e3e9;border-radius:8px;background:#fff;color:#193753;padding:7px 8px;font:inherit;font-size:11.5px;outline:none}.b2b-filter-field input:focus,.b2b-filter-field select:focus{border-color:#3b9aa1;box-shadow:0 0 0 3px rgba(20,127,141,.12)}.b2b-filter-extra{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:9px}.b2b-check{display:flex;align-items:center;gap:6px;color:#516d7f;font-size:11.5px;font-weight:750}.b2b-check input{accent-color:#147f8d}.b2b-filter-actions{display:flex;gap:7px;margin-left:auto}.b2b-report-btn{background:#eaf8f1!important;border-color:#a8d8bd!important;color:#15734e!important}.b2b-report-btn:hover{background:#d9f2e5!important}.b2b-filter-count{font-size:11px;color:#718699}.b2b-filter-count strong{color:#173653}@media(max-width:1100px){.b2b-filter-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:760px){.b2b-filter-grid{grid-template-columns:1fr 1fr}.b2b-filter-actions{margin-left:0;width:100%}.b2b-filter-actions .btn{flex:1}}
+
 /* ═══════════════════════════════════════
    Dashboard redesign — Tổng quan / B2B / Sidebar
 ═══════════════════════════════════════ */
@@ -3199,6 +3203,7 @@ function _b2bLeads() {
       default:        return all;
     }
   })();
+  const filteredRows = b2bApplyAdvancedRows(rows);
 
   const compactKeys = new Set(['ngayNhanData','kenh','tenCty','mst','nguoiLH','sdt','ptTruc','daGoi','trangThai','followUp','ghiChu']);
   const visibleCols = b2bCompactMode ? B2B_COLS.filter(c=>compactKeys.has(c.k)) : B2B_COLS;
@@ -3261,7 +3266,7 @@ function _b2bLeads() {
     <th style="width:36px"></th>
   </tr>`;
 
-  const _pgr = _paginate('b2b', rows, 50);
+  const _pgr = _paginate('b2b', filteredRows, 50);
   const tbody = _pgr.pageRows.map((r,idx) => {
     const i = _pgr.offset + idx;
     const dupCls = r._dBoth?'dup-red':r._dSdt||r._dMst?'dup':'';
@@ -3278,7 +3283,7 @@ function _b2bLeads() {
     </tr>`;
   }).join('');
 
-  return stats + chipsHtml + actBar + _pgr.bar + `
+  return stats + chipsHtml + b2bAdvancedHtml(all.length, filteredRows.length) + actBar + _pgr.bar + `
     <div class="tbl-wrap">
       <table class="tbl">
         <thead>${thead}</thead>
@@ -6427,6 +6432,7 @@ let b2bRows   = [];
 let b2bPtList = ['Hồng','Ngân','Hạ','Nghi','Chị Thảo','Chị Hiền'];
 let b2bFilter = 'all';
 let b2bCompactMode = true;
+let b2bAdvanced = { q:'', owner:'', status:'', channel:'', from:'', to:'', dupOnly:false };
 
 function b2bLoad() {
   b2bRows   = getStore(K.b2bCrm, []);
@@ -6450,8 +6456,54 @@ function b2bDelRow(id) {
   b2bRows = b2bRows.filter(r => r.id != id);
   b2bAutoSave(); b2bRerender();
 }
-function b2bSetFilter(f) { b2bFilter = f; _pg['b2b']=0; b2bRerender(); }
+function b2bSetFilter(f) { b2bFilter = f; b2bAdvanced = {q:'', owner:'', status:'', channel:'', from:'', to:'', dupOnly:false}; _pg['b2b']=0; b2bRerender(); }
 function b2bToggleCompact(){ b2bCompactMode = !b2bCompactMode; b2bRerender(); }
+function b2bResetAdvanced(){ b2bAdvanced = {q:'', owner:'', status:'', channel:'', from:'', to:'', dupOnly:false}; b2bFilter='all'; _pg['b2b']=0; b2bRerender(); }
+function b2bApplyAdvancedFromUi(){
+  const val = id => document.getElementById(id)?.value || '';
+  b2bAdvanced = {q:val('b2b-filter-q').trim(), owner:val('b2b-filter-owner'), status:val('b2b-filter-status'), channel:val('b2b-filter-channel'), from:val('b2b-filter-from'), to:val('b2b-filter-to'), dupOnly:!!document.getElementById('b2b-filter-dup')?.checked};
+  b2bFilter='all'; _pg['b2b']=0; b2bRerender();
+}
+function b2bDateKey(v){
+  const raw=String(v||'').trim(); if(!raw) return '';
+  const iso=raw.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/); if(iso) return `${iso[1]}-${String(iso[2]).padStart(2,'0')}-${String(iso[3]).padStart(2,'0')}`;
+  const vn=raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/); if(vn) return `${vn[3]}-${String(vn[2]).padStart(2,'0')}-${String(vn[1]).padStart(2,'0')}`;
+  return '';
+}
+function b2bApplyAdvancedRows(rows){
+  const f=b2bAdvanced, q=f.q.toLowerCase();
+  return rows.filter(r=>{
+    const hay=[r.tenCty,r.mst,r.diaChi,r.nguoiLH,r.sdt,r.ghiChu,r.kenh].join(' ').toLowerCase();
+    if(q && !hay.includes(q)) return false;
+    if(f.owner && r.ptTruc!==f.owner && r.ptGoi!==f.owner && r.ptSauGap!==f.owner) return false;
+    if(f.status && r.trangThai!==f.status) return false;
+    if(f.channel && r.kenh!==f.channel) return false;
+    const d=b2bDateKey(r.ngayNhanData); if(f.from && (!d || d<f.from)) return false; if(f.to && (!d || d>f.to)) return false;
+    if(f.dupOnly && !(r._dSdt||r._dMst||r._dCty)) return false;
+    return true;
+  });
+}
+function b2bAdvancedHasValue(){ return !!(b2bAdvanced.q||b2bAdvanced.owner||b2bAdvanced.status||b2bAdvanced.channel||b2bAdvanced.from||b2bAdvanced.to||b2bAdvanced.dupOnly); }
+function b2bAdvancedHtml(allCount, rowCount){
+  const owners=[...new Set([...(b2bPtList||[]), ...b2bRows.flatMap(r=>[r.ptTruc,r.ptGoi,r.ptSauGap]).filter(Boolean)])].sort((a,b)=>String(a).localeCompare(String(b),'vi'));
+  const statuses=['Mới','Đang liên hệ','Có nhu cầu','Không nhu cầu','Đã hẹn gặp','Đã gặp','Đã gửi BG','Đã chốt','Từ chối'];
+  const channels=['Facebook','Website','Tiktok','Người quen giới thiệu'];
+  const opt=(arr,val)=>'<option value="">Tất cả</option>'+arr.map(x=>`<option value="${esc(x)}" ${val===x?'selected':''}>${esc(x)}</option>`).join('');
+  return `<section class="b2b-advanced"><div class="b2b-advanced-head"><div><div class="b2b-advanced-title">Bộ lọc nâng cao</div><div class="b2b-advanced-sub">Kết hợp từ khóa, người phụ trách, trạng thái, kênh và khoảng ngày nhận lead.</div></div><span class="b2b-filter-count">Đang lọc <strong>${rowCount}</strong> / ${allCount} lead</span></div><div class="b2b-filter-grid"><div class="b2b-filter-field"><label for="b2b-filter-q">Tìm kiếm</label><input id="b2b-filter-q" type="search" value="${esc(b2bAdvanced.q)}" placeholder="Tên công ty, MST, người liên hệ, SĐT..."></div><div class="b2b-filter-field"><label for="b2b-filter-owner">Người phụ trách</label><select id="b2b-filter-owner">${opt(owners,b2bAdvanced.owner)}</select></div><div class="b2b-filter-field"><label for="b2b-filter-status">Trạng thái lead</label><select id="b2b-filter-status">${opt(statuses,b2bAdvanced.status)}</select></div><div class="b2b-filter-field"><label for="b2b-filter-channel">Kênh thông tin</label><select id="b2b-filter-channel">${opt(channels,b2bAdvanced.channel)}</select></div><div class="b2b-filter-field"><label for="b2b-filter-from">Từ ngày nhận</label><input id="b2b-filter-from" type="date" value="${esc(b2bAdvanced.from)}"></div><div class="b2b-filter-field"><label for="b2b-filter-to">Đến ngày nhận</label><input id="b2b-filter-to" type="date" value="${esc(b2bAdvanced.to)}"></div></div><div class="b2b-filter-extra"><label class="b2b-check"><input id="b2b-filter-dup" type="checkbox" ${b2bAdvanced.dupOnly?'checked':''}> Chỉ hiển thị lead có cảnh báo trùng</label><div class="b2b-filter-actions"><button type="button" class="btn btn-primary" onclick="b2bApplyAdvancedFromUi()">Áp dụng bộ lọc</button><button type="button" class="btn" onclick="b2bResetAdvanced()">Xóa bộ lọc</button><button type="button" class="btn b2b-report-btn" onclick="b2bExportExcel()">⬇ Xuất báo cáo Excel</button></div></div></section>`;
+}
+async function b2bExportExcel(){
+  try{ await ensureXlsxLoaded(); }catch(e){ toast('Không tải được thư viện Excel. Thử lại sau.'); return; }
+  b2bMarkDups();
+  const all=b2bRows||[]; let rows;
+  switch(b2bFilter){case 'warn':rows=all.filter(r=>r._dSdt||r._dMst);break;case 'dupSdt':rows=all.filter(r=>r._dSdt);break;case 'dupMst':rows=all.filter(r=>r._dMst);break;case 'sameCty':rows=all.filter(r=>r._dCty);break;case 'noInfo':rows=all.filter(r=>r._noInf);break;default:rows=all;}
+  rows=b2bApplyAdvancedRows(rows);
+  const headers=B2B_COLS.map(c=>c.l).concat(['Phân loại cảnh báo']);
+  const data=[headers,...rows.map(r=>B2B_COLS.map(c=>c.t==='date'?formatDateVN(r[c.k]):(r[c.k]??'')).concat([r._dBoth?'Trùng SĐT + MST':r._dSdt?'Trùng SĐT':r._dMst?'Trùng MST':r._dCty?'Cùng công ty':r._noInf?'Thiếu thông tin':'']))];
+  const wb=XLSX.utils.book_new(); const ws=XLSX.utils.aoa_to_sheet(data); ws['!autofilter']={ref:`A1:${XLSX.utils.encode_col(headers.length-1)}${data.length}`}; ws['!cols']=headers.map((h,i)=>({wch:Math.min(30,Math.max(12,String(h).length+2))})); XLSX.utils.book_append_sheet(wb,ws,'Danh sách B2B');
+  const summary=[['BÁO CÁO QUẢN LÝ B2B'],['Thời điểm xuất',new Date().toLocaleString('vi-VN')],['Số lead trong báo cáo',rows.length],['Bộ lọc nhanh',b2bFilter],['Từ khóa',b2bAdvanced.q||''],['Người phụ trách',b2bAdvanced.owner||'Tất cả'],['Trạng thái',b2bAdvanced.status||'Tất cả'],['Kênh thông tin',b2bAdvanced.channel||'Tất cả'],['Từ ngày',b2bAdvanced.from||''],['Đến ngày',b2bAdvanced.to||''],['Chỉ lead có cảnh báo trùng',b2bAdvanced.dupOnly?'Có':'Không']]; const ws2=XLSX.utils.aoa_to_sheet(summary); ws2['!cols']=[{wch:32},{wch:32}]; XLSX.utils.book_append_sheet(wb,ws2,'Tóm tắt báo cáo');
+  const stamp=new Date().toISOString().slice(0,10); XLSX.writeFile(wb,`Bao_cao_B2B_${stamp}.xlsx`); toast(`✅ Đã xuất ${rows.length} lead ra Excel.`);
+}
+
 
 function b2bAddPT(sel, id, k) {
   const n = prompt('Tên người phụ trách mới:');
