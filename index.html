@@ -502,6 +502,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .b2b-merge-table .conflict{background:#fff7e8}
 .b2b-merge-scroll{max-height:51vh;overflow:auto;margin:10px 0}
 .b2b-merge-pick{display:flex;gap:7px;align-items:center;margin-top:10px;font-size:12px;font-weight:800;color:#173653}
+/* B2B customer progress history */
+.b2b-history-btn{margin-top:4px;padding:3px 6px;display:block;border:1px solid #b4dce1;background:#eafaFC;color:#116977;border-radius:7px;cursor:pointer;font-weight:800;font-size:10px;white-space:nowrap}
+.b2b-history-btn:hover{background:#d5f2f5}
+.b2b-history-note{margin:8px 0 12px;padding:10px 12px;background:#f0f8fb;border:1px solid #cde5ec;border-radius:10px;color:#28566f;font-size:12px;line-height:1.55}
+.b2b-history-entry{padding:10px 12px;margin:8px 0;border:1px solid #dce6ef;border-radius:10px;background:#fff}
+.b2b-history-date{font-size:11px;color:#5b7289;font-weight:800;margin-bottom:6px}
+.b2b-history-pair{display:grid;grid-template-columns:minmax(100px,1fr) 2fr;gap:10px;padding:5px 0;border-bottom:1px solid #f1f4f7;font-size:12px;line-height:1.4}
+.b2b-history-pair b{color:#31516c}
+.b2b-history-pair span{color:#21354d;white-space:pre-wrap;overflow-wrap:anywhere}
+.b2b-merge-current{margin:9px 0 14px;padding:10px 12px;border:1px solid #d0dfe8;background:#f7fbfd;border-radius:10px}
+.b2b-merge-current-row{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px;align-items:center;margin:7px 0}
+.b2b-merge-current-row label{font-size:11px;font-weight:800;color:#2a4962}
+.b2b-merge-current-row select{padding:7px 8px;border:1px solid #c7d7e1;border-radius:7px;width:100%;font-size:12px;background:white;color:#213954}
+@media(max-width:580px){.b2b-merge-current-row{grid-template-columns:1fr}}
 /* B2B advanced filters and Excel report */
 .b2b-advanced{background:#f8fbfc;border:1px solid #dce8ee;border-radius:12px;padding:12px 13px;margin:0 0 13px}.b2b-advanced-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.b2b-advanced-title{font-size:12px;font-weight:900;color:#173653}.b2b-advanced-sub{font-size:11px;color:#718699;margin-top:2px}.b2b-filter-grid{display:grid;grid-template-columns:minmax(220px,1.5fr) repeat(4,minmax(130px,1fr));gap:8px;align-items:end}.b2b-filter-field{display:flex;flex-direction:column;gap:4px}.b2b-filter-field label{font-size:10px;font-weight:850;color:#668093;text-transform:uppercase;letter-spacing:.35px}.b2b-filter-field input,.b2b-filter-field select{min-width:0;border:1px solid #d5e3e9;border-radius:8px;background:#fff;color:#193753;padding:7px 8px;font:inherit;font-size:11.5px;outline:none}.b2b-filter-field input:focus,.b2b-filter-field select:focus{border-color:#3b9aa1;box-shadow:0 0 0 3px rgba(20,127,141,.12)}.b2b-filter-extra{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:9px}.b2b-check{display:flex;align-items:center;gap:6px;color:#516d7f;font-size:11.5px;font-weight:750}.b2b-check input{accent-color:#147f8d}.b2b-filter-actions{display:flex;gap:7px;margin-left:auto}.b2b-report-btn{background:#eaf8f1!important;border-color:#a8d8bd!important;color:#15734e!important}.b2b-report-btn:hover{background:#d9f2e5!important}.b2b-filter-count{font-size:11px;color:#718699}.b2b-filter-count strong{color:#173653}@media(max-width:1100px){.b2b-filter-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:760px){.b2b-filter-grid{grid-template-columns:1fr 1fr}.b2b-filter-actions{margin-left:0;width:100%}.b2b-filter-actions .btn{flex:1}}
 
@@ -3310,7 +3324,7 @@ function _b2bLeads() {
     const mergeBtn = r._dSdt ? `<button type="button" class="b2b-merge-btn" onclick="b2bReviewDuplicate(${JSON.stringify(String(r.id)).replace(/"/g,'&quot;')})" title="So sánh các lead trùng số điện thoại và chọn hồ sơ để gộp">Xem &amp; gộp</button>` : '';
     return `
     <tr class="${dupCls}">
-      <td class="stt" style="padding:3px 5px">${i+1}<br>${bdg}${mergeBtn}</td>
+      <td class="stt" style="padding:3px 5px">${i+1}<br>${bdg}${mergeBtn}${Array.isArray(r.b2bHistory)&&r.b2bHistory.length?`<button type="button" class="b2b-history-btn" onclick="b2bShowHistory(${JSON.stringify(String(r.id)).replace(/"/g,'&quot;')})">Lịch sử (${r.b2bHistory.length})</button>`:''}</td>
       ${visibleCols.map(c=>cell(r,c)).join('')}
       <td><button class="del-btn" onclick="b2bDelRow(${r.id})" title="Xóa">✕</button></td>
     </tr>`;
@@ -6478,7 +6492,21 @@ function b2bRerender()  { document.getElementById('content').innerHTML = renderB
 
 function b2bUpdate(id, k, v) {
   const r = b2bRows.find(r => r.id == id);
-  if (r) { r[k] = v; b2bAutoSave(); }
+  if (!r) return;
+  const before = String(r[k] ?? '');
+  const after = String(v ?? '');
+  if (before === after) return;
+  if (B2B_TRACK_FIELDS.has(k)) {
+    const u = demoCurrentUser();
+    if(!Array.isArray(r.b2bHistory)) r.b2bHistory=[];
+    r.b2bHistory.push({
+      type:'field_change',at:new Date().toISOString(),field:k,
+      label:B2B_COLS.find(c=>c.k===k)?.l||k,oldValue:before,newValue:after,
+      by:u?.displayName||u?.username||'Người dùng'
+    });
+  }
+  r[k] = v;
+  b2bAutoSave();
 }
 function b2bAddRow() {
   b2bRows.push({id: Date.now()+Math.random()});
@@ -6548,10 +6576,15 @@ function b2bAddPT(sel, id, k) {
 }
 
 
-/* Review duplicate phone groups; merge only on explicit confirmation.
-   The complete original rows are persisted in Supabase before any deletion. */
+/* B2B merge and progress history. Data source snapshots are NOT interpreted as
+   date-stamped changes: lead intake dates are not change timestamps. */
 let _b2bMergeBusy = false;
 const B2B_MERGE_ARCHIVE = 'mkt_b2b_merge_archive_v1';
+const B2B_TRACK_FIELDS = new Set([
+ 'nguoiLH','ptTruc','ptGoi','ptSauGap','ptChotHD','ptLamHD','ptBaoCao','ptNhanDon',
+ 'daGoi','ketQuaGoi','trangThai','danhGiaSauGap','danhGiaSoBo','followUp',
+ 'ghiChu','gioGoi','ngayGoiTT','ngayPhanCong'
+]);
 function b2bMergePlain(row){
   const out = {};
   B2B_COLS.forEach(c=>{ out[c.k] = row[c.k] ?? ''; });
@@ -6562,6 +6595,62 @@ function b2bMergeClean(row){
   Object.keys(row).forEach(k=>{ if(!k.startsWith('_')) out[k]=row[k]; });
   return out;
 }
+function b2bMergeText(v){return String(v??'').trim();}
+function b2bHistoryFieldLabel(k){return B2B_COLS.find(c=>c.k===k)?.l||k;}
+function b2bMergeSelected(){
+  const chosen=document.querySelector('input[name=b2b-merge-primary]:checked')?.value;
+  const confirmed=document.getElementById('b2b-merge-same-client')?.checked;
+  if(!confirmed){toast('Hãy xác nhận các hồ sơ cùng thuộc một khách hàng.');return null;}
+  if(!chosen){toast('Hãy chọn hồ sơ chính.');return null;}
+  const selected={};
+  document.querySelectorAll('[data-b2b-current-field]').forEach(el=>{
+    selected[el.dataset.b2bCurrentField]=el.value;
+  });
+  return {primaryId:chosen,selected};
+}
+function b2bHistoryEntryHtml(e){
+  const html=(label,value)=>'<div class="b2b-history-pair"><b>'+esc(label)+'</b><span>'+esc(value||'—')+'</span></div>';
+  if(e.type==='source_snapshot'){
+    let info='<div class="b2b-history-date">Hồ sơ nguồn '+esc(e.sourceId??'?')+
+      ' · Ngày nhận lead: '+esc(e.receivedAt?formatDateVN(e.receivedAt):'Không có')+
+      ' · Không có thời gian thay đổi gốc</div>';
+    const fields=e.fields||{};
+    const shown=['tenCty','mst','sdt',...Array.from(B2B_TRACK_FIELDS)];
+    return '<div class="b2b-history-entry">'+info+shown.filter(k=>b2bMergeText(fields[k])).map(k=>html(b2bHistoryFieldLabel(k),fields[k])).join('')+'</div>';
+  }
+  if(e.type==='field_change'){
+    return '<div class="b2b-history-entry"><div class="b2b-history-date">Cập nhật '+
+      esc(e.at?new Date(e.at).toLocaleString('vi-VN'):'Không rõ thời điểm')+
+      ' · '+esc(e.by||'Người dùng')+'</div>'+html(e.label||b2bHistoryFieldLabel(e.field),
+      (e.oldValue||'—')+' → '+(e.newValue||'—'))+'</div>';
+  }
+  if(e.type==='merge'){
+    return '<div class="b2b-history-entry"><div class="b2b-history-date">Gộp hồ sơ '+
+      esc(e.at?new Date(e.at).toLocaleString('vi-VN'):'')+'</div>'+
+      html('Hồ sơ gốc',Array.isArray(e.sourceIds)?e.sourceIds.join(', '):'')+
+      html('Hồ sơ chính',e.primaryId||'')+'</div>';
+  }
+  return '';
+}
+function b2bShowHistory(id){
+  b2bLoad();
+  const row=b2bRows.find(r=>String(r.id)===String(id));
+  if(!row)return;
+  const history=Array.isArray(row.b2bHistory)?row.b2bHistory:[];
+  const latest=Array.from(B2B_TRACK_FIELDS).filter(k=>b2bMergeText(row[k]));
+  const current='<div class="b2b-history-entry"><div class="b2b-history-date">THÔNG TIN ĐANG SỬ DỤNG</div>'+
+    latest.map(k=>'<div class="b2b-history-pair"><b>'+esc(b2bHistoryFieldLabel(k))+
+    '</b><span>'+esc(row[k])+'</span></div>').join('')+'</div>';
+  const dated=history.filter(e=>e.type!=='source_snapshot').slice().sort((a,b)=>Date.parse(b.at||0)-Date.parse(a.at||0));
+  const sources=history.filter(e=>e.type==='source_snapshot');
+  const details='<div class="b2b-history-note">Các cập nhật mới có thời gian và người sửa. Dữ liệu nhập từ các hồ sơ cũ hiển thị theo nguồn và ngày nhận lead; không tự suy đoán ai là người phụ trách trước/sau nếu thiếu mốc thời gian.</div>'+
+    current+'<h4 style="margin:14px 0 7px">Nhật ký thay đổi ('+dated.length+')</h4>'+
+    (dated.map(b2bHistoryEntryHtml).join('')||'<p style="font-size:12px">Chưa có thay đổi sau khi lập lịch sử.</p>')+
+    '<h4 style="margin:14px 0 7px">Hồ sơ nguồn ('+sources.length+')</h4>'+
+    (sources.map(b2bHistoryEntryHtml).join('')||'<p style="font-size:12px">Chưa có hồ sơ nguồn.</p>');
+  _mdkShow('Lịch sử tiến trình khách hàng', '<div class="b2b-merge-scroll" style="max-height:65vh">'+details+'</div>',
+    [{label:'Đóng',primary:true,action:'_mdkClose(true)'}]);
+}
 async function b2bReviewDuplicate(id){
   if (_b2bMergeBusy) return;
   b2bLoad();
@@ -6571,81 +6660,126 @@ async function b2bReviewDuplicate(id){
   const group = b2bRows.filter(r=>normSdt(r.sdt)===phone);
   if(group.length<2){toast('Số này không còn trùng.');b2bRerender();return;}
   const ids = group.map(r=>String(r.id));
-  const divergent = B2B_COLS.filter(c=>new Set(group.map(r=>String(r[c.k]??'').trim())).size>1);
+  const divergent = B2B_COLS.filter(c=>new Set(group.map(r=>b2bMergeText(r[c.k]))).size>1);
   const header = '<tr><th>Trường dữ liệu</th>'+group.map((r,i)=>'<th>Hồ sơ '+(i+1)+'</th>').join('')+'</tr>';
   const body = B2B_COLS.map(c=>'<tr class="'+(divergent.includes(c)?'conflict':'')+'"><td>'+esc(c.l)+'</td>'+group.map(r=>'<td>'+esc(r[c.k]||'—')+'</td>').join('')+'</tr>').join('');
   const choices = group.map((r,i)=>'<label class="b2b-merge-pick"><input type="radio" name="b2b-merge-primary" value="'+esc(String(r.id))+'" '+(String(r.id)===String(id)?'checked':'')+'> Giữ hồ sơ '+(i+1)+': '+esc(r.tenCty||r.nguoiLH||r.sdt||'Chưa có tên')+'</label>').join('');
-  const bodyHtml = '<div class="b2b-merge-guide"><b>'+group.length+' hồ sơ có cùng SĐT '+esc(phone)+'</b>. Chọn hồ sơ chính để giữ. Trường còn trống sẽ được bổ sung; các giá trị khác nhau sẽ được lưu vào ghi chú và bản sao lưu. <b>Kiểm tra kỹ:</b> cùng SĐT có thể thuộc những khách hàng khác nhau. Chỉ gộp khi đã xác nhận cùng một khách hàng.</div><div class="b2b-merge-scroll"><table class="b2b-merge-table">'+header+body+'</table></div>'+choices+'<label class="b2b-merge-pick"><input type="checkbox" id="b2b-merge-same-client"> Tôi đã đối chiếu và xác nhận các hồ sơ này thuộc cùng một khách hàng</label>';
-  const picked=await _mdkShow('Kiểm tra & gộp lead trùng SĐT',bodyHtml,[
+  const currentChoices = divergent.filter(c=>B2B_TRACK_FIELDS.has(c.k)).map(col=>{
+    const seen=new Set();const opts=[];
+    group.forEach((r,i)=>{const v=b2bMergeText(r[col.k]);if(v&&!seen.has(v)){seen.add(v);opts.push({value:v,label:'Hồ sơ '+(i+1)+': '+v});}});
+    return '<div class="b2b-merge-current-row"><label>'+esc(col.l)+' hiện tại</label><select data-b2b-current-field="'+esc(col.k)+'">'+
+      opts.map(o=>'<option value="'+esc(o.value)+'" '+(b2bMergeText(row[col.k])===o.value?'selected':'')+'>'+esc(o.label)+'</option>').join('')+'</select></div>';
+  }).join('');
+  const compare='<div class="b2b-merge-scroll"><table class="b2b-merge-table">'+header+body+'</table></div>';
+  const bodyHtml='<div class="b2b-merge-guide"><b>'+group.length+' hồ sơ cùng SĐT '+esc(phone)+
+    '</b>. Chọn hồ sơ chính để giữ và chọn giá trị <b>đang sử dụng</b> cho các trường thay đổi. Tất cả người phụ trách, người liên hệ, ghi chú và trạng thái cũ đều được giữ trong <b>Lịch sử tiến trình</b>. Ngày nhận lead không đồng nghĩa ngày thay đổi nhân sự. Chỉ gộp khi xác nhận cùng khách hàng.</div>'+
+    compare+choices+(currentChoices?'<div class="b2b-merge-current"><b>Thông tin hiện tại (có thể chọn lại):</b>'+currentChoices+'</div>':'')+
+    '<label class="b2b-merge-pick"><input type="checkbox" id="b2b-merge-same-client"> Tôi đã xác nhận các hồ sơ thuộc cùng một khách hàng</label>';
+  const picked=await _mdkShow('Kiểm tra & gộp, giữ lịch sử tiến trình',bodyHtml,[
     {label:'Hủy, giữ nguyên',action:'_mdkClose(null)'},
-    {label:'Gộp hồ sơ đã chọn',primary:true,action:"_mdkClose(document.getElementById('b2b-merge-same-client')?.checked ? document.querySelector('input[name=b2b-merge-primary]:checked')?.value : null)"}
+    {label:'Gộp và giữ lịch sử',primary:true,action:"(()=>{const v=b2bMergeSelected();if(v)_mdkClose(v)})()"}
   ]);
-  if(!picked) return;
-  if(!ids.includes(String(picked))){toast('Hồ sơ chính không hợp lệ.');return;}
-  await b2bMergePhoneGroup(phone,ids,String(picked));
+  if(!picked || !ids.includes(String(picked.primaryId)))return;
+  await b2bMergePhoneGroup(phone,ids,picked);
 }
-async function b2bMergePhoneGroup(phone,expectedIds,primaryId){
+async function b2bMergePhoneGroup(phone,expectedIds,selection){
   if(_b2bMergeBusy)return;
   _b2bMergeBusy=true;
   try{
     const u=demoCurrentUser();
-    if(!u?.id)throw Error('Bạn cần đăng nhập lại trước khi gộp.');
-    if(mktHasPendingSync() || _mktSyncDownBusy)throw Error('Có dữ liệu đang đồng bộ. Vui lòng lưu và cập nhật lại trước khi gộp.');
-    // Work from fresh cloud data. Never overwrite another user's additions.
+    if(!u?.id)throw Error('Cần đăng nhập lại trước khi gộp.');
+    if(mktHasPendingSync() || _mktSyncDownBusy)throw Error('Đang đồng bộ; vui lòng cập nhật lại trước khi gộp.');
     const cloud=await mktApi.kvGet(K.b2bCrm);
-    if(!Array.isArray(cloud))throw Error('Chưa tải được dữ liệu gốc từ Supabase.');
+    if(!Array.isArray(cloud))throw Error('Không tải được dữ liệu gốc từ Supabase.');
     const rows=cloud.filter(r=>normSdt(r.sdt)===phone);
     const found=rows.map(r=>String(r.id));
-    if(found.length!==expectedIds.length || expectedIds.some(id=>!found.includes(id)))throw Error('Nhóm trùng đã thay đổi. Hãy tải lại trước khi gộp.');
+    if(found.length!==expectedIds.length||expectedIds.some(id=>!found.includes(id)))
+      throw Error('Nhóm trùng đã thay đổi, hãy tải lại trước khi gộp.');
+    const primaryId=String(selection.primaryId);
     if(!rows.some(r=>String(r.id)===primaryId))throw Error('Không tìm thấy hồ sơ chính.');
     const localById=new Map(b2bRows.map(r=>[String(r.id),r]));
-    for(const r of rows){
-      const local=localById.get(String(r.id));
-      if(!local || JSON.stringify(b2bMergePlain(local))!==JSON.stringify(b2bMergePlain(r))){
-        throw Error('Có thay đổi dữ liệu chưa được đồng bộ. Vui lòng cập nhật rồi thử lại.');
-      }
+    for(const row of rows){
+      const local=localById.get(String(row.id));
+      if(!local||JSON.stringify(b2bMergeClean(local))!==JSON.stringify(b2bMergeClean(row)))
+        throw Error('Hồ sơ đã được chỉnh sửa ở nơi khác, vui lòng cập nhật rồi thử lại.');
     }
     const originals=rows.map(r=>JSON.parse(JSON.stringify(r)));
     const primary=rows.find(r=>String(r.id)===primaryId);
     const merged=b2bMergeClean(primary);
     const differences=[];
-    for(const other of rows.filter(r=>String(r.id)!==primaryId)){
-      for(const col of B2B_COLS){
-        if(col.k==='ghiChu')continue;
-        const val=String(other[col.k]??'').trim();
-        const cur=String(merged[col.k]??'').trim();
-        if(!val)continue;
-        if(!cur)merged[col.k]=other[col.k];
-        else if(val!==cur && !differences.some(d=>d.field===col.k && d.value===val)){
-          differences.push({field:col.k,label:col.l,value:val,fromId:String(other.id)});
+    const now=new Date().toISOString();
+    const sourceSnapshots=[];
+    const priorHistory=[];
+    const seenSnapshots=new Set();
+    for(const row of rows){
+      if(Array.isArray(row.b2bHistory)){
+        for(const e of row.b2bHistory){
+          if(e.type==='source_snapshot'){
+            const key=String(e.sourceId);
+            if(!seenSnapshots.has(key)){seenSnapshots.add(key);sourceSnapshots.push(e);}
+          }else priorHistory.push(e);
         }
       }
+      if(!seenSnapshots.has(String(row.id))){
+        seenSnapshots.add(String(row.id));
+        sourceSnapshots.push({type:'source_snapshot',sourceId:String(row.id),
+          receivedAt:row.ngayNhanData||'',fields:b2bMergePlain(row)});
+      }
     }
-    const notes = [...new Set(rows.map(r=>String(r.ghiChu||'').trim()).filter(Boolean))];
-    if(differences.length)notes.push('Thông tin từ các hồ sơ đã gộp (cần đối chiếu): '+differences.map(d=>d.label+': '+d.value).join('; '));
-    notes.push('Đã gộp '+rows.length+' hồ sơ trùng SĐT ngày '+new Date().toLocaleDateString('vi-VN')+'. Mã hồ sơ nguồn: '+expectedIds.join(', '));
-    merged.ghiChu=notes.join('\n');
-    const next=cloud.filter(r=>!expectedIds.includes(String(r.id)) || String(r.id)===primaryId).map(r=>String(r.id)===primaryId?merged:r);
-    if(next.length!==cloud.length-rows.length+1)throw Error('Không khớp số lượng hồ sơ sau gộp.');
+    for(const other of rows.filter(r=>String(r.id)!==primaryId)){
+      for(const col of B2B_COLS){
+        const value=b2bMergeText(other[col.k]);
+        const current=b2bMergeText(merged[col.k]);
+        if(!value)continue;
+        if(!current)merged[col.k]=other[col.k];
+        else if(value!==current&&!differences.some(d=>d.field===col.k&&d.value===value))
+          differences.push({field:col.k,label:col.l,value,fromId:String(other.id)});
+      }
+    }
+    // Explicit current values are independent of the selected canonical record.
+    for(const [k,v] of Object.entries(selection.selected||{})){
+      if(!B2B_TRACK_FIELDS.has(k))continue;
+      if(!rows.some(r=>b2bMergeText(r[k])===b2bMergeText(v)))throw Error('Giá trị hiện tại không thuộc nhóm hồ sơ.');
+      merged[k]=v;
+    }
+    const changes=[];
+    for(const k of B2B_TRACK_FIELDS){
+      if(b2bMergeText(primary[k])!==b2bMergeText(merged[k])){
+        changes.push({type:'field_change',at:now,field:k,label:b2bHistoryFieldLabel(k),
+          oldValue:primary[k]??'',newValue:merged[k]??'',by:u.displayName||u.username||'Người dùng'});
+      }
+    }
+    const mergeEvent={type:'merge',at:now,sourceIds:expectedIds,primaryId,
+      by:u.displayName||u.username||'Người dùng'};
+    merged.b2bHistory=sourceSnapshots.concat(priorHistory,changes,[mergeEvent]);
+    // Keep current note only. Source notes remain intact in sourceSnapshots and archive.
+    const next=cloud.filter(r=>!expectedIds.includes(String(r.id))||String(r.id)===primaryId)
+      .map(r=>String(r.id)===primaryId?merged:r);
+    if(next.length!==cloud.length-rows.length+1)throw Error('Sai số lượng hồ sơ sau gộp.');
     const existing=await mktApi.kvGet(B2B_MERGE_ARCHIVE);
-    if(existing!==null && !Array.isArray(existing))throw Error('Dữ liệu sao lưu có cấu trúc không đúng.');
+    if(existing!==null&&!Array.isArray(existing))throw Error('Cấu trúc bản sao lưu không đúng.');
     const archive=Array.isArray(existing)?existing:[];
     const stamp='merge_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
-    const entry={id:stamp,at:new Date().toISOString(),by:u.id,phone,primaryId,originals,differences};
+    const entry={id:stamp,at:now,by:u.id,phone,primaryId,originals,differences,
+      currentSelections:selection.selected||{}};
     await mktApi.kvSet(B2B_MERGE_ARCHIVE,archive.concat([entry]),u.id);
     const verifiedArchive=await mktApi.kvGet(B2B_MERGE_ARCHIVE);
-    if(!Array.isArray(verifiedArchive)||!verifiedArchive.some(x=>x.id===stamp))throw Error('Không xác nhận được bản sao lưu trên Supabase. Chưa gộp dữ liệu.');
+    if(!Array.isArray(verifiedArchive)||!verifiedArchive.some(x=>x.id===stamp))
+      throw Error('Sao lưu chưa xác minh thành công. Chưa gộp.');
     await mktApi.kvSet(K.b2bCrm,next,u.id);
     const verified=await mktApi.kvGet(K.b2bCrm);
-    if(!Array.isArray(verified)||verified.length!==next.length||verified.filter(r=>String(r.id)===primaryId).length!==1||verified.some(r=>expectedIds.includes(String(r.id))&&String(r.id)!==primaryId)){
-      throw Error('Chưa xác nhận được kết quả ghi dữ liệu. Vui lòng cập nhật để kiểm tra, không thao tác gộp lại ngay.');
-    }
+    const result=Array.isArray(verified)?verified.find(r=>String(r.id)===primaryId):null;
+    if(!result||verified.length!==next.length||!Array.isArray(result.b2bHistory)||
+      result.b2bHistory.length!==merged.b2bHistory.length||
+      verified.some(r=>expectedIds.includes(String(r.id))&&String(r.id)!==primaryId))
+      throw Error('Chưa xác nhận dữ liệu đã gộp. Hãy cập nhật rồi kiểm tra trước khi thử lại.');
     clearPendingSync(K.b2bCrm);
     localStorage.setItem(K.b2bCrm,JSON.stringify(verified));
     _kvSetKnown(K.b2bCrm,verified);
     _pg['b2b']=0;
     b2bRerender();
-    toast('Đã gộp '+rows.length+' lead, giữ '+1+' hồ sơ chính. Bản gốc đã được sao lưu trên Supabase.');
+    toast('Đã gộp '+rows.length+' hồ sơ và giữ lịch sử tiến trình.');
+    b2bShowHistory(primaryId);
   }catch(e){console.error('[b2b merge]',e);toast('Không thể gộp: '+(e.message||e));}
   finally{_b2bMergeBusy=false;}
 }
