@@ -502,6 +502,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .b2b-merge-table .conflict{background:#fff7e8}
 .b2b-merge-scroll{max-height:51vh;overflow:auto;margin:10px 0}
 .b2b-merge-pick{display:flex;gap:7px;align-items:center;margin-top:10px;font-size:12px;font-weight:800;color:#173653}
+/* B2B customer quick view: current information in the row, detailed events in timeline */
+.b2b-note-preview{display:flex;align-items:center;gap:5px;min-width:180px}
+.b2b-note-preview input{flex:1;min-width:100px}
+.b2b-note-history{border:1px solid #bdd7df;border-radius:6px;background:#f2fafb;color:#136c79;white-space:nowrap;font-size:10px;font-weight:750;padding:6px 7px;cursor:pointer}
+.b2b-note-history:hover{background:#def1f5}
+.b2b-current-label{font-size:10px;color:#178077;font-weight:750;margin-top:4px}
+.b2b-history-recent{padding:10px 12px;margin:8px 0;border:1px solid #b5dcd3;border-radius:10px;background:#f2fbf8}
 /* B2B customer progress history */
 .b2b-history-btn{margin-top:4px;padding:3px 6px;display:block;border:1px solid #b4dce1;background:#eafaFC;color:#116977;border-radius:7px;cursor:pointer;font-weight:800;font-size:10px;white-space:nowrap}
 .b2b-history-btn:hover{background:#d5f2f5}
@@ -3293,6 +3300,9 @@ function _b2bLeads() {
     if (col.t === 'date') return `<td style="min-width:${w}px">
       <input type="text" value="${formatDateVN(r[col.k])}" placeholder="DD/MM/YYYY"
         onchange="b2bUpdate(${id},'${k}',parseDateSafe(this.value))"></td>`;
+    if (col.t === 'text' && k === 'ghiChu') return `<td style="min-width:${Math.max(w,240)}px">
+      <div class="b2b-note-preview"><input type="text" value="${v}" title="Ghi chú hiện tại (mới nhất được chọn hoặc cập nhật)" onchange="b2bUpdate(${id},'ghiChu',this.value)">
+      <button type="button" class="b2b-note-history" onclick="b2bShowHistory(${JSON.stringify(String(id)).replace(/"/g,'&quot;')})">Tiến trình</button></div></td>`;
     if (col.t === 'text') return `<td style="min-width:${w}px">
       <input type="text" value="${v}" onchange="b2bUpdate(${id},'${k}',this.value)"></td>`;
     if (col.t === 'sel') return `<td style="min-width:${w}px">
@@ -3324,7 +3334,7 @@ function _b2bLeads() {
     const mergeBtn = r._dSdt ? `<button type="button" class="b2b-merge-btn" onclick="b2bReviewDuplicate(${JSON.stringify(String(r.id)).replace(/"/g,'&quot;')})" title="So sánh các lead trùng số điện thoại và chọn hồ sơ để gộp">Xem &amp; gộp</button>` : '';
     return `
     <tr class="${dupCls}">
-      <td class="stt" style="padding:3px 5px">${i+1}<br>${bdg}${mergeBtn}${Array.isArray(r.b2bHistory)&&r.b2bHistory.length?`<button type="button" class="b2b-history-btn" onclick="b2bShowHistory(${JSON.stringify(String(r.id)).replace(/"/g,'&quot;')})">Lịch sử (${r.b2bHistory.length})</button>`:''}</td>
+      <td class="stt" style="padding:3px 5px">${i+1}<br>${bdg}${mergeBtn}${Array.isArray(r.b2bHistory)&&r.b2bHistory.length?`<button type="button" class="b2b-history-btn" onclick="b2bShowHistory(${JSON.stringify(String(r.id)).replace(/"/g,'&quot;')})">Tiến trình (${r.b2bHistory.length})</button>`:''}</td>
       ${visibleCols.map(c=>cell(r,c)).join('')}
       <td><button class="del-btn" onclick="b2bDelRow(${r.id})" title="Xóa">✕</button></td>
     </tr>`;
@@ -6637,13 +6647,14 @@ function b2bShowHistory(id){
   const row=b2bRows.find(r=>String(r.id)===String(id));
   if(!row)return;
   const history=Array.isArray(row.b2bHistory)?row.b2bHistory:[];
-  const latest=Array.from(B2B_TRACK_FIELDS).filter(k=>b2bMergeText(row[k]));
-  const current='<div class="b2b-history-entry"><div class="b2b-history-date">THÔNG TIN ĐANG SỬ DỤNG</div>'+
+  const latest=['ptTruc','ptGoi','nguoiLH','trangThai','followUp','ghiChu',...Array.from(B2B_TRACK_FIELDS)]
+    .filter((k,i,arr)=>arr.indexOf(k)===i&&b2bMergeText(row[k]));
+  const current='<div class="b2b-history-recent"><div class="b2b-history-date">XEM NHANH · THÔNG TIN MỚI NHẤT ĐANG SỬ DỤNG</div>'+
     latest.map(k=>'<div class="b2b-history-pair"><b>'+esc(b2bHistoryFieldLabel(k))+
     '</b><span>'+esc(row[k])+'</span></div>').join('')+'</div>';
   const dated=history.filter(e=>e.type!=='source_snapshot').slice().sort((a,b)=>Date.parse(b.at||0)-Date.parse(a.at||0));
   const sources=history.filter(e=>e.type==='source_snapshot');
-  const details='<div class="b2b-history-note">Các cập nhật mới có thời gian và người sửa. Dữ liệu nhập từ các hồ sơ cũ hiển thị theo nguồn và ngày nhận lead; không tự suy đoán ai là người phụ trách trước/sau nếu thiếu mốc thời gian.</div>'+
+  const details='<div class="b2b-history-note">Ngoài bảng chỉ hiển thị thông tin đang sử dụng và ghi chú hiện tại. Bên dưới là lịch sử tiến trình gồm ghi chú trước đây, người phụ trách/người liên hệ cũ và các lần cập nhật. Dữ liệu cũ thiếu thời gian thay đổi sẽ chỉ ghi rõ nguồn, không suy đoán thứ tự.</div>'+
     current+'<h4 style="margin:14px 0 7px">Nhật ký thay đổi ('+dated.length+')</h4>'+
     (dated.map(b2bHistoryEntryHtml).join('')||'<p style="font-size:12px">Chưa có thay đổi sau khi lập lịch sử.</p>')+
     '<h4 style="margin:14px 0 7px">Hồ sơ nguồn ('+sources.length+')</h4>'+
